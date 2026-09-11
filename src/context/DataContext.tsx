@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { saveAllToSupabase, loadFromSupabase } from '../lib/supabase';
 import {
   SchoolProfile,
   ProgramItem,
@@ -18,9 +19,9 @@ import {
   PROGRAMS_DATA,
   EXTRACURRICULARS,
   ACHIEVEMENTS,
-  NEWS_DATA,
-  FACILITIES_DATA,
-  GALLERY_ITEMS,
+  INITIAL_NEWS,
+  FACILITIES,
+  GALLERY_DATA,
   TESTIMONIALS,
   FAQ_DATA,
   INITIAL_PPDB_REGISTRATIONS,
@@ -31,7 +32,7 @@ import {
 const STORAGE_KEY = 'mi_al_ihsan_data_v4';
 const AUTH_KEY = 'mi_al_ihsan_auth_v1';
 
-interface AppStorageState {
+export interface AppStorageState {
   schoolProfile: SchoolProfile;
   staffList: StaffMember[];
   statsList: StatItem[];
@@ -46,6 +47,8 @@ interface AppStorageState {
   ppdbRegistrations: PPDBRegistration[];
 }
 
+export type CloudSyncStatus = 'connected' | 'syncing' | 'synced' | 'offline' | 'error';
+
 interface DataContextType {
   schoolProfile: SchoolProfile;
   updateSchoolProfile: (profile: Partial<SchoolProfile>) => void;
@@ -56,7 +59,8 @@ interface DataContextType {
   deleteStaff: (id: string) => void;
 
   statsList: StatItem[];
-  addStat: (item: Omit<StatItem, 'id'>) => void;
+  setStatsList: (stats: StatItem[]) => void;
+  addStat: (item: Omit<StatItem, 'id'> & { id?: string }) => void;
   updateStat: (id: string, item: Partial<StatItem>) => void;
   deleteStat: (id: string) => void;
 
@@ -87,6 +91,7 @@ interface DataContextType {
 
   gallery: GalleryItem[];
   addGalleryItem: (item: Omit<GalleryItem, 'id'>) => void;
+  updateGalleryItem: (id: string, item: Partial<GalleryItem>) => void;
   deleteGalleryItem: (id: string) => void;
 
   testimonials: TestimonialItem[];
@@ -100,9 +105,9 @@ interface DataContextType {
   deleteFAQ: (id: string) => void;
 
   ppdbRegistrations: PPDBRegistration[];
-  addPPDBRegistration: (reg: Omit<PPDBRegistration, 'id' | 'submissionDate'>) => string;
-  updatePPDBStatus: (id: string, status: PPDBRegistration['status'], notes?: string) => void;
-  deletePPDBRegistration: (id: string) => void;
+  addPPDBRegistration: (reg: Omit<PPDBRegistration, 'id' | 'submissionDate'>) => Promise<string>;
+  updatePPDBStatus: (id: string, status: PPDBRegistration['status'], notes?: string) => Promise<void>;
+  deletePPDBRegistration: (id: string) => Promise<void>;
 
   // Admin Auth & Mode
   isAdmin: boolean;
@@ -112,6 +117,14 @@ interface DataContextType {
   logoutAdmin: () => void;
   isLoginModalOpen: boolean;
   setIsLoginModalOpen: (open: boolean) => void;
+
+  // Cloud Database Status & Actions
+  cloudSyncStatus: CloudSyncStatus;
+  lastSyncedAt: string | null;
+  refreshFromCloud: () => Promise<void>;
+  pushAllToCloud: (authToken?: string | null) => Promise<boolean>;
+  syncToSupabase: () => Promise<{ success: boolean; message: string }>;
+  pullFromSupabase: () => Promise<boolean>;
 
   // Backup & Reset
   resetToDefaultData: () => void;
@@ -128,12 +141,51 @@ const DEFAULT_DATA: AppStorageState = {
   programs: PROGRAMS_DATA,
   extracurriculars: EXTRACURRICULARS,
   achievements: ACHIEVEMENTS,
-  newsList: NEWS_DATA,
-  facilities: FACILITIES_DATA,
-  gallery: GALLERY_ITEMS,
+  newsList: INITIAL_NEWS,
+  facilities: FACILITIES,
+  gallery: GALLERY_DATA,
   testimonials: TESTIMONIALS,
   faqs: FAQ_DATA,
   ppdbRegistrations: INITIAL_PPDB_REGISTRATIONS,
+};
+
+let uniqueCounter = 0;
+
+export const generateUniqueId = (prefix: string): string => {
+  uniqueCounter = (uniqueCounter + 1) % 1000000;
+  return `${prefix}-${Date.now()}-${uniqueCounter}-${Math.random().toString(36).substring(2, 7)}`;
+};
+
+export const ensureUniqueIds = <T extends { id?: string }>(items: T[] | undefined, prefix: string): T[] => {
+  if (!Array.isArray(items)) return [];
+  const seen = new Set<string>();
+  return items.map((item, index) => {
+    let id = item.id ? String(item.id).trim() : '';
+    if (!id || seen.has(id) || /^[a-z]+-\d{10,}$/.test(id)) {
+      uniqueCounter = (uniqueCounter + 1) % 1000000;
+      id = `${prefix}-${Date.now()}-${uniqueCounter}-${index}-${Math.random().toString(36).substring(2, 7)}`;
+    }
+    seen.add(id);
+    return { ...item, id };
+  });
+};
+
+export const sanitizeAppState = (raw: any): AppStorageState => {
+  if (!raw) return DEFAULT_DATA;
+  return {
+    schoolProfile: { ...DEFAULT_DATA.schoolProfile, ...(raw.schoolProfile || {}) },
+    staffList: ensureUniqueIds(raw.staffList || DEFAULT_DATA.staffList, 'staff'),
+    statsList: ensureUniqueIds(raw.statsList !== undefined ? raw.statsList : DEFAULT_DATA.statsList, 'stat'),
+    programs: ensureUniqueIds(raw.programs || DEFAULT_DATA.programs, 'prog'),
+    extracurriculars: ensureUniqueIds(raw.extracurriculars || DEFAULT_DATA.extracurriculars, 'ekskul'),
+    achievements: ensureUniqueIds(raw.achievements || DEFAULT_DATA.achievements, 'ach'),
+    newsList: ensureUniqueIds(raw.newsList || DEFAULT_DATA.newsList, 'news'),
+    facilities: ensureUniqueIds(raw.facilities || DEFAULT_DATA.facilities, 'fac'),
+    gallery: ensureUniqueIds(raw.gallery || DEFAULT_DATA.gallery, 'gal'),
+    testimonials: ensureUniqueIds(raw.testimonials || DEFAULT_DATA.testimonials, 'testi'),
+    faqs: ensureUniqueIds(raw.faqs || DEFAULT_DATA.faqs, 'faq'),
+    ppdbRegistrations: ensureUniqueIds(raw.ppdbRegistrations || DEFAULT_DATA.ppdbRegistrations, 'reg'),
+  };
 };
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -142,25 +194,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        return {
-          schoolProfile: { ...DEFAULT_DATA.schoolProfile, ...(parsed.schoolProfile || {}) },
-          staffList: parsed.staffList || DEFAULT_DATA.staffList,
-          statsList: parsed.statsList || DEFAULT_DATA.statsList,
-          programs: parsed.programs || DEFAULT_DATA.programs,
-          extracurriculars: parsed.extracurriculars || DEFAULT_DATA.extracurriculars,
-          achievements: parsed.achievements || DEFAULT_DATA.achievements,
-          newsList: parsed.newsList || DEFAULT_DATA.newsList,
-          facilities: parsed.facilities || DEFAULT_DATA.facilities,
-          gallery: parsed.gallery || DEFAULT_DATA.gallery,
-          testimonials: parsed.testimonials || DEFAULT_DATA.testimonials,
-          faqs: parsed.faqs || DEFAULT_DATA.faqs,
-          ppdbRegistrations: parsed.ppdbRegistrations || DEFAULT_DATA.ppdbRegistrations,
-        };
+        return sanitizeAppState(parsed);
       }
     } catch (e) {
-      console.error('Error loading saved school data:', e);
+      console.error('Error loading local school data:', e);
     }
-    return DEFAULT_DATA;
+    return sanitizeAppState(DEFAULT_DATA);
   });
 
   const [isAdmin, setIsAdmin] = useState<boolean>(() => {
@@ -173,8 +212,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [viewMode, setViewMode] = useState<'public' | 'admin'>('public');
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<CloudSyncStatus>('connected');
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
 
-  // Sync to local storage
+  // Sync to local storage for instant responsiveness
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -183,10 +224,51 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [data]);
 
+  // Fetch online data from Cloud SQL on initial load
+  const refreshFromCloud = useCallback(async () => {
+    try {
+      setCloudSyncStatus('syncing');
+      const res = await fetch('/api/data');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          const onlineData = json.data;
+          setData((prev) => {
+            const sanitized = sanitizeAppState({
+              schoolProfile: { ...prev.schoolProfile, ...(onlineData.schoolProfile || {}) },
+              staffList: onlineData.staffList && onlineData.staffList.length > 0 ? onlineData.staffList : prev.staffList,
+              statsList: onlineData.statsList && onlineData.statsList.length > 0 ? onlineData.statsList : prev.statsList,
+              programs: onlineData.programs && onlineData.programs.length > 0 ? onlineData.programs : prev.programs,
+              extracurriculars: onlineData.extracurriculars && onlineData.extracurriculars.length > 0 ? onlineData.extracurriculars : prev.extracurriculars,
+              achievements: onlineData.achievements && onlineData.achievements.length > 0 ? onlineData.achievements : prev.achievements,
+              newsList: onlineData.newsList && onlineData.newsList.length > 0 ? onlineData.newsList : prev.newsList,
+              facilities: onlineData.facilities && onlineData.facilities.length > 0 ? onlineData.facilities : prev.facilities,
+              gallery: onlineData.gallery && onlineData.gallery.length > 0 ? onlineData.gallery : prev.gallery,
+              testimonials: onlineData.testimonials && onlineData.testimonials.length > 0 ? onlineData.testimonials : prev.testimonials,
+              faqs: onlineData.faqs && onlineData.faqs.length > 0 ? onlineData.faqs : prev.faqs,
+              ppdbRegistrations: onlineData.ppdbRegistrations && onlineData.ppdbRegistrations.length > 0 ? onlineData.ppdbRegistrations : prev.ppdbRegistrations,
+            });
+            return sanitized;
+          });
+          setCloudSyncStatus('synced');
+          setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+        }
+      } else {
+        setCloudSyncStatus('connected');
+      }
+    } catch (err) {
+      console.warn('Could not refresh from Cloud SQL, using local cache:', err);
+      setCloudSyncStatus('offline');
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshFromCloud();
+  }, [refreshFromCloud]);
+
   // Auth methods
   const loginAdmin = (secret: string): boolean => {
     const clean = secret.trim().toLowerCase();
-    // Default passcodes
     if (clean === 'admin123' || clean === 'alihsan2025' || clean === 'soborejo' || clean === 'admin') {
       setIsAdmin(true);
       try {
@@ -207,25 +289,126 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (e) {}
   };
 
+  // Push all data to Cloud SQL
+  const pushAllToCloud = async (authToken?: string | null): Promise<boolean> => {
+    try {
+      setCloudSyncStatus('syncing');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+
+      const res = await fetch('/api/sync-all', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          schoolProfile: data.schoolProfile,
+          statsList: data.statsList,
+          programs: data.programs,
+          extracurriculars: data.extracurriculars,
+          achievements: data.achievements,
+          facilities: data.facilities,
+          gallery: data.gallery,
+          testimonials: data.testimonials,
+          faqs: data.faqs,
+        })
+      });
+
+      if (res.ok) {
+        setCloudSyncStatus('synced');
+        setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+        // Also persist to Supabase in background
+        saveAllToSupabase(data).catch(() => {});
+        return true;
+      } else {
+        setCloudSyncStatus('error');
+        return false;
+      }
+    } catch (err) {
+      console.error('Failed to push to Cloud SQL:', err);
+      // Fallback: still attempt to save to Supabase
+      saveAllToSupabase(data).catch(() => {});
+      setCloudSyncStatus('error');
+      return false;
+    }
+  };
+
+  // Explicit Sync to Supabase
+  const syncToSupabase = async (): Promise<{ success: boolean; message: string }> => {
+    try {
+      setCloudSyncStatus('syncing');
+      const res = await saveAllToSupabase(data);
+      if (res.success) {
+        setCloudSyncStatus('synced');
+        setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+      }
+      return res;
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'Gagal menyimpan ke Supabase' };
+    }
+  };
+
+  // Pull data from Supabase
+  const pullFromSupabase = async (): Promise<boolean> => {
+    try {
+      setCloudSyncStatus('syncing');
+      const remoteState = await loadFromSupabase();
+      if (remoteState && remoteState.schoolProfile) {
+        const cleanState = sanitizeAppState(remoteState);
+        setData(cleanState);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanState));
+        } catch (e) {}
+        setCloudSyncStatus('synced');
+        setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('Failed to pull from Supabase:', err);
+      return false;
+    }
+  };
+
   // School Profile
   const updateSchoolProfile = (partial: Partial<SchoolProfile>) => {
-    setData((prev) => ({
-      ...prev,
-      schoolProfile: { ...prev.schoolProfile, ...partial },
-    }));
+    setData((prev) => {
+      const updated = { ...prev.schoolProfile, ...partial };
+      fetch('/api/settings/school_profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: updated })
+      }).catch(() => {});
+      return { ...prev, schoolProfile: updated };
+    });
   };
 
   // Guru dan Tenaga Kependidikan (GTK)
   const addStaff = (item: Omit<StaffMember, 'id'>) => {
-    const newItem: StaffMember = { ...item, id: `staff-${Date.now()}` };
+    const newItem: StaffMember = { ...item, id: generateUniqueId('staff') };
     setData((prev) => ({ ...prev, staffList: [...prev.staffList, newItem] }));
+    fetch('/api/staff', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newItem)
+    }).catch(() => {});
   };
 
   const updateStaff = (id: string, updated: Partial<StaffMember>) => {
-    setData((prev) => ({
-      ...prev,
-      staffList: prev.staffList.map((s) => (s.id === id ? { ...s, ...updated } : s)),
-    }));
+    setData((prev) => {
+      const updatedList = prev.staffList.map((s) => (s.id === id ? { ...s, ...updated } : s));
+      const target = updatedList.find((s) => s.id === id);
+      if (target) {
+        fetch('/api/staff', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(target)
+        }).catch(() => {});
+      }
+      return { ...prev, staffList: updatedList };
+    });
   };
 
   const deleteStaff = (id: string) => {
@@ -233,102 +416,198 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       staffList: prev.staffList.filter((s) => s.id !== id),
     }));
+    fetch(`/api/staff/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
   // Statistik Madrasah
-  const addStat = (item: Omit<StatItem, 'id'>) => {
-    const newItem: StatItem = { ...item, id: `stat-${Date.now()}` };
-    setData((prev) => ({
-      ...prev,
-      statsList: [...(prev.statsList || []), newItem],
-    }));
+  const setStatsList = (stats: StatItem[]) => {
+    const clean = ensureUniqueIds(stats, 'stat');
+    setData((prev) => {
+      fetch('/api/settings/stats_list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: clean })
+      }).catch(() => {});
+      return { ...prev, statsList: clean };
+    });
+  };
+
+  const addStat = (item: Omit<StatItem, 'id'> & { id?: string }) => {
+    const newItem: StatItem = { ...item, id: item.id && item.id.trim() ? item.id : generateUniqueId('stat') };
+    setData((prev) => {
+      const filtered = (prev.statsList || []).filter((s) => s.id !== newItem.id);
+      const nextStats = [...filtered, newItem];
+      fetch('/api/settings/stats_list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: nextStats })
+      }).catch(() => {});
+      return { ...prev, statsList: nextStats };
+    });
   };
 
   const updateStat = (id: string, updated: Partial<StatItem>) => {
-    setData((prev) => ({
-      ...prev,
-      statsList: (prev.statsList || []).map((s) => (s.id === id ? { ...s, ...updated } : s)),
-    }));
+    setData((prev) => {
+      const nextStats = (prev.statsList || []).map((s) => (s.id === id ? { ...s, ...updated } : s));
+      fetch('/api/settings/stats_list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: nextStats })
+      }).catch(() => {});
+      return { ...prev, statsList: nextStats };
+    });
   };
 
   const deleteStat = (id: string) => {
-    setData((prev) => ({
-      ...prev,
-      statsList: (prev.statsList || []).filter((s) => s.id !== id),
-    }));
+    setData((prev) => {
+      const nextStats = (prev.statsList || []).filter((s) => s.id !== id);
+      fetch('/api/settings/stats_list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: nextStats })
+      }).catch(() => {});
+      return { ...prev, statsList: nextStats };
+    });
   };
 
   // Programs
   const addProgram = (item: Omit<ProgramItem, 'id'>) => {
-    const newItem: ProgramItem = { ...item, id: `prog-${Date.now()}` };
-    setData((prev) => ({ ...prev, programs: [newItem, ...prev.programs] }));
+    const newItem: ProgramItem = { ...item, id: generateUniqueId('prog') };
+    setData((prev) => {
+      const nextPrograms = [newItem, ...prev.programs];
+      fetch('/api/settings/programs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: nextPrograms })
+      }).catch(() => {});
+      return { ...prev, programs: nextPrograms };
+    });
   };
 
   const updateProgram = (id: string, updated: Partial<ProgramItem>) => {
-    setData((prev) => ({
-      ...prev,
-      programs: prev.programs.map((p) => (p.id === id ? { ...p, ...updated } : p)),
-    }));
+    setData((prev) => {
+      const nextPrograms = prev.programs.map((p) => (p.id === id ? { ...p, ...updated } : p));
+      fetch('/api/settings/programs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: nextPrograms })
+      }).catch(() => {});
+      return { ...prev, programs: nextPrograms };
+    });
   };
 
   const deleteProgram = (id: string) => {
-    setData((prev) => ({
-      ...prev,
-      programs: prev.programs.filter((p) => p.id !== id),
-    }));
+    setData((prev) => {
+      const nextPrograms = prev.programs.filter((p) => p.id !== id);
+      fetch('/api/settings/programs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: nextPrograms })
+      }).catch(() => {});
+      return { ...prev, programs: nextPrograms };
+    });
   };
 
   // Extracurriculars
   const addExtracurricular = (item: Omit<ExtracurricularItem, 'id'>) => {
-    const newItem: ExtracurricularItem = { ...item, id: `ekskul-${Date.now()}` };
-    setData((prev) => ({ ...prev, extracurriculars: [...prev.extracurriculars, newItem] }));
+    const newItem: ExtracurricularItem = { ...item, id: generateUniqueId('ekskul') };
+    setData((prev) => {
+      const next = [...prev.extracurriculars, newItem];
+      fetch('/api/settings/extracurriculars', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: next })
+      }).catch(() => {});
+      return { ...prev, extracurriculars: next };
+    });
   };
 
   const updateExtracurricular = (id: string, updated: Partial<ExtracurricularItem>) => {
-    setData((prev) => ({
-      ...prev,
-      extracurriculars: prev.extracurriculars.map((e) => (e.id === id ? { ...e, ...updated } : e)),
-    }));
+    setData((prev) => {
+      const next = prev.extracurriculars.map((e) => (e.id === id ? { ...e, ...updated } : e));
+      fetch('/api/settings/extracurriculars', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: next })
+      }).catch(() => {});
+      return { ...prev, extracurriculars: next };
+    });
   };
 
   const deleteExtracurricular = (id: string) => {
-    setData((prev) => ({
-      ...prev,
-      extracurriculars: prev.extracurriculars.filter((e) => e.id !== id),
-    }));
+    setData((prev) => {
+      const next = prev.extracurriculars.filter((e) => e.id !== id);
+      fetch('/api/settings/extracurriculars', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: next })
+      }).catch(() => {});
+      return { ...prev, extracurriculars: next };
+    });
   };
 
   // Achievements
   const addAchievement = (item: Omit<AchievementItem, 'id'>) => {
-    const newItem: AchievementItem = { ...item, id: `ach-${Date.now()}` };
-    setData((prev) => ({ ...prev, achievements: [newItem, ...prev.achievements] }));
+    const newItem: AchievementItem = { ...item, id: generateUniqueId('ach') };
+    setData((prev) => {
+      const next = [newItem, ...prev.achievements];
+      fetch('/api/settings/achievements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: next })
+      }).catch(() => {});
+      return { ...prev, achievements: next };
+    });
   };
 
   const updateAchievement = (id: string, updated: Partial<AchievementItem>) => {
-    setData((prev) => ({
-      ...prev,
-      achievements: prev.achievements.map((a) => (a.id === id ? { ...a, ...updated } : a)),
-    }));
+    setData((prev) => {
+      const next = prev.achievements.map((a) => (a.id === id ? { ...a, ...updated } : a));
+      fetch('/api/settings/achievements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: next })
+      }).catch(() => {});
+      return { ...prev, achievements: next };
+    });
   };
 
   const deleteAchievement = (id: string) => {
-    setData((prev) => ({
-      ...prev,
-      achievements: prev.achievements.filter((a) => a.id !== id),
-    }));
+    setData((prev) => {
+      const next = prev.achievements.filter((a) => a.id !== id);
+      fetch('/api/settings/achievements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: next })
+      }).catch(() => {});
+      return { ...prev, achievements: next };
+    });
   };
 
   // News
   const addNews = (item: Omit<NewsArticle, 'id'>) => {
-    const newItem: NewsArticle = { ...item, id: `news-${Date.now()}` };
+    const newItem: NewsArticle = { ...item, id: generateUniqueId('news') };
     setData((prev) => ({ ...prev, newsList: [newItem, ...prev.newsList] }));
+    fetch('/api/news', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newItem)
+    }).catch(() => {});
   };
 
   const updateNews = (id: string, updated: Partial<NewsArticle>) => {
-    setData((prev) => ({
-      ...prev,
-      newsList: prev.newsList.map((n) => (n.id === id ? { ...n, ...updated } : n)),
-    }));
+    setData((prev) => {
+      const next = prev.newsList.map((n) => (n.id === id ? { ...n, ...updated } : n));
+      const target = next.find((n) => n.id === id);
+      if (target) {
+        fetch('/api/news', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(target)
+        }).catch(() => {});
+      }
+      return { ...prev, newsList: next };
+    });
   };
 
   const deleteNews = (id: string) => {
@@ -336,113 +615,243 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       newsList: prev.newsList.filter((n) => n.id !== id),
     }));
+    fetch(`/api/news/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
   // Facilities
   const addFacility = (item: Omit<FacilityItem, 'id'>) => {
-    const newItem: FacilityItem = { ...item, id: `fac-${Date.now()}` };
-    setData((prev) => ({ ...prev, facilities: [...prev.facilities, newItem] }));
+    const newItem: FacilityItem = { ...item, id: generateUniqueId('fac') };
+    setData((prev) => {
+      const next = [...prev.facilities, newItem];
+      fetch('/api/settings/facilities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: next })
+      }).catch(() => {});
+      return { ...prev, facilities: next };
+    });
   };
 
   const updateFacility = (id: string, updated: Partial<FacilityItem>) => {
-    setData((prev) => ({
-      ...prev,
-      facilities: prev.facilities.map((f) => (f.id === id ? { ...f, ...updated } : f)),
-    }));
+    setData((prev) => {
+      const next = prev.facilities.map((f) => (f.id === id ? { ...f, ...updated } : f));
+      fetch('/api/settings/facilities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: next })
+      }).catch(() => {});
+      return { ...prev, facilities: next };
+    });
   };
 
   const deleteFacility = (id: string) => {
-    setData((prev) => ({
-      ...prev,
-      facilities: prev.facilities.filter((f) => f.id !== id),
-    }));
+    setData((prev) => {
+      const next = prev.facilities.filter((f) => f.id !== id);
+      fetch('/api/settings/facilities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: next })
+      }).catch(() => {});
+      return { ...prev, facilities: next };
+    });
   };
 
   // Gallery
   const addGalleryItem = (item: Omit<GalleryItem, 'id'>) => {
-    const newItem: GalleryItem = { ...item, id: `gal-${Date.now()}` };
-    setData((prev) => ({ ...prev, gallery: [newItem, ...prev.gallery] }));
+    const newItem: GalleryItem = { ...item, id: generateUniqueId('gal') };
+    setData((prev) => {
+      const next = [newItem, ...prev.gallery];
+      fetch('/api/settings/gallery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: next })
+      }).catch(() => {});
+      return { ...prev, gallery: next };
+    });
+  };
+
+  const updateGalleryItem = (id: string, updated: Partial<GalleryItem>) => {
+    setData((prev) => {
+      const next = prev.gallery.map((g) => (g.id === id ? { ...g, ...updated } : g));
+      fetch('/api/settings/gallery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: next })
+      }).catch(() => {});
+      return { ...prev, gallery: next };
+    });
   };
 
   const deleteGalleryItem = (id: string) => {
-    setData((prev) => ({
-      ...prev,
-      gallery: prev.gallery.filter((g) => g.id !== id),
-    }));
+    setData((prev) => {
+      const next = prev.gallery.filter((g) => g.id !== id);
+      fetch('/api/settings/gallery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: next })
+      }).catch(() => {});
+      return { ...prev, gallery: next };
+    });
   };
 
   // Testimonials
   const addTestimonial = (item: Omit<TestimonialItem, 'id'>) => {
-    const newItem: TestimonialItem = { ...item, id: `testi-${Date.now()}` };
-    setData((prev) => ({ ...prev, testimonials: [...prev.testimonials, newItem] }));
+    const newItem: TestimonialItem = { ...item, id: generateUniqueId('testi') };
+    setData((prev) => {
+      const next = [...prev.testimonials, newItem];
+      fetch('/api/settings/testimonials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: next })
+      }).catch(() => {});
+      return { ...prev, testimonials: next };
+    });
   };
 
   const updateTestimonial = (id: string, updated: Partial<TestimonialItem>) => {
-    setData((prev) => ({
-      ...prev,
-      testimonials: prev.testimonials.map((t) => (t.id === id ? { ...t, ...updated } : t)),
-    }));
+    setData((prev) => {
+      const next = prev.testimonials.map((t) => (t.id === id ? { ...t, ...updated } : t));
+      fetch('/api/settings/testimonials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: next })
+      }).catch(() => {});
+      return { ...prev, testimonials: next };
+    });
   };
 
   const deleteTestimonial = (id: string) => {
-    setData((prev) => ({
-      ...prev,
-      testimonials: prev.testimonials.filter((t) => t.id !== id),
-    }));
+    setData((prev) => {
+      const next = prev.testimonials.filter((t) => t.id !== id);
+      fetch('/api/settings/testimonials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: next })
+      }).catch(() => {});
+      return { ...prev, testimonials: next };
+    });
   };
 
   // FAQ
   const addFAQ = (item: Omit<FAQItem, 'id'>) => {
-    const newItem: FAQItem = { ...item, id: `faq-${Date.now()}` };
-    setData((prev) => ({ ...prev, faqs: [...prev.faqs, newItem] }));
+    const newItem: FAQItem = { ...item, id: generateUniqueId('faq') };
+    setData((prev) => {
+      const next = [...prev.faqs, newItem];
+      fetch('/api/settings/faqs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: next })
+      }).catch(() => {});
+      return { ...prev, faqs: next };
+    });
   };
 
   const updateFAQ = (id: string, updated: Partial<FAQItem>) => {
-    setData((prev) => ({
-      ...prev,
-      faqs: prev.faqs.map((f) => (f.id === id ? { ...f, ...updated } : f)),
-    }));
+    setData((prev) => {
+      const next = prev.faqs.map((f) => (f.id === id ? { ...f, ...updated } : f));
+      fetch('/api/settings/faqs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: next })
+      }).catch(() => {});
+      return { ...prev, faqs: next };
+    });
   };
 
   const deleteFAQ = (id: string) => {
-    setData((prev) => ({
-      ...prev,
-      faqs: prev.faqs.filter((f) => f.id !== id),
-    }));
+    setData((prev) => {
+      const next = prev.faqs.filter((f) => f.id !== id);
+      fetch('/api/settings/faqs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: next })
+      }).catch(() => {});
+      return { ...prev, faqs: next };
+    });
   };
 
-  // PPDB Registrations
-  const addPPDBRegistration = (reg: Omit<PPDBRegistration, 'id' | 'submissionDate'>): string => {
+  // PPDB Registrations (Real-time Cloud SQL Sync)
+  const addPPDBRegistration = async (reg: Omit<PPDBRegistration, 'id' | 'submissionDate'>): Promise<string> => {
     const today = new Date().toISOString().split('T')[0];
     const rand = Math.floor(1000 + Math.random() * 9000);
-    const code = reg.registrationNumber || `REG-MIAS-2025-${rand}`;
+    const code = reg.registrationNumber || `REG-MIAS-${new Date().getFullYear()}-${rand}`;
     const newReg: PPDBRegistration = {
       ...reg,
-      id: `reg-${Date.now()}`,
+      id: generateUniqueId('reg'),
       registrationNumber: code,
       submissionDate: today,
     };
+
+    // Update local state immediately
     setData((prev) => ({
       ...prev,
       ppdbRegistrations: [newReg, ...prev.ppdbRegistrations],
     }));
+
+    // Save directly to Cloud SQL online database
+    try {
+      await fetch('/api/ppdb/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: newReg.id,
+          registrationNumber: newReg.registrationNumber,
+          fullName: newReg.studentName,
+          nisn: newReg.nisn,
+          nik: newReg.nik,
+          birthPlace: newReg.birthPlace,
+          birthDate: newReg.birthDate,
+          gender: newReg.gender,
+          parentName: newReg.parentName,
+          parentPhone: newReg.parentPhone,
+          parentAddress: newReg.address,
+          previousSchool: newReg.originSchool,
+          registrationDate: newReg.submissionDate,
+          status: newReg.status,
+          notes: newReg.notes,
+        })
+      });
+      setCloudSyncStatus('synced');
+      setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+    } catch (err) {
+      console.error('Failed to post PPDB online to Cloud SQL:', err);
+    }
+
     return code;
   };
 
-  const updatePPDBStatus = (id: string, status: PPDBRegistration['status'], notes?: string) => {
+  const updatePPDBStatus = async (id: string, status: PPDBRegistration['status'], notes?: string) => {
     setData((prev) => ({
       ...prev,
       ppdbRegistrations: prev.ppdbRegistrations.map((r) =>
         r.id === id ? { ...r, status, ...(notes !== undefined ? { notes } : {}) } : r
       ),
     }));
+
+    try {
+      await fetch('/api/ppdb/update-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status, notes })
+      });
+      setCloudSyncStatus('synced');
+    } catch (err) {
+      console.error('Failed to update PPDB status online:', err);
+    }
   };
 
-  const deletePPDBRegistration = (id: string) => {
+  const deletePPDBRegistration = async (id: string) => {
     setData((prev) => ({
       ...prev,
       ppdbRegistrations: prev.ppdbRegistrations.filter((r) => r.id !== id),
     }));
+
+    try {
+      await fetch(`/api/ppdb/${id}`, { method: 'DELETE' });
+      setCloudSyncStatus('synced');
+    } catch (err) {
+      console.error('Failed to delete PPDB online:', err);
+    }
   };
 
   // Backup & Reset
@@ -452,6 +861,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_DATA));
       } catch (e) {}
+      pushAllToCloud();
     }
   };
 
@@ -461,7 +871,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `backup-mi-al-ihsan-soborejo-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `backup-mi-alihsan-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -469,15 +879,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const importBackupJSON = (jsonString: string): boolean => {
     try {
       const parsed = JSON.parse(jsonString);
-      if (parsed.schoolProfile && parsed.newsList) {
-        setData(parsed);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+      if (parsed.schoolProfile) {
+        const cleanState = sanitizeAppState(parsed);
+        setData(cleanState);
+        pushAllToCloud();
         return true;
       }
+      return false;
     } catch (e) {
-      console.error('Failed to import backup:', e);
+      console.error('Import failed:', e);
+      return false;
     }
-    return false;
   };
 
   return (
@@ -491,7 +903,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateStaff,
         deleteStaff,
 
-        statsList: data.statsList || [],
+        statsList: data.statsList,
+        setStatsList,
         addStat,
         updateStat,
         deleteStat,
@@ -523,6 +936,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         gallery: data.gallery,
         addGalleryItem,
+        updateGalleryItem,
         deleteGalleryItem,
 
         testimonials: data.testimonials,
@@ -548,6 +962,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoginModalOpen,
         setIsLoginModalOpen,
 
+        cloudSyncStatus,
+        lastSyncedAt,
+        refreshFromCloud,
+        pushAllToCloud,
+        syncToSupabase,
+        pullFromSupabase,
+
         resetToDefaultData,
         exportBackupJSON,
         importBackupJSON,
@@ -558,10 +979,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export const useDataContext = () => {
+export const useData = () => {
   const context = useContext(DataContext);
   if (!context) {
-    throw new Error('useDataContext must be used within a DataProvider');
+    throw new Error('useData must be used within a DataProvider');
   }
   return context;
 };
+
+export const useDataContext = useData;

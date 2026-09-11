@@ -20,6 +20,7 @@ export interface SchoolProfile {
   headmasterName: string;
   headmasterNip: string;
   headmasterTitle: string;
+  headmasterPhotoUrl?: string;
   headmasterWelcome: string[];
   history: string[];
   vision: string;

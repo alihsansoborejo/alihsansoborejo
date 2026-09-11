@@ -76,8 +76,8 @@ export const PrincipalWelcome: React.FC = () => {
                 <div className="absolute -inset-1.5 bg-gradient-to-r from-[#d4af37] via-[#0b3c26] to-[#d4af37] rounded-2xl blur-sm opacity-50 group-hover:opacity-75 transition duration-300" />
                 <div className="relative rounded-2xl overflow-hidden border-2 border-[#d4af37] shadow-2xl bg-[#072217]">
                   <img
-                    src="https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80"
-                    alt="Kepala MI Ma'arif Al Ihsan Soborejo"
+                    src={schoolProfile.headmasterPhotoUrl || "https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=800&q=80"}
+                    alt={schoolProfile.headmasterName || "Kepala MI Ma'arif Al Ihsan Soborejo"}
                     className="w-full h-[340px] sm:h-[380px] object-cover object-top filter contrast-105"
                   />
                   <div className="p-4 bg-[#072217]/95 backdrop-blur-md border-t border-[#d4af37]/30 text-center">

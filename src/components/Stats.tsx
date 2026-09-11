@@ -50,7 +50,7 @@ export const Stats: React.FC = () => {
       <div className={`bg-white rounded-2xl p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.08)] border border-[#d4af37]/25 grid ${gridColsClass} mx-auto gap-6 sm:gap-4 divide-y sm:divide-y-0 sm:divide-x divide-gray-100`}>
         {statsList.map((stat, idx) => (
           <div
-            key={stat.id || idx}
+            key={stat.id ? `stat-item-${stat.id}-${idx}` : `stat-item-${idx}`}
             id={`stat-card-${idx}`}
             className="text-center px-4 pt-4 sm:pt-0 first:pt-0 group relative cursor-pointer"
             onMouseEnter={() => setActiveTooltip(idx)}
