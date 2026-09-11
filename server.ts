@@ -22,8 +22,31 @@ import {
 const app = express();
 const PORT = 3000;
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+
+// Real-time synchronization state & SSE clients
+let currentDataVersion = Date.now();
+const sseClients = new Set<express.Response>();
+
+export function notifyDataChanged(changeType: string, payload?: any) {
+  currentDataVersion = Date.now();
+  const msg = JSON.stringify({
+    type: 'data_changed',
+    changeType,
+    version: currentDataVersion,
+    timestamp: new Date().toISOString(),
+    payload
+  });
+
+  for (const client of sseClients) {
+    try {
+      client.write(`data: ${msg}\n\n`);
+    } catch {
+      sseClients.delete(client);
+    }
+  }
+}
 
 // Health Check
 app.get('/api/health', (req, res) => {
@@ -31,7 +54,46 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     service: "MI Ma'arif Al Ihsan Soborejo Online Database",
     database: 'Cloud SQL PostgreSQL',
+    dataVersion: currentDataVersion,
+    activeRealtimeClients: sseClients.size,
     timestamp: new Date().toISOString()
+  });
+});
+
+// Data version lightweight check for clients
+app.get('/api/data/version', (req, res) => {
+  res.json({
+    success: true,
+    version: currentDataVersion,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Real-time Server-Sent Events (SSE) stream for live updates across all devices
+app.get('/api/realtime/stream', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  // Initial connection handshake
+  res.write(`data: ${JSON.stringify({ type: 'connected', version: currentDataVersion, timestamp: new Date().toISOString() })}\n\n`);
+  sseClients.add(res);
+
+  // Heartbeat ping every 20 seconds to prevent connection timeout
+  const pingInterval = setInterval(() => {
+    try {
+      res.write(': ping\n\n');
+    } catch {
+      clearInterval(pingInterval);
+      sseClients.delete(res);
+    }
+  }, 20000);
+
+  req.on('close', () => {
+    clearInterval(pingInterval);
+    sseClients.delete(res);
   });
 });
 
@@ -39,7 +101,7 @@ app.get('/api/health', (req, res) => {
 app.get('/api/data', async (req, res) => {
   try {
     const data = await getAllMadrasahOnlineData();
-    res.json({ success: true, data });
+    res.json({ success: true, data, version: currentDataVersion });
   } catch (error: any) {
     console.error('Error in /api/data:', error);
     res.status(500).json({ success: false, error: error.message || 'Gagal memuat data online' });
@@ -98,6 +160,8 @@ app.post('/api/ppdb/register', async (req, res) => {
       status: payload.status || 'menunggu_verifikasi'
     });
 
+    notifyDataChanged('ppdb', saved);
+
     res.json({
       success: true,
       message: 'Pendaftaran PPDB online berhasil disimpan ke Cloud SQL Database.',
@@ -129,6 +193,7 @@ app.post('/api/ppdb/update-status', requireAuth, async (req: AuthRequest, res) =
       return res.status(400).json({ success: false, error: 'ID pendaftaran dan status baru wajib diisi' });
     }
     const updated = await updatePPDB(id, { status, notes });
+    notifyDataChanged('ppdb', updated);
     res.json({ success: true, data: updated });
   } catch (error: any) {
     console.error('Error updating PPDB status:', error);
@@ -141,6 +206,7 @@ app.delete('/api/ppdb/:id', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
     await deletePPDB(id);
+    notifyDataChanged('ppdb', { deletedId: id });
     res.json({ success: true, message: 'Data PPDB berhasil dihapus dari Cloud SQL' });
   } catch (error: any) {
     console.error('Error deleting PPDB:', error);
@@ -156,6 +222,7 @@ app.post('/api/staff', requireAuth, async (req: AuthRequest, res) => {
       return res.status(400).json({ success: false, error: 'Nama dan jabatan guru/staf wajib diisi' });
     }
     const saved = await upsertStaff(item);
+    notifyDataChanged('staff', saved);
     res.json({ success: true, data: saved });
   } catch (error: any) {
     console.error('Error upserting staff:', error);
@@ -168,6 +235,7 @@ app.delete('/api/staff/:id', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
     await deleteStaff(id);
+    notifyDataChanged('staff', { deletedId: id });
     res.json({ success: true, message: 'Data GTK berhasil dihapus dari Cloud SQL' });
   } catch (error: any) {
     console.error('Error deleting staff:', error);
@@ -183,6 +251,7 @@ app.post('/api/news', requireAuth, async (req: AuthRequest, res) => {
       return res.status(400).json({ success: false, error: 'Judul dan konten berita wajib diisi' });
     }
     const saved = await upsertNews(item);
+    notifyDataChanged('news', saved);
     res.json({ success: true, data: saved });
   } catch (error: any) {
     console.error('Error upserting news:', error);
@@ -195,6 +264,7 @@ app.delete('/api/news/:id', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
     await deleteNews(id);
+    notifyDataChanged('news', { deletedId: id });
     res.json({ success: true, message: 'Berita berhasil dihapus dari Cloud SQL' });
   } catch (error: any) {
     console.error('Error deleting news:', error);
@@ -208,6 +278,7 @@ app.post('/api/settings/:key', requireAuth, async (req: AuthRequest, res) => {
     const { key } = req.params;
     const { value } = req.body;
     const saved = await setAppSetting(key, value);
+    notifyDataChanged(key, saved);
     res.json({ success: true, data: saved });
   } catch (error: any) {
     console.error(`Error saving setting ${req.params.key}:`, error);
@@ -228,6 +299,8 @@ app.post('/api/sync-all', requireAuth, async (req: AuthRequest, res) => {
       gallery,
       testimonials,
       faqs,
+      staffList,
+      newsList,
     } = req.body;
 
     if (schoolProfile) await setAppSetting('school_profile', schoolProfile);
@@ -240,6 +313,23 @@ app.post('/api/sync-all', requireAuth, async (req: AuthRequest, res) => {
     if (testimonials) await setAppSetting('testimonials', testimonials);
     if (faqs) await setAppSetting('faqs', faqs);
 
+    if (staffList && Array.isArray(staffList)) {
+      for (const s of staffList) {
+        if (s.name && s.role) {
+          await upsertStaff(s).catch(() => {});
+        }
+      }
+    }
+
+    if (newsList && Array.isArray(newsList)) {
+      for (const n of newsList) {
+        if (n.title && n.content) {
+          await upsertNews(n).catch(() => {});
+        }
+      }
+    }
+
+    notifyDataChanged('all');
     res.json({ success: true, message: 'Semua perubahan berhasil disinkronkan ke Cloud SQL Database.' });
   } catch (error: any) {
     console.error('Error syncing all settings:', error);

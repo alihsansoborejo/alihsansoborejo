@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { saveAllToSupabase, loadFromSupabase } from '../lib/supabase';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { saveAllToSupabase, loadFromSupabase, supabase } from '../lib/supabase';
 import {
   SchoolProfile,
   ProgramItem,
@@ -31,6 +31,30 @@ import {
 
 const STORAGE_KEY = 'mi_al_ihsan_data_v4';
 const AUTH_KEY = 'mi_al_ihsan_auth_v1';
+const ADMIN_API_KEY = 'alihsan2025';
+
+export function getAdminAuthHeaders(): Record<string, string> {
+  const token = (typeof localStorage !== 'undefined' && localStorage.getItem('mi_al_ihsan_admin_token')) || ADMIN_API_KEY;
+  return {
+    'Content-Type': 'application/json',
+    'x-admin-secret': token,
+    'x-admin-key': token,
+    'x-client-role': 'madrasah-admin',
+    'Authorization': `Bearer ${token}`,
+  };
+}
+
+export async function apiRequest(url: string, options: RequestInit = {}) {
+  const headers = {
+    ...getAdminAuthHeaders(),
+    ...(options.headers as Record<string, string> || {}),
+  };
+
+  return fetch(url, {
+    ...options,
+    headers,
+  });
+}
 
 export interface AppStorageState {
   schoolProfile: SchoolProfile;
@@ -241,15 +265,31 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [data]);
 
-  // Fetch online data from Cloud SQL on initial load
-  const refreshFromCloud = useCallback(async () => {
+  const isInitialMount = useRef(true);
+  const isRemoteUpdating = useRef(false);
+  const lastKnownVersionRef = useRef<number>(0);
+  const lastLocalEditTimeRef = useRef<number>(0);
+  const isSelfPushingRef = useRef<boolean>(false);
+
+  // Fetch online data from Cloud SQL on initial load or on real-time event
+  const refreshFromCloud = useCallback(async (silent: boolean = false) => {
     try {
-      setCloudSyncStatus('syncing');
+      if (!silent) setCloudSyncStatus('syncing');
       const res = await fetch('/api/data');
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data) {
           const onlineData = json.data;
+          if (json.version) {
+            lastKnownVersionRef.current = json.version;
+          }
+
+          // If user edited locally very recently, do not overwrite in-progress edits
+          if (Date.now() - lastLocalEditTimeRef.current < 1500) {
+            return;
+          }
+
+          isRemoteUpdating.current = true;
           setData((prev) => {
             const sanitized = sanitizeAppState({
               schoolProfile: { ...prev.schoolProfile, ...(onlineData.schoolProfile || {}) },
@@ -269,16 +309,38 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
           setCloudSyncStatus('synced');
           setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+          return;
         }
+      }
+
+      // Fallback: Supabase
+      const remoteState = await loadFromSupabase();
+      if (remoteState && remoteState.schoolProfile) {
+        if (Date.now() - lastLocalEditTimeRef.current < 1500) return;
+        isRemoteUpdating.current = true;
+        setData(sanitizeAppState(remoteState));
+        setCloudSyncStatus('synced');
+        setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
       } else {
         setCloudSyncStatus('connected');
       }
     } catch (err) {
-      console.warn('Could not refresh from Cloud SQL, using local cache:', err);
+      console.warn('Could not refresh from Cloud SQL, trying Supabase fallback:', err);
+      try {
+        const remoteState = await loadFromSupabase();
+        if (remoteState && remoteState.schoolProfile) {
+          isRemoteUpdating.current = true;
+          setData(sanitizeAppState(remoteState));
+          setCloudSyncStatus('synced');
+          setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+          return;
+        }
+      } catch (e) {}
       setCloudSyncStatus('offline');
     }
   }, []);
 
+  // Initial load
   useEffect(() => {
     refreshFromCloud();
   }, [refreshFromCloud]);
@@ -290,6 +352,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsAdmin(true);
       try {
         localStorage.setItem(AUTH_KEY, 'true');
+        localStorage.setItem('mi_al_ihsan_admin_token', clean);
       } catch (e) {}
       setViewMode('admin');
       setIsLoginModalOpen(false);
@@ -303,41 +366,49 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setViewMode('public');
     try {
       localStorage.removeItem(AUTH_KEY);
+      localStorage.removeItem('mi_al_ihsan_admin_token');
     } catch (e) {}
   };
 
-  // Push all data to Cloud SQL
-  const pushAllToCloud = async (authToken?: string | null): Promise<boolean> => {
+  // Push all data to Cloud SQL + Supabase
+  const pushAllToCloud = useCallback(async (authToken?: string | null): Promise<boolean> => {
     try {
       setCloudSyncStatus('syncing');
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json'
-      };
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-      }
+      isSelfPushingRef.current = true;
 
-      const res = await fetch('/api/sync-all', {
+      const payload = {
+        schoolProfile: data.schoolProfile,
+        statsList: data.statsList,
+        programs: data.programs,
+        extracurriculars: data.extracurriculars,
+        achievements: data.achievements,
+        facilities: data.facilities,
+        gallery: data.gallery,
+        testimonials: data.testimonials,
+        faqs: data.faqs,
+        staffList: data.staffList,
+        newsList: data.newsList,
+      };
+
+      const res = await apiRequest('/api/sync-all', {
         method: 'POST',
-        headers,
-        body: JSON.stringify({
-          schoolProfile: data.schoolProfile,
-          statsList: data.statsList,
-          programs: data.programs,
-          extracurriculars: data.extracurriculars,
-          achievements: data.achievements,
-          facilities: data.facilities,
-          gallery: data.gallery,
-          testimonials: data.testimonials,
-          faqs: data.faqs,
-        })
+        headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+        body: JSON.stringify(payload)
       });
+
+      // Also persist to Supabase in parallel
+      saveAllToSupabase(data).catch((e) => console.warn('Supabase parallel save note:', e));
+
+      // Broadcast across tabs in the same browser
+      try {
+        const bc = new BroadcastChannel('madrasah_live_channel');
+        bc.postMessage({ type: 'data_updated', data, timestamp: Date.now() });
+        bc.close();
+      } catch (e) {}
 
       if (res.ok) {
         setCloudSyncStatus('synced');
         setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
-        // Also persist to Supabase in background
-        saveAllToSupabase(data).catch(() => {});
         return true;
       } else {
         setCloudSyncStatus('error');
@@ -345,12 +416,162 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (err) {
       console.error('Failed to push to Cloud SQL:', err);
-      // Fallback: still attempt to save to Supabase
       saveAllToSupabase(data).catch(() => {});
       setCloudSyncStatus('error');
       return false;
+    } finally {
+      setTimeout(() => {
+        isSelfPushingRef.current = false;
+      }, 500);
     }
-  };
+  }, [data]);
+
+  // Automatic Debounced Cloud Push on local changes
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    if (isRemoteUpdating.current) {
+      isRemoteUpdating.current = false;
+      return;
+    }
+
+    // Auto debounce push to Cloud SQL + Supabase on every user action
+    const timer = setTimeout(() => {
+      pushAllToCloud();
+    }, 700);
+
+    return () => clearTimeout(timer);
+  }, [data, pushAllToCloud]);
+
+  // 1. Realtime SSE Connection to /api/realtime/stream
+  useEffect(() => {
+    let eventSource: EventSource | null = null;
+    let reconnectTimeout: any = null;
+
+    const connectSSE = () => {
+      try {
+        eventSource = new EventSource('/api/realtime/stream');
+
+        eventSource.onopen = () => {
+          setCloudSyncStatus('connected');
+        };
+
+        eventSource.onmessage = (event) => {
+          try {
+            const parsed = JSON.parse(event.data);
+            if (parsed.type === 'data_changed') {
+              // Silently refresh data from cloud if change came from another device/source
+              refreshFromCloud(true);
+            }
+          } catch (e) {}
+        };
+
+        eventSource.onerror = () => {
+          if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+          }
+          // Reconnect after 5 seconds
+          clearTimeout(reconnectTimeout);
+          reconnectTimeout = setTimeout(connectSSE, 5000);
+        };
+      } catch (e) {
+        console.warn('SSE not initialized, relying on fallback real-time channels.');
+      }
+    };
+
+    connectSSE();
+
+    return () => {
+      if (eventSource) eventSource.close();
+      clearTimeout(reconnectTimeout);
+    };
+  }, [refreshFromCloud]);
+
+  // 2. BroadcastChannel for instant zero-latency cross-tab sync in the same browser
+  useEffect(() => {
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel('madrasah_live_channel');
+      channel.onmessage = (event) => {
+        if (event.data?.type === 'data_updated' && event.data.data) {
+          isRemoteUpdating.current = true;
+          setData(sanitizeAppState(event.data.data));
+          setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+        }
+      };
+    } catch (e) {}
+
+    return () => {
+      if (channel) channel.close();
+    };
+  }, []);
+
+  // 3. Smart Polling + Window Focus + Online triggers
+  useEffect(() => {
+    const handleFocus = () => {
+      // Check version or refresh when user switches tab or unlocks screen
+      refreshFromCloud(true);
+    };
+
+    const handleOnline = () => {
+      setCloudSyncStatus('syncing');
+      refreshFromCloud(true);
+    };
+
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('online', handleOnline);
+
+    // Periodic background sync check every 12 seconds
+    const interval = setInterval(() => {
+      fetch('/api/data/version')
+        .then((res) => res.json())
+        .then((ver) => {
+          if (ver && ver.version && ver.version > lastKnownVersionRef.current) {
+            lastKnownVersionRef.current = ver.version;
+            refreshFromCloud(true);
+          }
+        })
+        .catch(() => {});
+    }, 12000);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('online', handleOnline);
+      clearInterval(interval);
+    };
+  }, [refreshFromCloud]);
+
+  // 4. Supabase Realtime Channel
+  useEffect(() => {
+    let sub: any = null;
+    try {
+      sub = supabase
+        .channel('madrasah_realtime_db')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'madrasah_store' },
+          (payload) => {
+            if (payload?.new && (payload.new as any).data) {
+              const remoteData = (payload.new as any).data;
+              isRemoteUpdating.current = true;
+              setData((prev) => sanitizeAppState({ ...prev, ...remoteData }));
+              setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+            } else {
+              refreshFromCloud(true);
+            }
+          }
+        )
+        .subscribe();
+    } catch (e) {}
+
+    return () => {
+      if (sub) supabase.removeChannel(sub);
+    };
+  }, [refreshFromCloud]);
 
   // Explicit Sync to Supabase
   const syncToSupabase = async (): Promise<{ success: boolean; message: string }> => {
@@ -374,6 +595,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const remoteState = await loadFromSupabase();
       if (remoteState && remoteState.schoolProfile) {
         const cleanState = sanitizeAppState(remoteState);
+        isRemoteUpdating.current = true;
         setData(cleanState);
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanState));
@@ -391,11 +613,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // School Profile
   const updateSchoolProfile = (partial: Partial<SchoolProfile>) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => {
       const updated = { ...prev.schoolProfile, ...partial };
-      fetch('/api/settings/school_profile', {
+      apiRequest('/api/settings/school_profile', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: updated })
       }).catch(() => {});
       return { ...prev, schoolProfile: updated };
@@ -404,23 +626,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Guru dan Tenaga Kependidikan (GTK)
   const addStaff = (item: Omit<StaffMember, 'id'>) => {
+    lastLocalEditTimeRef.current = Date.now();
     const newItem: StaffMember = { ...item, id: generateUniqueId('staff') };
     setData((prev) => ({ ...prev, staffList: [...prev.staffList, newItem] }));
-    fetch('/api/staff', {
+    apiRequest('/api/staff', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newItem)
     }).catch(() => {});
   };
 
   const updateStaff = (id: string, updated: Partial<StaffMember>) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => {
       const updatedList = prev.staffList.map((s) => (s.id === id ? { ...s, ...updated } : s));
       const target = updatedList.find((s) => s.id === id);
       if (target) {
-        fetch('/api/staff', {
+        apiRequest('/api/staff', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(target)
         }).catch(() => {});
       }
@@ -429,20 +651,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteStaff = (id: string) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => ({
       ...prev,
       staffList: prev.staffList.filter((s) => s.id !== id),
     }));
-    fetch(`/api/staff/${id}`, { method: 'DELETE' }).catch(() => {});
+    apiRequest(`/api/staff/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
   // Statistik Madrasah
   const setStatsList = (stats: StatItem[]) => {
+    lastLocalEditTimeRef.current = Date.now();
     const clean = ensureUniqueIds(stats, 'stat');
     setData((prev) => {
-      fetch('/api/settings/stats_list', {
+      apiRequest('/api/settings/stats_list', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: clean })
       }).catch(() => {});
       return { ...prev, statsList: clean };
@@ -450,13 +673,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addStat = (item: Omit<StatItem, 'id'> & { id?: string }) => {
+    lastLocalEditTimeRef.current = Date.now();
     const newItem: StatItem = { ...item, id: item.id && item.id.trim() ? item.id : generateUniqueId('stat') };
     setData((prev) => {
       const filtered = (prev.statsList || []).filter((s) => s.id !== newItem.id);
       const nextStats = [...filtered, newItem];
-      fetch('/api/settings/stats_list', {
+      apiRequest('/api/settings/stats_list', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: nextStats })
       }).catch(() => {});
       return { ...prev, statsList: nextStats };
@@ -464,11 +687,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateStat = (id: string, updated: Partial<StatItem>) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => {
       const nextStats = (prev.statsList || []).map((s) => (s.id === id ? { ...s, ...updated } : s));
-      fetch('/api/settings/stats_list', {
+      apiRequest('/api/settings/stats_list', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: nextStats })
       }).catch(() => {});
       return { ...prev, statsList: nextStats };
@@ -476,11 +699,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteStat = (id: string) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => {
       const nextStats = (prev.statsList || []).filter((s) => s.id !== id);
-      fetch('/api/settings/stats_list', {
+      apiRequest('/api/settings/stats_list', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: nextStats })
       }).catch(() => {});
       return { ...prev, statsList: nextStats };
@@ -489,12 +712,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Programs
   const addProgram = (item: Omit<ProgramItem, 'id'>) => {
+    lastLocalEditTimeRef.current = Date.now();
     const newItem: ProgramItem = { ...item, id: generateUniqueId('prog') };
     setData((prev) => {
       const nextPrograms = [newItem, ...prev.programs];
-      fetch('/api/settings/programs', {
+      apiRequest('/api/settings/programs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: nextPrograms })
       }).catch(() => {});
       return { ...prev, programs: nextPrograms };
@@ -502,11 +725,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateProgram = (id: string, updated: Partial<ProgramItem>) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => {
       const nextPrograms = prev.programs.map((p) => (p.id === id ? { ...p, ...updated } : p));
-      fetch('/api/settings/programs', {
+      apiRequest('/api/settings/programs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: nextPrograms })
       }).catch(() => {});
       return { ...prev, programs: nextPrograms };
@@ -514,11 +737,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteProgram = (id: string) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => {
       const nextPrograms = prev.programs.filter((p) => p.id !== id);
-      fetch('/api/settings/programs', {
+      apiRequest('/api/settings/programs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: nextPrograms })
       }).catch(() => {});
       return { ...prev, programs: nextPrograms };
@@ -527,12 +750,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Extracurriculars
   const addExtracurricular = (item: Omit<ExtracurricularItem, 'id'>) => {
+    lastLocalEditTimeRef.current = Date.now();
     const newItem: ExtracurricularItem = { ...item, id: generateUniqueId('ekskul') };
     setData((prev) => {
       const next = [...prev.extracurriculars, newItem];
-      fetch('/api/settings/extracurriculars', {
+      apiRequest('/api/settings/extracurriculars', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: next })
       }).catch(() => {});
       return { ...prev, extracurriculars: next };
@@ -540,11 +763,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateExtracurricular = (id: string, updated: Partial<ExtracurricularItem>) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => {
       const next = prev.extracurriculars.map((e) => (e.id === id ? { ...e, ...updated } : e));
-      fetch('/api/settings/extracurriculars', {
+      apiRequest('/api/settings/extracurriculars', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: next })
       }).catch(() => {});
       return { ...prev, extracurriculars: next };
@@ -552,11 +775,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteExtracurricular = (id: string) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => {
       const next = prev.extracurriculars.filter((e) => e.id !== id);
-      fetch('/api/settings/extracurriculars', {
+      apiRequest('/api/settings/extracurriculars', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: next })
       }).catch(() => {});
       return { ...prev, extracurriculars: next };
@@ -565,12 +788,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Achievements
   const addAchievement = (item: Omit<AchievementItem, 'id'>) => {
+    lastLocalEditTimeRef.current = Date.now();
     const newItem: AchievementItem = { ...item, id: generateUniqueId('ach') };
     setData((prev) => {
       const next = [newItem, ...prev.achievements];
-      fetch('/api/settings/achievements', {
+      apiRequest('/api/settings/achievements', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: next })
       }).catch(() => {});
       return { ...prev, achievements: next };
@@ -578,11 +801,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateAchievement = (id: string, updated: Partial<AchievementItem>) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => {
       const next = prev.achievements.map((a) => (a.id === id ? { ...a, ...updated } : a));
-      fetch('/api/settings/achievements', {
+      apiRequest('/api/settings/achievements', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: next })
       }).catch(() => {});
       return { ...prev, achievements: next };
@@ -590,11 +813,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteAchievement = (id: string) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => {
       const next = prev.achievements.filter((a) => a.id !== id);
-      fetch('/api/settings/achievements', {
+      apiRequest('/api/settings/achievements', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: next })
       }).catch(() => {});
       return { ...prev, achievements: next };
@@ -603,23 +826,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // News
   const addNews = (item: Omit<NewsArticle, 'id'>) => {
+    lastLocalEditTimeRef.current = Date.now();
     const newItem: NewsArticle = { ...item, id: generateUniqueId('news') };
     setData((prev) => ({ ...prev, newsList: [newItem, ...prev.newsList] }));
-    fetch('/api/news', {
+    apiRequest('/api/news', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newItem)
     }).catch(() => {});
   };
 
   const updateNews = (id: string, updated: Partial<NewsArticle>) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => {
       const next = prev.newsList.map((n) => (n.id === id ? { ...n, ...updated } : n));
       const target = next.find((n) => n.id === id);
       if (target) {
-        fetch('/api/news', {
+        apiRequest('/api/news', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(target)
         }).catch(() => {});
       }
@@ -628,21 +851,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteNews = (id: string) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => ({
       ...prev,
       newsList: prev.newsList.filter((n) => n.id !== id),
     }));
-    fetch(`/api/news/${id}`, { method: 'DELETE' }).catch(() => {});
+    apiRequest(`/api/news/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
   // Facilities
   const addFacility = (item: Omit<FacilityItem, 'id'>) => {
+    lastLocalEditTimeRef.current = Date.now();
     const newItem: FacilityItem = { ...item, id: generateUniqueId('fac') };
     setData((prev) => {
       const next = [...prev.facilities, newItem];
-      fetch('/api/settings/facilities', {
+      apiRequest('/api/settings/facilities', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: next })
       }).catch(() => {});
       return { ...prev, facilities: next };
@@ -650,11 +874,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateFacility = (id: string, updated: Partial<FacilityItem>) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => {
       const next = prev.facilities.map((f) => (f.id === id ? { ...f, ...updated } : f));
-      fetch('/api/settings/facilities', {
+      apiRequest('/api/settings/facilities', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: next })
       }).catch(() => {});
       return { ...prev, facilities: next };
@@ -662,11 +886,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteFacility = (id: string) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => {
       const next = prev.facilities.filter((f) => f.id !== id);
-      fetch('/api/settings/facilities', {
+      apiRequest('/api/settings/facilities', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: next })
       }).catch(() => {});
       return { ...prev, facilities: next };
@@ -675,12 +899,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Gallery
   const addGalleryItem = (item: Omit<GalleryItem, 'id'>) => {
+    lastLocalEditTimeRef.current = Date.now();
     const newItem: GalleryItem = { ...item, id: generateUniqueId('gal') };
     setData((prev) => {
       const next = [newItem, ...prev.gallery];
-      fetch('/api/settings/gallery', {
+      apiRequest('/api/settings/gallery', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: next })
       }).catch(() => {});
       return { ...prev, gallery: next };
@@ -688,11 +912,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateGalleryItem = (id: string, updated: Partial<GalleryItem>) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => {
       const next = prev.gallery.map((g) => (g.id === id ? { ...g, ...updated } : g));
-      fetch('/api/settings/gallery', {
+      apiRequest('/api/settings/gallery', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: next })
       }).catch(() => {});
       return { ...prev, gallery: next };
@@ -700,11 +924,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteGalleryItem = (id: string) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => {
       const next = prev.gallery.filter((g) => g.id !== id);
-      fetch('/api/settings/gallery', {
+      apiRequest('/api/settings/gallery', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: next })
       }).catch(() => {});
       return { ...prev, gallery: next };
@@ -713,12 +937,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Testimonials
   const addTestimonial = (item: Omit<TestimonialItem, 'id'>) => {
+    lastLocalEditTimeRef.current = Date.now();
     const newItem: TestimonialItem = { ...item, id: generateUniqueId('testi') };
     setData((prev) => {
       const next = [...prev.testimonials, newItem];
-      fetch('/api/settings/testimonials', {
+      apiRequest('/api/settings/testimonials', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: next })
       }).catch(() => {});
       return { ...prev, testimonials: next };
@@ -726,11 +950,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateTestimonial = (id: string, updated: Partial<TestimonialItem>) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => {
       const next = prev.testimonials.map((t) => (t.id === id ? { ...t, ...updated } : t));
-      fetch('/api/settings/testimonials', {
+      apiRequest('/api/settings/testimonials', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: next })
       }).catch(() => {});
       return { ...prev, testimonials: next };
@@ -738,11 +962,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteTestimonial = (id: string) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => {
       const next = prev.testimonials.filter((t) => t.id !== id);
-      fetch('/api/settings/testimonials', {
+      apiRequest('/api/settings/testimonials', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: next })
       }).catch(() => {});
       return { ...prev, testimonials: next };
@@ -751,12 +975,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // FAQ
   const addFAQ = (item: Omit<FAQItem, 'id'>) => {
+    lastLocalEditTimeRef.current = Date.now();
     const newItem: FAQItem = { ...item, id: generateUniqueId('faq') };
     setData((prev) => {
       const next = [...prev.faqs, newItem];
-      fetch('/api/settings/faqs', {
+      apiRequest('/api/settings/faqs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: next })
       }).catch(() => {});
       return { ...prev, faqs: next };
@@ -764,11 +988,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateFAQ = (id: string, updated: Partial<FAQItem>) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => {
       const next = prev.faqs.map((f) => (f.id === id ? { ...f, ...updated } : f));
-      fetch('/api/settings/faqs', {
+      apiRequest('/api/settings/faqs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: next })
       }).catch(() => {});
       return { ...prev, faqs: next };
@@ -776,11 +1000,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteFAQ = (id: string) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => {
       const next = prev.faqs.filter((f) => f.id !== id);
-      fetch('/api/settings/faqs', {
+      apiRequest('/api/settings/faqs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: next })
       }).catch(() => {});
       return { ...prev, faqs: next };
@@ -789,6 +1013,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // PPDB Registrations (Real-time Cloud SQL Sync)
   const addPPDBRegistration = async (reg: Omit<PPDBRegistration, 'id' | 'submissionDate'>): Promise<string> => {
+    lastLocalEditTimeRef.current = Date.now();
     const today = new Date().toISOString().split('T')[0];
     const rand = Math.floor(1000 + Math.random() * 9000);
     const code = reg.registrationNumber || `REG-MIAS-${new Date().getFullYear()}-${rand}`;
@@ -807,9 +1032,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Save directly to Cloud SQL online database
     try {
-      await fetch('/api/ppdb/register', {
+      await apiRequest('/api/ppdb/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: newReg.id,
           registrationNumber: newReg.registrationNumber,
@@ -838,6 +1062,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updatePPDBStatus = async (id: string, status: PPDBRegistration['status'], notes?: string) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => ({
       ...prev,
       ppdbRegistrations: prev.ppdbRegistrations.map((r) =>
@@ -846,9 +1071,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
 
     try {
-      await fetch('/api/ppdb/update-status', {
+      await apiRequest('/api/ppdb/update-status', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, status, notes })
       });
       setCloudSyncStatus('synced');
@@ -858,13 +1082,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deletePPDBRegistration = async (id: string) => {
+    lastLocalEditTimeRef.current = Date.now();
     setData((prev) => ({
       ...prev,
       ppdbRegistrations: prev.ppdbRegistrations.filter((r) => r.id !== id),
     }));
 
     try {
-      await fetch(`/api/ppdb/${id}`, { method: 'DELETE' });
+      await apiRequest(`/api/ppdb/${id}`, { method: 'DELETE' });
       setCloudSyncStatus('synced');
     } catch (err) {
       console.error('Failed to delete PPDB online:', err);
