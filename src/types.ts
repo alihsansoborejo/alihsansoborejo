@@ -21,6 +21,9 @@ export interface SchoolProfile {
   headmasterNip: string;
   headmasterTitle: string;
   headmasterPhotoUrl?: string;
+  headmasterPhotoPosition?: 'top' | 'center' | 'bottom';
+  headmasterPhotoScale?: number;
+  headmasterPhotoFit?: 'cover' | 'contain';
   headmasterWelcome: string[];
   history: string[];
   vision: string;

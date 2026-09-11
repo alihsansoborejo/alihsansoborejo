@@ -1,12 +1,34 @@
 import React, { useState } from 'react';
 import { useDataContext } from '../context/DataContext';
-import { Quote, Sparkles, Compass, Eye, BookOpen, History, Shield, Heart, Award, Target, CheckCircle2 } from 'lucide-react';
+import { Quote, Sparkles, Compass, Eye, BookOpen, History, Shield, Heart, Award, Target, CheckCircle2, Sliders, Camera } from 'lucide-react';
+import { HeadmasterPhotoModal } from './HeadmasterPhotoModal';
 
 export const PrincipalWelcome: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'sambutan' | 'visi-misi' | 'sejarah'>('sambutan');
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const { schoolProfile } = useDataContext();
 
   const alphabet = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
+
+  const photoPos = schoolProfile.headmasterPhotoPosition || 'top';
+  const photoScale = schoolProfile.headmasterPhotoScale ?? 100;
+  const photoFit = schoolProfile.headmasterPhotoFit || 'cover';
+
+  const positionClass =
+    photoPos === 'center'
+      ? 'object-center'
+      : photoPos === 'bottom'
+      ? 'object-bottom'
+      : 'object-top';
+
+  const fitClass = photoFit === 'contain' ? 'object-contain' : 'object-cover';
+
+  const transformOrigin =
+    photoPos === 'top'
+      ? 'top center'
+      : photoPos === 'bottom'
+      ? 'bottom center'
+      : 'center center';
 
   return (
     <section id="profil" className="py-16 sm:py-20 px-4 sm:px-8 max-w-7xl mx-auto">
@@ -75,11 +97,30 @@ export const PrincipalWelcome: React.FC = () => {
               <div className="relative mx-auto max-w-sm">
                 <div className="absolute -inset-1.5 bg-gradient-to-r from-[#d4af37] via-[#0b3c26] to-[#d4af37] rounded-2xl blur-sm opacity-50 group-hover:opacity-75 transition duration-300" />
                 <div className="relative rounded-2xl overflow-hidden border-2 border-[#d4af37] shadow-2xl bg-[#072217]">
-                  <img
-                    src={schoolProfile.headmasterPhotoUrl || "https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=800&q=80"}
-                    alt={schoolProfile.headmasterName || "Kepala MI Ma'arif Al Ihsan Soborejo"}
-                    className="w-full h-[340px] sm:h-[380px] object-cover object-top filter contrast-105"
-                  />
+                  {/* Action Button: Atur & Sesuaikan Foto */}
+                  <button
+                    id="btn-adjust-headmaster-photo"
+                    type="button"
+                    onClick={() => setIsPhotoModalOpen(true)}
+                    className="absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#072217]/90 hover:bg-[#072217] text-[#d4af37] border border-[#d4af37]/70 shadow-lg text-[11px] font-semibold backdrop-blur-sm transition-all hover:scale-105 active:scale-95"
+                    title="Atur, sesuaikan posisi/zoom, atau ganti foto kepala madrasah"
+                  >
+                    <Sliders className="w-3.5 h-3.5" />
+                    <span>Atur Foto</span>
+                  </button>
+
+                  <div className="w-full h-[340px] sm:h-[380px] overflow-hidden relative flex items-center justify-center bg-[#041a11]">
+                    <img
+                      src={schoolProfile.headmasterPhotoUrl || "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80"}
+                      alt={schoolProfile.headmasterName || "Kepala MI Ma'arif Al Ihsan Soborejo"}
+                      style={{
+                        transform: `scale(${photoScale / 100})`,
+                        transformOrigin,
+                      }}
+                      className={`w-full h-full filter contrast-105 transition-transform duration-300 ${fitClass} ${positionClass}`}
+                    />
+                  </div>
+
                   <div className="p-4 bg-[#072217]/95 backdrop-blur-md border-t border-[#d4af37]/30 text-center">
                     <div className="font-heading text-[#d4af37] font-bold text-sm tracking-wide">
                       {schoolProfile.headmasterName}
@@ -256,6 +297,12 @@ export const PrincipalWelcome: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Modal Pengaturan & Penyesuaian Foto Kepala Madrasah */}
+      <HeadmasterPhotoModal
+        isOpen={isPhotoModalOpen}
+        onClose={() => setIsPhotoModalOpen(false)}
+      />
     </section>
   );
 };

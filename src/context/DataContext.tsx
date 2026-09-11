@@ -172,8 +172,25 @@ export const ensureUniqueIds = <T extends { id?: string }>(items: T[] | undefine
 
 export const sanitizeAppState = (raw: any): AppStorageState => {
   if (!raw) return DEFAULT_DATA;
+  const rawProfile = raw.schoolProfile || {};
+  const isOldDummyPhoto =
+    rawProfile.headmasterPhotoUrl ===
+      'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=800&q=80' ||
+    !rawProfile.headmasterPhotoUrl;
+
+  const schoolProfile = {
+    ...DEFAULT_DATA.schoolProfile,
+    ...rawProfile,
+    headmasterPhotoUrl: isOldDummyPhoto
+      ? DEFAULT_DATA.schoolProfile.headmasterPhotoUrl
+      : rawProfile.headmasterPhotoUrl,
+    headmasterPhotoPosition: rawProfile.headmasterPhotoPosition || 'top',
+    headmasterPhotoScale: rawProfile.headmasterPhotoScale ?? 100,
+    headmasterPhotoFit: rawProfile.headmasterPhotoFit || 'cover',
+  };
+
   return {
-    schoolProfile: { ...DEFAULT_DATA.schoolProfile, ...(raw.schoolProfile || {}) },
+    schoolProfile,
     staffList: ensureUniqueIds(raw.staffList || DEFAULT_DATA.staffList, 'staff'),
     statsList: ensureUniqueIds(raw.statsList !== undefined ? raw.statsList : DEFAULT_DATA.statsList, 'stat'),
     programs: ensureUniqueIds(raw.programs || DEFAULT_DATA.programs, 'prog'),

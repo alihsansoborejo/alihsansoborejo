@@ -43,8 +43,12 @@ import {
   Check,
   Copy,
   Edit3,
-  Award
+  Award,
+  Sliders,
+  ZoomIn,
+  MoveVertical
 } from 'lucide-react';
+import { compressImage } from '../lib/imageCompressor';
 import {
   SUPABASE_SQL_SCRIPT,
   SUPABASE_URL,
@@ -186,6 +190,10 @@ export const AdminDashboard: React.FC = () => {
 
   // Profile Form state
   const [profileForm, setProfileForm] = useState<SchoolProfile>(schoolProfile);
+
+  useEffect(() => {
+    setProfileForm(schoolProfile);
+  }, [schoolProfile]);
 
   // New Article Form state
   const [isAddingNews, setIsAddingNews] = useState(false);
@@ -625,21 +633,21 @@ export const AdminDashboard: React.FC = () => {
       contentString: '',
       author: 'Admin Madrasah',
       readTime: '3 Menit',
-      imageUrl: 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=800&q=80',
+      imageUrl: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=800&q=80',
       date: new Date().toISOString().split('T')[0]
     });
   };
 
-  // Headmaster Photo Upload
-  const handleHeadmasterPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Headmaster Photo Upload with Compression
+  const handleHeadmasterPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const result = ev.target?.result as string;
-        setProfileForm((prev) => ({ ...prev, headmasterPhotoUrl: result }));
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await compressImage(file, 1000, 1200, 0.85);
+        setProfileForm((prev) => ({ ...prev, headmasterPhotoUrl: compressed }));
+      } catch (err) {
+        console.error('Gagal mengompres foto kepala madrasah:', err);
+      }
     }
   };
 
@@ -2096,45 +2104,78 @@ export const AdminDashboard: React.FC = () => {
                   </div>
 
                   {/* Foto Kepala Madrasah */}
-                  <div className="bg-white p-4 rounded-xl border border-emerald-200/80 shadow-sm">
-                    <label className="block text-xs font-bold text-[#072217] mb-2">
-                      Foto Kepala Madrasah (Tampil pada Sambutan di Beranda Utama)
-                    </label>
+                  <div className="bg-white p-5 rounded-xl border border-emerald-200/80 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="block text-xs font-bold text-[#072217]">
+                          Foto Kepala Madrasah (Tampil pada Sambutan di Beranda Utama)
+                        </label>
+                        <p className="text-[11px] text-gray-500 mt-0.5">
+                          Atur foto Bapak {profileForm.headmasterName} lengkap dengan penyesuaian posisi, skala/zoom, dan mode bingkai.
+                        </p>
+                      </div>
+                      <span className="text-[11px] font-bold text-[#d4af37] bg-[#072217] px-2.5 py-1 rounded-md">
+                        Sambutan Beranda
+                      </span>
+                    </div>
 
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                      {/* Image Preview */}
-                      <div className="relative w-24 h-28 sm:w-28 sm:h-32 rounded-xl overflow-hidden border-2 border-[#d4af37] shadow-md bg-emerald-950 shrink-0 flex items-center justify-center">
-                        {profileForm.headmasterPhotoUrl ? (
-                          <img
-                            src={profileForm.headmasterPhotoUrl}
-                            alt={profileForm.headmasterName || 'Kepala Madrasah'}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="text-center p-2 text-white/70 text-[10px]">
-                            <UserIcon className="w-8 h-8 mx-auto text-[#d4af37] mb-1" />
-                            <span>Belum ada foto</span>
-                          </div>
-                        )}
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+                      {/* Live Frame Preview */}
+                      <div className="md:col-span-4 flex flex-col items-center">
+                        <div className="relative w-36 h-48 sm:w-40 sm:h-52 rounded-xl overflow-hidden border-2 border-[#d4af37] shadow-lg bg-[#072217] flex items-center justify-center">
+                          {profileForm.headmasterPhotoUrl ? (
+                            <img
+                              src={profileForm.headmasterPhotoUrl}
+                              alt={profileForm.headmasterName || 'Kepala Madrasah'}
+                              style={{
+                                transform: `scale(${(profileForm.headmasterPhotoScale ?? 100) / 100})`,
+                                transformOrigin:
+                                  profileForm.headmasterPhotoPosition === 'top'
+                                    ? 'top center'
+                                    : profileForm.headmasterPhotoPosition === 'bottom'
+                                    ? 'bottom center'
+                                    : 'center center',
+                              }}
+                              className={`w-full h-full transition-transform duration-200 ${
+                                profileForm.headmasterPhotoFit === 'contain' ? 'object-contain' : 'object-cover'
+                              } ${
+                                profileForm.headmasterPhotoPosition === 'top'
+                                  ? 'object-top'
+                                  : profileForm.headmasterPhotoPosition === 'bottom'
+                                  ? 'object-bottom'
+                                  : 'object-center'
+                              }`}
+                            />
+                          ) : (
+                            <div className="text-center p-2 text-white/70 text-[10px]">
+                              <UserIcon className="w-10 h-10 mx-auto text-[#d4af37] mb-1" />
+                              <span>Belum ada foto</span>
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-gray-400 mt-1.5 font-medium">
+                          Pratinjau Bingkai Sambutan
+                        </span>
                       </div>
 
                       {/* Controls */}
-                      <div className="flex-1 w-full space-y-2.5">
+                      <div className="md:col-span-8 space-y-3.5">
+                        {/* URL & Upload */}
                         <div>
-                          <label className="block text-[11px] font-semibold text-gray-600 mb-1">
-                            URL Gambar Foto (Bisa tautan langsung atau unggah file)
+                          <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                            URL Gambar Foto / Unggah dari Perangkat
                           </label>
                           <input
                             type="text"
                             value={profileForm.headmasterPhotoUrl || ''}
                             onChange={(e) => setProfileForm({ ...profileForm, headmasterPhotoUrl: e.target.value })}
-                            placeholder="https://... atau klik tombol unggah di bawah"
-                            className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg font-mono text-[11px]"
+                            placeholder="https://... tempelkan tautan langsung atau pilih file"
+                            className="w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg font-mono text-[11px]"
                           />
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2">
-                          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0b3c26] hover:bg-[#072217] text-[#f3e5ab] text-xs font-semibold rounded-lg shadow-sm transition-colors">
+                          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 bg-[#0b3c26] hover:bg-[#072217] text-[#f3e5ab] text-xs font-semibold rounded-lg shadow-sm transition-colors">
                             <Upload className="w-3.5 h-3.5" />
                             <span>Pilih Foto dari Perangkat</span>
                             <input
@@ -2145,34 +2186,139 @@ export const AdminDashboard: React.FC = () => {
                             />
                           </label>
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setProfileForm({
-                                ...profileForm,
-                                headmasterPhotoUrl:
-                                  'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80',
-                              })
-                            }
-                            className="px-2.5 py-1.5 border border-gray-300 hover:bg-gray-100 text-gray-700 text-xs rounded-lg transition-colors"
-                          >
-                            Gunakan Foto Contoh Ustadz
-                          </button>
-
                           {profileForm.headmasterPhotoUrl && (
                             <button
                               type="button"
                               onClick={() => setProfileForm({ ...profileForm, headmasterPhotoUrl: '' })}
-                              className="px-2.5 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-lg border border-red-200 transition-colors"
+                              className="px-2.5 py-2 text-xs text-red-600 hover:bg-red-50 rounded-lg border border-red-200 transition-colors"
                             >
                               Hapus Foto
                             </button>
                           )}
                         </div>
 
-                        <p className="text-[11px] text-gray-500">
-                          Format yang didukung: JPG, PNG, WEBP. Foto otomatis langsung disesuaikan ke bingkai resmi sambutan.
-                        </p>
+                        {/* Presets */}
+                        <div>
+                          <label className="block text-[11px] font-semibold text-gray-600 mb-1">
+                            Pilihan Cepat Foto Islami Formal:
+                          </label>
+                          <div className="flex flex-wrap gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setProfileForm({
+                                  ...profileForm,
+                                  headmasterPhotoUrl:
+                                    'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80',
+                                  headmasterPhotoPosition: 'top',
+                                  headmasterPhotoScale: 100,
+                                  headmasterPhotoFit: 'cover'
+                                })
+                              }
+                              className="px-2 py-1 text-[11px] border border-gray-300 bg-gray-50 hover:bg-emerald-50 hover:border-emerald-300 rounded-md text-gray-700"
+                            >
+                              Ustadz Berkacamata
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setProfileForm({
+                                  ...profileForm,
+                                  headmasterPhotoUrl:
+                                    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80',
+                                  headmasterPhotoPosition: 'top',
+                                  headmasterPhotoScale: 100,
+                                  headmasterPhotoFit: 'cover'
+                                })
+                              }
+                              className="px-2 py-1 text-[11px] border border-gray-300 bg-gray-50 hover:bg-emerald-50 hover:border-emerald-300 rounded-md text-gray-700"
+                            >
+                              Jas Pimpinan Formal
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setProfileForm({
+                                  ...profileForm,
+                                  headmasterPhotoUrl:
+                                    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80',
+                                  headmasterPhotoPosition: 'top',
+                                  headmasterPhotoScale: 100,
+                                  headmasterPhotoFit: 'cover'
+                                })
+                              }
+                              className="px-2 py-1 text-[11px] border border-gray-300 bg-gray-50 hover:bg-emerald-50 hover:border-emerald-300 rounded-md text-gray-700"
+                            >
+                              Pendidik Hangat Bersahaja
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Adjustments: Position, Zoom, Fit */}
+                        <div className="pt-2 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          {/* Position */}
+                          <div>
+                            <label className="block text-[10px] font-semibold text-gray-600 mb-1">
+                              Fokus Posisi:
+                            </label>
+                            <div className="grid grid-cols-3 gap-1">
+                              {(['top', 'center', 'bottom'] as const).map((pos) => (
+                                <button
+                                  key={pos}
+                                  type="button"
+                                  onClick={() => setProfileForm({ ...profileForm, headmasterPhotoPosition: pos })}
+                                  className={`py-1 text-[10px] font-semibold rounded border transition-colors ${
+                                    (profileForm.headmasterPhotoPosition || 'top') === pos
+                                      ? 'bg-[#0b3c26] text-white border-[#0b3c26]'
+                                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                                  }`}
+                                >
+                                  {pos === 'top' ? 'Atas' : pos === 'center' ? 'Tengah' : 'Bawah'}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Zoom Scale */}
+                          <div>
+                            <div className="flex justify-between text-[10px] font-semibold text-gray-600 mb-1">
+                              <span>Skala (Zoom):</span>
+                              <span className="text-[#0b3c26] font-mono">{profileForm.headmasterPhotoScale ?? 100}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="80"
+                              max="160"
+                              step="5"
+                              value={profileForm.headmasterPhotoScale ?? 100}
+                              onChange={(e) => setProfileForm({ ...profileForm, headmasterPhotoScale: Number(e.target.value) })}
+                              className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#0b3c26]"
+                            />
+                          </div>
+
+                          {/* Fit Mode */}
+                          <div>
+                            <label className="block text-[10px] font-semibold text-gray-600 mb-1">
+                              Mode Bingkai:
+                            </label>
+                            <div className="grid grid-cols-2 gap-1">
+                              {(['cover', 'contain'] as const).map((f) => (
+                                <button
+                                  key={f}
+                                  type="button"
+                                  onClick={() => setProfileForm({ ...profileForm, headmasterPhotoFit: f })}
+                                  className={`py-1 text-[10px] font-semibold rounded border transition-colors ${
+                                    (profileForm.headmasterPhotoFit || 'cover') === f
+                                      ? 'bg-[#0b3c26] text-white border-[#0b3c26]'
+                                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                                  }`}
+                                >
+                                  {f === 'cover' ? 'Penuh' : 'Utuh'}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>

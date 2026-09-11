@@ -34,7 +34,10 @@ export const SCHOOL_PROFILE: SchoolProfile = {
   headmasterName: "MUIN, S.Pd.I.",
   headmasterNip: "-",
   headmasterTitle: "Kepala Madrasah Ibtidaiyah Ma'arif Al Ihsan Soborejo",
-  headmasterPhotoUrl: "https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=800&q=80",
+  headmasterPhotoUrl: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80",
+  headmasterPhotoPosition: "top",
+  headmasterPhotoScale: 100,
+  headmasterPhotoFit: "cover",
   headmasterWelcome: [
     "Assalamu'alaikum Warahmatullahi Wabarakatuh.",
     "Bismillahirrohmanirrohim. Alhamdulillahi rabbil 'alamin, puji syukur senantiasa kita panjatkan ke hadirat Allah SWT, serta sholawat dan salam semoga tercurah kepada junjungan kita Nabi Muhammad SAW, keluarga, sahabat, dan pengikutnya hingga akhir zaman.",
