@@ -117,38 +117,45 @@ export async function upsertStaff(item: {
   role: string;
   category: string;
   nip?: string;
+  nipOrNuptk?: string;
   education?: string;
   subject?: string;
+  subjects?: string;
   photoUrl?: string;
   bio?: string;
   orderNum?: number;
+  order?: number;
 }) {
   try {
+    const nipVal = item.nip || item.nipOrNuptk || null;
+    const subjectVal = item.subject || item.subjects || null;
+    const orderNumVal = item.orderNum ?? item.order ?? 0;
+
     const result = await db.insert(staffMembers)
       .values({
         id: item.id,
         name: item.name,
         role: item.role,
-        category: item.category,
-        nip: item.nip || null,
+        category: item.category || 'Guru Kelas',
+        nip: nipVal,
         education: item.education || null,
-        subject: item.subject || null,
+        subject: subjectVal,
         photoUrl: item.photoUrl || null,
         bio: item.bio || null,
-        orderNum: item.orderNum ?? 0,
+        orderNum: orderNumVal,
       })
       .onConflictDoUpdate({
         target: staffMembers.id,
         set: {
           name: item.name,
           role: item.role,
-          category: item.category,
-          nip: item.nip || null,
+          category: item.category || 'Guru Kelas',
+          nip: nipVal,
           education: item.education || null,
-          subject: item.subject || null,
+          subject: subjectVal,
           photoUrl: item.photoUrl || null,
           bio: item.bio || null,
-          orderNum: item.orderNum ?? 0,
+          orderNum: orderNumVal,
         },
       })
       .returning();
@@ -182,10 +189,11 @@ export async function getNewsList() {
 export async function upsertNews(item: {
   id: string;
   title: string;
-  slug: string;
+  slug?: string;
   category: string;
-  excerpt: string;
-  content: string;
+  excerpt?: string;
+  summary?: string;
+  content: string | string[];
   date: string;
   author: string;
   imageUrl?: string;
@@ -193,16 +201,20 @@ export async function upsertNews(item: {
   isPublished?: boolean;
 }) {
   try {
+    const slugVal = item.slug || (item.title ? item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : `berita-${item.id}`);
+    const excerptVal = item.excerpt || item.summary || (typeof item.content === 'string' ? item.content.slice(0, 150) : '') || '';
+    const contentVal = Array.isArray(item.content) ? item.content.join('\n\n') : (item.content || '');
+
     const result = await db.insert(newsArticles)
       .values({
         id: item.id,
         title: item.title,
-        slug: item.slug,
-        category: item.category,
-        excerpt: item.excerpt,
-        content: item.content,
-        date: item.date,
-        author: item.author,
+        slug: slugVal,
+        category: item.category || 'Berita Madrasah',
+        excerpt: excerptVal,
+        content: contentVal,
+        date: item.date || new Date().toLocaleDateString('id-ID'),
+        author: item.author || 'Admin Madrasah',
         imageUrl: item.imageUrl || null,
         readTime: item.readTime || '3 menit',
         isPublished: item.isPublished ?? true,
@@ -211,12 +223,12 @@ export async function upsertNews(item: {
         target: newsArticles.id,
         set: {
           title: item.title,
-          slug: item.slug,
-          category: item.category,
-          excerpt: item.excerpt,
-          content: item.content,
-          date: item.date,
-          author: item.author,
+          slug: slugVal,
+          category: item.category || 'Berita Madrasah',
+          excerpt: excerptVal,
+          content: contentVal,
+          date: item.date || new Date().toLocaleDateString('id-ID'),
+          author: item.author || 'Admin Madrasah',
           imageUrl: item.imageUrl || null,
           readTime: item.readTime || '3 menit',
           isPublished: item.isPublished ?? true,

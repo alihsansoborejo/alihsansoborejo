@@ -22,8 +22,8 @@ import {
 const app = express();
 const PORT = 3000;
 
-app.use(express.json({ limit: '15mb' }));
-app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Real-time synchronization state & SSE clients
 let currentDataVersion = Date.now();
@@ -303,31 +303,35 @@ app.post('/api/sync-all', requireAuth, async (req: AuthRequest, res) => {
       newsList,
     } = req.body;
 
-    if (schoolProfile) await setAppSetting('school_profile', schoolProfile);
-    if (statsList !== undefined) await setAppSetting('stats_list', statsList);
-    if (programs) await setAppSetting('programs', programs);
-    if (extracurriculars) await setAppSetting('extracurriculars', extracurriculars);
-    if (achievements) await setAppSetting('achievements', achievements);
-    if (facilities) await setAppSetting('facilities', facilities);
-    if (gallery) await setAppSetting('gallery', gallery);
-    if (testimonials) await setAppSetting('testimonials', testimonials);
-    if (faqs) await setAppSetting('faqs', faqs);
+    const tasks: Promise<any>[] = [];
+
+    if (schoolProfile) tasks.push(setAppSetting('school_profile', schoolProfile));
+    if (statsList !== undefined) tasks.push(setAppSetting('stats_list', statsList));
+    if (programs) tasks.push(setAppSetting('programs', programs));
+    if (extracurriculars) tasks.push(setAppSetting('extracurriculars', extracurriculars));
+    if (achievements) tasks.push(setAppSetting('achievements', achievements));
+    if (facilities) tasks.push(setAppSetting('facilities', facilities));
+    if (gallery) tasks.push(setAppSetting('gallery', gallery));
+    if (testimonials) tasks.push(setAppSetting('testimonials', testimonials));
+    if (faqs) tasks.push(setAppSetting('faqs', faqs));
 
     if (staffList && Array.isArray(staffList)) {
       for (const s of staffList) {
         if (s.name && s.role) {
-          await upsertStaff(s).catch(() => {});
+          tasks.push(upsertStaff(s).catch((err) => console.warn('Sync staff item note:', err.message)));
         }
       }
     }
 
     if (newsList && Array.isArray(newsList)) {
       for (const n of newsList) {
-        if (n.title && n.content) {
-          await upsertNews(n).catch(() => {});
+        if (n.title) {
+          tasks.push(upsertNews(n).catch((err) => console.warn('Sync news item note:', err.message)));
         }
       }
     }
+
+    await Promise.all(tasks);
 
     notifyDataChanged('all');
     res.json({ success: true, message: 'Semua perubahan berhasil disinkronkan ke Cloud SQL Database.' });

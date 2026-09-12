@@ -294,7 +294,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
 
           // If user edited locally very recently, do not overwrite in-progress edits
-          if (Date.now() - lastLocalEditTimeRef.current < 1500) {
+          if (Date.now() - lastLocalEditTimeRef.current < 2500) {
+            setCloudSyncStatus('synced');
             return;
           }
 
@@ -330,7 +331,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Fallback: Supabase
       const remoteState = await loadFromSupabase();
       if (remoteState && remoteState.schoolProfile) {
-        if (Date.now() - lastLocalEditTimeRef.current < 1500) return;
+        if (Date.now() - lastLocalEditTimeRef.current < 2500) {
+          setCloudSyncStatus('synced');
+          return;
+        }
         isRemoteUpdating.current = true;
         setData(sanitizeAppState(remoteState));
         setCloudSyncStatus('synced');
@@ -343,6 +347,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const remoteState = await loadFromSupabase();
         if (remoteState && remoteState.schoolProfile) {
+          if (Date.now() - lastLocalEditTimeRef.current < 2500) {
+            setCloudSyncStatus('synced');
+            return;
+          }
           isRemoteUpdating.current = true;
           setData(sanitizeAppState(remoteState));
           setCloudSyncStatus('synced');
@@ -350,7 +358,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
       } catch (e) {}
-      setCloudSyncStatus('offline');
+      if (Date.now() - lastLocalEditTimeRef.current > 3000) {
+        setCloudSyncStatus('offline');
+      } else {
+        setCloudSyncStatus('synced');
+      }
     }
   }, []);
 
@@ -404,14 +416,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         newsList: data.newsList,
       };
 
-      const res = await apiRequest('/api/sync-all', {
+      const cloudSqlPromise = apiRequest('/api/sync-all', {
         method: 'POST',
         headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
         body: JSON.stringify(payload)
+      }).then(async (res) => {
+        if (!res.ok) {
+          const errText = await res.text().catch(() => '');
+          throw new Error(`Cloud SQL returned ${res.status}: ${errText}`);
+        }
+        return res;
       });
 
-      // Also persist to Supabase in parallel
-      saveAllToSupabase(data).catch((e) => console.warn('Supabase parallel save note:', e));
+      const supabasePromise = saveAllToSupabase(data);
+
+      const [cloudSqlRes, supabaseRes] = await Promise.allSettled([
+        cloudSqlPromise,
+        supabasePromise,
+      ]);
+
+      const cloudSqlSuccess = cloudSqlRes.status === 'fulfilled';
+      const supabaseSuccess = supabaseRes.status === 'fulfilled' && (supabaseRes.value as any)?.success !== false;
 
       // Broadcast across tabs in the same browser
       try {
@@ -420,23 +445,34 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         bc.close();
       } catch (e) {}
 
-      if (res.ok) {
+      if (cloudSqlSuccess || supabaseSuccess) {
         setCloudSyncStatus('synced');
         setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
         return true;
       } else {
-        setCloudSyncStatus('error');
+        console.warn('Both Cloud SQL and Supabase sync failed');
+        setCloudSyncStatus('offline');
         return false;
       }
     } catch (err) {
       console.error('Failed to push to Cloud SQL:', err);
-      saveAllToSupabase(data).catch(() => {});
-      setCloudSyncStatus('error');
+      saveAllToSupabase(data)
+        .then((res) => {
+          if (res?.success) {
+            setCloudSyncStatus('synced');
+            setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+          } else {
+            setCloudSyncStatus('offline');
+          }
+        })
+        .catch(() => {
+          setCloudSyncStatus('offline');
+        });
       return false;
     } finally {
       setTimeout(() => {
         isSelfPushingRef.current = false;
-      }, 500);
+      }, 2500);
     }
   }, [data]);
 
@@ -455,7 +491,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Auto debounce push to Cloud SQL + Supabase on every user action
     const timer = setTimeout(() => {
       pushAllToCloud();
-    }, 700);
+    }, 400);
 
     return () => clearTimeout(timer);
   }, [data, pushAllToCloud]);
@@ -470,13 +506,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         eventSource = new EventSource('/api/realtime/stream');
 
         eventSource.onopen = () => {
-          setCloudSyncStatus('connected');
+          setCloudSyncStatus((prev) => (prev === 'syncing' ? 'syncing' : 'connected'));
         };
 
         eventSource.onmessage = (event) => {
           try {
             const parsed = JSON.parse(event.data);
             if (parsed.type === 'data_changed') {
+              if (isSelfPushingRef.current || Date.now() - lastLocalEditTimeRef.current < 2500) {
+                return;
+              }
               // Silently refresh data from cloud if change came from another device/source
               refreshFromCloud(true);
             }
@@ -512,6 +551,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       channel = new BroadcastChannel('madrasah_live_channel');
       channel.onmessage = (event) => {
         if (event.data?.type === 'data_updated' && event.data.data) {
+          if (isSelfPushingRef.current || Date.now() - lastLocalEditTimeRef.current < 2500) {
+            return;
+          }
           isRemoteUpdating.current = true;
           setData(sanitizeAppState(event.data.data));
           setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
@@ -590,6 +632,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           'postgres_changes',
           { event: '*', schema: 'public', table: 'madrasah_store' },
           (payload) => {
+            if (isSelfPushingRef.current || Date.now() - lastLocalEditTimeRef.current < 2500) {
+              return;
+            }
             if (payload?.new && (payload.new as any).data) {
               const remoteData = (payload.new as any).data;
               isRemoteUpdating.current = true;
@@ -604,6 +649,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           'postgres_changes',
           { event: '*', schema: 'public', table: 'school_profile' },
           () => {
+            if (isSelfPushingRef.current || Date.now() - lastLocalEditTimeRef.current < 2500) {
+              return;
+            }
             pullFromSupabase(true);
           }
         )
@@ -611,6 +659,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           'postgres_changes',
           { event: '*', schema: 'public', table: 'staff_members' },
           () => {
+            if (isSelfPushingRef.current || Date.now() - lastLocalEditTimeRef.current < 2500) {
+              return;
+            }
             pullFromSupabase(true);
           }
         )
@@ -666,13 +717,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // School Profile
   const updateSchoolProfile = (partial: Partial<SchoolProfile>) => {
     lastLocalEditTimeRef.current = Date.now();
+    setCloudSyncStatus('syncing');
     setData((prev) => {
       const updated = { ...prev.schoolProfile, ...partial };
-      upsertSchoolProfileToSupabase(updated);
-      apiRequest('/api/settings/school_profile', {
-        method: 'POST',
-        body: JSON.stringify({ value: updated })
-      }).catch(() => {});
       return { ...prev, schoolProfile: updated };
     });
   };
@@ -680,33 +727,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Guru dan Tenaga Kependidikan (GTK)
   const addStaff = (item: Omit<StaffMember, 'id'>) => {
     lastLocalEditTimeRef.current = Date.now();
+    setCloudSyncStatus('syncing');
     const newItem: StaffMember = { ...item, id: generateUniqueId('staff') };
     setData((prev) => ({ ...prev, staffList: [...prev.staffList, newItem] }));
-    upsertStaffToSupabase(newItem);
-    apiRequest('/api/staff', {
-      method: 'POST',
-      body: JSON.stringify(newItem)
-    }).catch(() => {});
   };
 
   const updateStaff = (id: string, updated: Partial<StaffMember>) => {
     lastLocalEditTimeRef.current = Date.now();
-    setData((prev) => {
-      const updatedList = prev.staffList.map((s) => (s.id === id ? { ...s, ...updated } : s));
-      const target = updatedList.find((s) => s.id === id);
-      if (target) {
-        upsertStaffToSupabase(target);
-        apiRequest('/api/staff', {
-          method: 'POST',
-          body: JSON.stringify(target)
-        }).catch(() => {});
-      }
-      return { ...prev, staffList: updatedList };
-    });
+    setCloudSyncStatus('syncing');
+    setData((prev) => ({
+      ...prev,
+      staffList: prev.staffList.map((s) => (s.id === id ? { ...s, ...updated } : s)),
+    }));
   };
 
   const deleteStaff = (id: string) => {
     lastLocalEditTimeRef.current = Date.now();
+    setCloudSyncStatus('syncing');
     setData((prev) => ({
       ...prev,
       staffList: prev.staffList.filter((s) => s.id !== id),
@@ -718,196 +755,146 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Statistik Madrasah
   const setStatsList = (stats: StatItem[]) => {
     lastLocalEditTimeRef.current = Date.now();
+    setCloudSyncStatus('syncing');
     const clean = ensureUniqueIds(stats, 'stat');
-    setData((prev) => {
-      apiRequest('/api/settings/stats_list', {
-        method: 'POST',
-        body: JSON.stringify({ value: clean })
-      }).catch(() => {});
-      return { ...prev, statsList: clean };
-    });
+    setData((prev) => ({ ...prev, statsList: clean }));
   };
 
   const addStat = (item: Omit<StatItem, 'id'> & { id?: string }) => {
     lastLocalEditTimeRef.current = Date.now();
+    setCloudSyncStatus('syncing');
     const newItem: StatItem = { ...item, id: item.id && item.id.trim() ? item.id : generateUniqueId('stat') };
     setData((prev) => {
       const filtered = (prev.statsList || []).filter((s) => s.id !== newItem.id);
-      const nextStats = [...filtered, newItem];
-      apiRequest('/api/settings/stats_list', {
-        method: 'POST',
-        body: JSON.stringify({ value: nextStats })
-      }).catch(() => {});
-      return { ...prev, statsList: nextStats };
+      return { ...prev, statsList: [...filtered, newItem] };
     });
   };
 
   const updateStat = (id: string, updated: Partial<StatItem>) => {
     lastLocalEditTimeRef.current = Date.now();
-    setData((prev) => {
-      const nextStats = (prev.statsList || []).map((s) => (s.id === id ? { ...s, ...updated } : s));
-      apiRequest('/api/settings/stats_list', {
-        method: 'POST',
-        body: JSON.stringify({ value: nextStats })
-      }).catch(() => {});
-      return { ...prev, statsList: nextStats };
-    });
+    setCloudSyncStatus('syncing');
+    setData((prev) => ({
+      ...prev,
+      statsList: (prev.statsList || []).map((s) => (s.id === id ? { ...s, ...updated } : s)),
+    }));
   };
 
   const deleteStat = (id: string) => {
     lastLocalEditTimeRef.current = Date.now();
-    setData((prev) => {
-      const nextStats = (prev.statsList || []).filter((s) => s.id !== id);
-      apiRequest('/api/settings/stats_list', {
-        method: 'POST',
-        body: JSON.stringify({ value: nextStats })
-      }).catch(() => {});
-      return { ...prev, statsList: nextStats };
-    });
+    setCloudSyncStatus('syncing');
+    setData((prev) => ({
+      ...prev,
+      statsList: (prev.statsList || []).filter((s) => s.id !== id),
+    }));
   };
 
   // Programs
   const addProgram = (item: Omit<ProgramItem, 'id'>) => {
     lastLocalEditTimeRef.current = Date.now();
+    setCloudSyncStatus('syncing');
     const newItem: ProgramItem = { ...item, id: generateUniqueId('prog') };
-    setData((prev) => {
-      const nextPrograms = [newItem, ...prev.programs];
-      apiRequest('/api/settings/programs', {
-        method: 'POST',
-        body: JSON.stringify({ value: nextPrograms })
-      }).catch(() => {});
-      return { ...prev, programs: nextPrograms };
-    });
+    setData((prev) => ({
+      ...prev,
+      programs: [newItem, ...prev.programs],
+    }));
   };
 
   const updateProgram = (id: string, updated: Partial<ProgramItem>) => {
     lastLocalEditTimeRef.current = Date.now();
-    setData((prev) => {
-      const nextPrograms = prev.programs.map((p) => (p.id === id ? { ...p, ...updated } : p));
-      apiRequest('/api/settings/programs', {
-        method: 'POST',
-        body: JSON.stringify({ value: nextPrograms })
-      }).catch(() => {});
-      return { ...prev, programs: nextPrograms };
-    });
+    setCloudSyncStatus('syncing');
+    setData((prev) => ({
+      ...prev,
+      programs: prev.programs.map((p) => (p.id === id ? { ...p, ...updated } : p)),
+    }));
   };
 
   const deleteProgram = (id: string) => {
     lastLocalEditTimeRef.current = Date.now();
-    setData((prev) => {
-      const nextPrograms = prev.programs.filter((p) => p.id !== id);
-      apiRequest('/api/settings/programs', {
-        method: 'POST',
-        body: JSON.stringify({ value: nextPrograms })
-      }).catch(() => {});
-      return { ...prev, programs: nextPrograms };
-    });
+    setCloudSyncStatus('syncing');
+    setData((prev) => ({
+      ...prev,
+      programs: prev.programs.filter((p) => p.id !== id),
+    }));
   };
 
   // Extracurriculars
   const addExtracurricular = (item: Omit<ExtracurricularItem, 'id'>) => {
     lastLocalEditTimeRef.current = Date.now();
+    setCloudSyncStatus('syncing');
     const newItem: ExtracurricularItem = { ...item, id: generateUniqueId('ekskul') };
-    setData((prev) => {
-      const next = [...prev.extracurriculars, newItem];
-      apiRequest('/api/settings/extracurriculars', {
-        method: 'POST',
-        body: JSON.stringify({ value: next })
-      }).catch(() => {});
-      return { ...prev, extracurriculars: next };
-    });
+    setData((prev) => ({
+      ...prev,
+      extracurriculars: [...prev.extracurriculars, newItem],
+    }));
   };
 
   const updateExtracurricular = (id: string, updated: Partial<ExtracurricularItem>) => {
     lastLocalEditTimeRef.current = Date.now();
-    setData((prev) => {
-      const next = prev.extracurriculars.map((e) => (e.id === id ? { ...e, ...updated } : e));
-      apiRequest('/api/settings/extracurriculars', {
-        method: 'POST',
-        body: JSON.stringify({ value: next })
-      }).catch(() => {});
-      return { ...prev, extracurriculars: next };
-    });
+    setCloudSyncStatus('syncing');
+    setData((prev) => ({
+      ...prev,
+      extracurriculars: prev.extracurriculars.map((e) => (e.id === id ? { ...e, ...updated } : e)),
+    }));
   };
 
   const deleteExtracurricular = (id: string) => {
     lastLocalEditTimeRef.current = Date.now();
-    setData((prev) => {
-      const next = prev.extracurriculars.filter((e) => e.id !== id);
-      apiRequest('/api/settings/extracurriculars', {
-        method: 'POST',
-        body: JSON.stringify({ value: next })
-      }).catch(() => {});
-      return { ...prev, extracurriculars: next };
-    });
+    setCloudSyncStatus('syncing');
+    setData((prev) => ({
+      ...prev,
+      extracurriculars: prev.extracurriculars.filter((e) => e.id !== id),
+    }));
   };
 
   // Achievements
   const addAchievement = (item: Omit<AchievementItem, 'id'>) => {
     lastLocalEditTimeRef.current = Date.now();
+    setCloudSyncStatus('syncing');
     const newItem: AchievementItem = { ...item, id: generateUniqueId('ach') };
-    setData((prev) => {
-      const next = [newItem, ...prev.achievements];
-      apiRequest('/api/settings/achievements', {
-        method: 'POST',
-        body: JSON.stringify({ value: next })
-      }).catch(() => {});
-      return { ...prev, achievements: next };
-    });
+    setData((prev) => ({
+      ...prev,
+      achievements: [newItem, ...prev.achievements],
+    }));
   };
 
   const updateAchievement = (id: string, updated: Partial<AchievementItem>) => {
     lastLocalEditTimeRef.current = Date.now();
-    setData((prev) => {
-      const next = prev.achievements.map((a) => (a.id === id ? { ...a, ...updated } : a));
-      apiRequest('/api/settings/achievements', {
-        method: 'POST',
-        body: JSON.stringify({ value: next })
-      }).catch(() => {});
-      return { ...prev, achievements: next };
-    });
+    setCloudSyncStatus('syncing');
+    setData((prev) => ({
+      ...prev,
+      achievements: prev.achievements.map((a) => (a.id === id ? { ...a, ...updated } : a)),
+    }));
   };
 
   const deleteAchievement = (id: string) => {
     lastLocalEditTimeRef.current = Date.now();
-    setData((prev) => {
-      const next = prev.achievements.filter((a) => a.id !== id);
-      apiRequest('/api/settings/achievements', {
-        method: 'POST',
-        body: JSON.stringify({ value: next })
-      }).catch(() => {});
-      return { ...prev, achievements: next };
-    });
+    setCloudSyncStatus('syncing');
+    setData((prev) => ({
+      ...prev,
+      achievements: prev.achievements.filter((a) => a.id !== id),
+    }));
   };
 
   // News
   const addNews = (item: Omit<NewsArticle, 'id'>) => {
     lastLocalEditTimeRef.current = Date.now();
+    setCloudSyncStatus('syncing');
     const newItem: NewsArticle = { ...item, id: generateUniqueId('news') };
     setData((prev) => ({ ...prev, newsList: [newItem, ...prev.newsList] }));
-    apiRequest('/api/news', {
-      method: 'POST',
-      body: JSON.stringify(newItem)
-    }).catch(() => {});
   };
 
   const updateNews = (id: string, updated: Partial<NewsArticle>) => {
     lastLocalEditTimeRef.current = Date.now();
-    setData((prev) => {
-      const next = prev.newsList.map((n) => (n.id === id ? { ...n, ...updated } : n));
-      const target = next.find((n) => n.id === id);
-      if (target) {
-        apiRequest('/api/news', {
-          method: 'POST',
-          body: JSON.stringify(target)
-        }).catch(() => {});
-      }
-      return { ...prev, newsList: next };
-    });
+    setCloudSyncStatus('syncing');
+    setData((prev) => ({
+      ...prev,
+      newsList: prev.newsList.map((n) => (n.id === id ? { ...n, ...updated } : n)),
+    }));
   };
 
   const deleteNews = (id: string) => {
     lastLocalEditTimeRef.current = Date.now();
+    setCloudSyncStatus('syncing');
     setData((prev) => ({
       ...prev,
       newsList: prev.newsList.filter((n) => n.id !== id),
@@ -918,153 +905,117 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Facilities
   const addFacility = (item: Omit<FacilityItem, 'id'>) => {
     lastLocalEditTimeRef.current = Date.now();
+    setCloudSyncStatus('syncing');
     const newItem: FacilityItem = { ...item, id: generateUniqueId('fac') };
-    setData((prev) => {
-      const next = [...prev.facilities, newItem];
-      apiRequest('/api/settings/facilities', {
-        method: 'POST',
-        body: JSON.stringify({ value: next })
-      }).catch(() => {});
-      return { ...prev, facilities: next };
-    });
+    setData((prev) => ({
+      ...prev,
+      facilities: [...prev.facilities, newItem],
+    }));
   };
 
   const updateFacility = (id: string, updated: Partial<FacilityItem>) => {
     lastLocalEditTimeRef.current = Date.now();
-    setData((prev) => {
-      const next = prev.facilities.map((f) => (f.id === id ? { ...f, ...updated } : f));
-      apiRequest('/api/settings/facilities', {
-        method: 'POST',
-        body: JSON.stringify({ value: next })
-      }).catch(() => {});
-      return { ...prev, facilities: next };
-    });
+    setCloudSyncStatus('syncing');
+    setData((prev) => ({
+      ...prev,
+      facilities: prev.facilities.map((f) => (f.id === id ? { ...f, ...updated } : f)),
+    }));
   };
 
   const deleteFacility = (id: string) => {
     lastLocalEditTimeRef.current = Date.now();
-    setData((prev) => {
-      const next = prev.facilities.filter((f) => f.id !== id);
-      apiRequest('/api/settings/facilities', {
-        method: 'POST',
-        body: JSON.stringify({ value: next })
-      }).catch(() => {});
-      return { ...prev, facilities: next };
-    });
+    setCloudSyncStatus('syncing');
+    setData((prev) => ({
+      ...prev,
+      facilities: prev.facilities.filter((f) => f.id !== id),
+    }));
   };
 
   // Gallery
   const addGalleryItem = (item: Omit<GalleryItem, 'id'>) => {
     lastLocalEditTimeRef.current = Date.now();
+    setCloudSyncStatus('syncing');
     const newItem: GalleryItem = { ...item, id: generateUniqueId('gal') };
-    setData((prev) => {
-      const next = [newItem, ...prev.gallery];
-      apiRequest('/api/settings/gallery', {
-        method: 'POST',
-        body: JSON.stringify({ value: next })
-      }).catch(() => {});
-      return { ...prev, gallery: next };
-    });
+    setData((prev) => ({
+      ...prev,
+      gallery: [newItem, ...prev.gallery],
+    }));
   };
 
   const updateGalleryItem = (id: string, updated: Partial<GalleryItem>) => {
     lastLocalEditTimeRef.current = Date.now();
-    setData((prev) => {
-      const next = prev.gallery.map((g) => (g.id === id ? { ...g, ...updated } : g));
-      apiRequest('/api/settings/gallery', {
-        method: 'POST',
-        body: JSON.stringify({ value: next })
-      }).catch(() => {});
-      return { ...prev, gallery: next };
-    });
+    setCloudSyncStatus('syncing');
+    setData((prev) => ({
+      ...prev,
+      gallery: prev.gallery.map((g) => (g.id === id ? { ...g, ...updated } : g)),
+    }));
   };
 
   const deleteGalleryItem = (id: string) => {
     lastLocalEditTimeRef.current = Date.now();
-    setData((prev) => {
-      const next = prev.gallery.filter((g) => g.id !== id);
-      apiRequest('/api/settings/gallery', {
-        method: 'POST',
-        body: JSON.stringify({ value: next })
-      }).catch(() => {});
-      return { ...prev, gallery: next };
-    });
+    setCloudSyncStatus('syncing');
+    setData((prev) => ({
+      ...prev,
+      gallery: prev.gallery.filter((g) => g.id !== id),
+    }));
   };
 
   // Testimonials
   const addTestimonial = (item: Omit<TestimonialItem, 'id'>) => {
     lastLocalEditTimeRef.current = Date.now();
+    setCloudSyncStatus('syncing');
     const newItem: TestimonialItem = { ...item, id: generateUniqueId('testi') };
-    setData((prev) => {
-      const next = [...prev.testimonials, newItem];
-      apiRequest('/api/settings/testimonials', {
-        method: 'POST',
-        body: JSON.stringify({ value: next })
-      }).catch(() => {});
-      return { ...prev, testimonials: next };
-    });
+    setData((prev) => ({
+      ...prev,
+      testimonials: [...prev.testimonials, newItem],
+    }));
   };
 
   const updateTestimonial = (id: string, updated: Partial<TestimonialItem>) => {
     lastLocalEditTimeRef.current = Date.now();
-    setData((prev) => {
-      const next = prev.testimonials.map((t) => (t.id === id ? { ...t, ...updated } : t));
-      apiRequest('/api/settings/testimonials', {
-        method: 'POST',
-        body: JSON.stringify({ value: next })
-      }).catch(() => {});
-      return { ...prev, testimonials: next };
-    });
+    setCloudSyncStatus('syncing');
+    setData((prev) => ({
+      ...prev,
+      testimonials: prev.testimonials.map((t) => (t.id === id ? { ...t, ...updated } : t)),
+    }));
   };
 
   const deleteTestimonial = (id: string) => {
     lastLocalEditTimeRef.current = Date.now();
-    setData((prev) => {
-      const next = prev.testimonials.filter((t) => t.id !== id);
-      apiRequest('/api/settings/testimonials', {
-        method: 'POST',
-        body: JSON.stringify({ value: next })
-      }).catch(() => {});
-      return { ...prev, testimonials: next };
-    });
+    setCloudSyncStatus('syncing');
+    setData((prev) => ({
+      ...prev,
+      testimonials: prev.testimonials.filter((t) => t.id !== id),
+    }));
   };
 
   // FAQ
   const addFAQ = (item: Omit<FAQItem, 'id'>) => {
     lastLocalEditTimeRef.current = Date.now();
+    setCloudSyncStatus('syncing');
     const newItem: FAQItem = { ...item, id: generateUniqueId('faq') };
-    setData((prev) => {
-      const next = [...prev.faqs, newItem];
-      apiRequest('/api/settings/faqs', {
-        method: 'POST',
-        body: JSON.stringify({ value: next })
-      }).catch(() => {});
-      return { ...prev, faqs: next };
-    });
+    setData((prev) => ({
+      ...prev,
+      faqs: [...prev.faqs, newItem],
+    }));
   };
 
   const updateFAQ = (id: string, updated: Partial<FAQItem>) => {
     lastLocalEditTimeRef.current = Date.now();
-    setData((prev) => {
-      const next = prev.faqs.map((f) => (f.id === id ? { ...f, ...updated } : f));
-      apiRequest('/api/settings/faqs', {
-        method: 'POST',
-        body: JSON.stringify({ value: next })
-      }).catch(() => {});
-      return { ...prev, faqs: next };
-    });
+    setCloudSyncStatus('syncing');
+    setData((prev) => ({
+      ...prev,
+      faqs: prev.faqs.map((f) => (f.id === id ? { ...f, ...updated } : f)),
+    }));
   };
 
   const deleteFAQ = (id: string) => {
     lastLocalEditTimeRef.current = Date.now();
-    setData((prev) => {
-      const next = prev.faqs.filter((f) => f.id !== id);
-      apiRequest('/api/settings/faqs', {
-        method: 'POST',
-        body: JSON.stringify({ value: next })
-      }).catch(() => {});
-      return { ...prev, faqs: next };
-    });
+    setCloudSyncStatus('syncing');
+    setData((prev) => ({
+      ...prev,
+      faqs: prev.faqs.filter((f) => f.id !== id),
+    }));
   };
 
   // PPDB Registrations (Real-time Cloud SQL Sync)
@@ -1119,6 +1070,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updatePPDBStatus = async (id: string, status: PPDBRegistration['status'], notes?: string) => {
     lastLocalEditTimeRef.current = Date.now();
+    setCloudSyncStatus('syncing');
     setData((prev) => ({
       ...prev,
       ppdbRegistrations: prev.ppdbRegistrations.map((r) =>
@@ -1132,6 +1084,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify({ id, status, notes })
       });
       setCloudSyncStatus('synced');
+      setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
     } catch (err) {
       console.error('Failed to update PPDB status online:', err);
     }
@@ -1139,6 +1092,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const deletePPDBRegistration = async (id: string) => {
     lastLocalEditTimeRef.current = Date.now();
+    setCloudSyncStatus('syncing');
     setData((prev) => ({
       ...prev,
       ppdbRegistrations: prev.ppdbRegistrations.filter((r) => r.id !== id),
@@ -1147,6 +1101,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await apiRequest(`/api/ppdb/${id}`, { method: 'DELETE' });
       setCloudSyncStatus('synced');
+      setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
     } catch (err) {
       console.error('Failed to delete PPDB online:', err);
     }
