@@ -1,5 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { saveAllToSupabase, loadFromSupabase, supabase } from '../lib/supabase';
+import {
+  saveAllToSupabase,
+  loadFromSupabase,
+  supabase,
+  CLIENT_INSTANCE_ID,
+  broadcastSupabaseChange,
+  upsertStaffToSupabase,
+  deleteStaffFromSupabase,
+  upsertSchoolProfileToSupabase
+} from '../lib/supabase';
 import {
   SchoolProfile,
   ProgramItem,
@@ -291,8 +300,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           isRemoteUpdating.current = true;
           setData((prev) => {
+            const rawProfile = { ...prev.schoolProfile, ...(onlineData.schoolProfile || {}) };
+            if (!rawProfile.logoUrl || rawProfile.logoUrl.includes('wikimedia.org')) {
+              rawProfile.logoUrl = '/assets/logo-maarif.svg';
+            }
+
             const sanitized = sanitizeAppState({
-              schoolProfile: { ...prev.schoolProfile, ...(onlineData.schoolProfile || {}) },
+              schoolProfile: rawProfile,
               staffList: onlineData.staffList && onlineData.staffList.length > 0 ? onlineData.staffList : prev.staffList,
               statsList: onlineData.statsList && onlineData.statsList.length > 0 ? onlineData.statsList : prev.statsList,
               programs: onlineData.programs && onlineData.programs.length > 0 ? onlineData.programs : prev.programs,
@@ -545,11 +559,32 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [refreshFromCloud]);
 
-  // 4. Supabase Realtime Channel
+  // 4. Supabase Realtime Channel: Broadcast & Postgres Changes for sub-second cross-device sync
   useEffect(() => {
-    let sub: any = null;
+    let broadcastSub: any = null;
+    let dbSub: any = null;
+
     try {
-      sub = supabase
+      // Fast Realtime Broadcast channel (works on all devices without publication setup)
+      broadcastSub = supabase
+        .channel('madrasah_live_broadcast')
+        .on('broadcast', { event: 'data_changed' }, async (eventPayload: any) => {
+          const sender = eventPayload?.payload?.senderId;
+          if (sender === CLIENT_INSTANCE_ID) {
+            return;
+          }
+          console.log('[Supabase Realtime] Multi-device update detected:', eventPayload);
+          const remoteState = await loadFromSupabase();
+          if (remoteState && remoteState.schoolProfile) {
+            isRemoteUpdating.current = true;
+            setData((prev) => sanitizeAppState({ ...prev, ...remoteState }));
+            setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+          }
+        })
+        .subscribe();
+
+      // Postgres changes channel for database-level events
+      dbSub = supabase
         .channel('madrasah_realtime_db')
         .on(
           'postgres_changes',
@@ -561,17 +596,34 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setData((prev) => sanitizeAppState({ ...prev, ...remoteData }));
               setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
             } else {
-              refreshFromCloud(true);
+              pullFromSupabase(true);
             }
           }
         )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'school_profile' },
+          () => {
+            pullFromSupabase(true);
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'staff_members' },
+          () => {
+            pullFromSupabase(true);
+          }
+        )
         .subscribe();
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Realtime subscription error:', e);
+    }
 
     return () => {
-      if (sub) supabase.removeChannel(sub);
+      if (broadcastSub) supabase.removeChannel(broadcastSub);
+      if (dbSub) supabase.removeChannel(dbSub);
     };
-  }, [refreshFromCloud]);
+  }, []);
 
   // Explicit Sync to Supabase
   const syncToSupabase = async (): Promise<{ success: boolean; message: string }> => {
@@ -589,9 +641,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Pull data from Supabase
-  const pullFromSupabase = async (): Promise<boolean> => {
+  const pullFromSupabase = async (silent: boolean = false): Promise<boolean> => {
     try {
-      setCloudSyncStatus('syncing');
+      if (!silent) setCloudSyncStatus('syncing');
       const remoteState = await loadFromSupabase();
       if (remoteState && remoteState.schoolProfile) {
         const cleanState = sanitizeAppState(remoteState);
@@ -616,6 +668,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     lastLocalEditTimeRef.current = Date.now();
     setData((prev) => {
       const updated = { ...prev.schoolProfile, ...partial };
+      upsertSchoolProfileToSupabase(updated);
       apiRequest('/api/settings/school_profile', {
         method: 'POST',
         body: JSON.stringify({ value: updated })
@@ -629,6 +682,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     lastLocalEditTimeRef.current = Date.now();
     const newItem: StaffMember = { ...item, id: generateUniqueId('staff') };
     setData((prev) => ({ ...prev, staffList: [...prev.staffList, newItem] }));
+    upsertStaffToSupabase(newItem);
     apiRequest('/api/staff', {
       method: 'POST',
       body: JSON.stringify(newItem)
@@ -641,6 +695,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updatedList = prev.staffList.map((s) => (s.id === id ? { ...s, ...updated } : s));
       const target = updatedList.find((s) => s.id === id);
       if (target) {
+        upsertStaffToSupabase(target);
         apiRequest('/api/staff', {
           method: 'POST',
           body: JSON.stringify(target)
@@ -656,6 +711,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       staffList: prev.staffList.filter((s) => s.id !== id),
     }));
+    deleteStaffFromSupabase(id);
     apiRequest(`/api/staff/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 

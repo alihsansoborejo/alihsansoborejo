@@ -633,20 +633,207 @@ export async function saveAllToSupabase(state: AppStorageState): Promise<{ succe
   }
 }
 
+export const CLIENT_INSTANCE_ID =
+  typeof window !== 'undefined'
+    ? 'client_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now()
+    : 'server_' + Math.random().toString(36).substring(2, 9);
+
+// Dedicated Realtime Broadcast Channel for instant sub-second multi-device sync
+export const realtimeBroadcastChannel = supabase.channel('madrasah_live_broadcast');
+realtimeBroadcastChannel.subscribe();
+
 /**
- * Load state from Supabase
+ * Broadcast an instant change event across all connected devices
+ */
+export async function broadcastSupabaseChange(table: string, payload?: any) {
+  try {
+    await realtimeBroadcastChannel.send({
+      type: 'broadcast',
+      event: 'data_changed',
+      payload: {
+        table,
+        timestamp: Date.now(),
+        senderId: CLIENT_INSTANCE_ID,
+        data: payload,
+      },
+    });
+  } catch (err) {
+    console.warn('Supabase broadcast notice:', err);
+  }
+}
+
+/**
+ * Direct Upsert Single Staff Member to Supabase
+ */
+export async function upsertStaffToSupabase(staff: any) {
+  try {
+    await supabase.from('staff_members').upsert({
+      id: staff.id,
+      name: staff.name,
+      role: staff.role,
+      category: staff.category,
+      nip_or_nuptk: staff.nipOrNuptk || null,
+      education: staff.education || null,
+      subjects: staff.subjects || null,
+      photo_url: staff.photoUrl || null,
+      phone: staff.phone || null,
+      order_num: staff.order ?? 99,
+    });
+    broadcastSupabaseChange('staff_members', staff);
+  } catch (err) {
+    console.warn('Failed to upsert staff to Supabase:', err);
+  }
+}
+
+/**
+ * Direct Delete Single Staff Member from Supabase
+ */
+export async function deleteStaffFromSupabase(id: string) {
+  try {
+    await supabase.from('staff_members').delete().eq('id', id);
+    broadcastSupabaseChange('staff_members', { deletedId: id });
+  } catch (err) {
+    console.warn('Failed to delete staff from Supabase:', err);
+  }
+}
+
+/**
+ * Direct Upsert School Profile to Supabase
+ */
+export async function upsertSchoolProfileToSupabase(sp: any) {
+  try {
+    await supabase.from('school_profile').upsert({
+      id: 'main',
+      nsm: sp.nsm || null,
+      npsn: sp.npsn || null,
+      name: sp.name,
+      short_name: sp.shortName || null,
+      tagline: sp.tagline || null,
+      logo_url: sp.logoUrl || null,
+      email: sp.email || null,
+      phone: sp.phone || null,
+      whatsapp: sp.whatsapp || null,
+      address: sp.address || null,
+      village: sp.village || null,
+      district: sp.district || null,
+      regency: sp.regency || null,
+      province: sp.province || null,
+      postal_code: sp.postalCode || null,
+      akreditasi: sp.accreditation || null,
+      headmaster_name: sp.headmasterName || null,
+      headmaster_nip: sp.headmasterNip || null,
+      headmaster_title: sp.headmasterTitle || null,
+      headmaster_photo: sp.headmasterPhotoUrl || null,
+      headmaster_welcome: sp.headmasterWelcome || [],
+      vision: sp.vision || null,
+      missions: sp.missions || [],
+      goals: sp.goals || [],
+      history: sp.history || [],
+      core_values: sp.coreValues || [],
+      updated_at: new Date().toISOString(),
+    });
+    broadcastSupabaseChange('school_profile', sp);
+  } catch (err) {
+    console.warn('Failed to upsert school profile to Supabase:', err);
+  }
+}
+
+/**
+ * Load state from Supabase with robust multi-table fallback
  */
 export async function loadFromSupabase(): Promise<AppStorageState | null> {
   try {
-    const { data, error } = await supabase
+    // 1. Fetch snapshot from madrasah_store
+    const storePromise = supabase
       .from('madrasah_store')
       .select('data')
       .eq('id', 'main')
       .single();
 
-    if (!error && data?.data) {
-      return data.data as AppStorageState;
+    // 2. In parallel, fetch individual relational tables for high fidelity
+    const profilePromise = supabase
+      .from('school_profile')
+      .select('*')
+      .eq('id', 'main')
+      .single();
+
+    const staffPromise = supabase
+      .from('staff_members')
+      .select('*')
+      .order('order_num', { ascending: true });
+
+    const [storeRes, profileRes, staffRes] = await Promise.allSettled([
+      storePromise,
+      profilePromise,
+      staffPromise,
+    ]);
+
+    let state: AppStorageState | null = null;
+
+    if (storeRes.status === 'fulfilled' && storeRes.value.data?.data) {
+      state = storeRes.value.data.data as AppStorageState;
     }
+
+    // If no store snapshot exists yet, initialize minimal empty structure
+    if (!state) {
+      state = {} as any;
+    }
+
+    // Merge School Profile if retrieved from relational table
+    if (profileRes.status === 'fulfilled' && profileRes.value.data) {
+      const p = profileRes.value.data;
+      state.schoolProfile = {
+        ...(state.schoolProfile || {}),
+        name: p.name || state.schoolProfile?.name || "MI Ma'arif Al Ihsan Soborejo",
+        shortName: p.short_name || state.schoolProfile?.shortName || "MI Al Ihsan Soborejo",
+        tagline: p.tagline || state.schoolProfile?.tagline || "",
+        logoUrl: p.logo_url || state.schoolProfile?.logoUrl || "/assets/logo-maarif.svg",
+        npsn: p.npsn || state.schoolProfile?.npsn || "60713037",
+        nsm: p.nsm || state.schoolProfile?.nsm || "111233230053",
+        accreditation: p.akreditasi || state.schoolProfile?.accreditation || "Terakreditasi Baik",
+        email: p.email || state.schoolProfile?.email || "mialihsansoborejo@gmail.com",
+        phone: p.phone || state.schoolProfile?.phone || "085876543210",
+        whatsapp: p.whatsapp || state.schoolProfile?.whatsapp || "6285876543210",
+        address: p.address || state.schoolProfile?.address || "Soborejo, Pringsurat",
+        village: p.village || state.schoolProfile?.village || "Soborejo",
+        district: p.district || state.schoolProfile?.district || "Pringsurat",
+        regency: p.regency || state.schoolProfile?.regency || "Kabupaten Temanggung",
+        province: p.province || state.schoolProfile?.province || "Jawa Tengah",
+        postalCode: p.postal_code || state.schoolProfile?.postalCode || "56272",
+        headmasterName: p.headmaster_name || state.schoolProfile?.headmasterName || "MUIN, S.Pd.I.",
+        headmasterNip: p.headmaster_nip || state.schoolProfile?.headmasterNip || "-",
+        headmasterTitle: p.headmaster_title || state.schoolProfile?.headmasterTitle || "Kepala Madrasah",
+        headmasterPhotoUrl: p.headmaster_photo || state.schoolProfile?.headmasterPhotoUrl || "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80",
+        headmasterWelcome: p.headmaster_welcome?.length ? p.headmaster_welcome : state.schoolProfile?.headmasterWelcome || [],
+        vision: p.vision || state.schoolProfile?.vision || "",
+        missions: p.missions?.length ? p.missions : state.schoolProfile?.missions || [],
+        goals: p.goals?.length ? p.goals : state.schoolProfile?.goals || [],
+        history: p.history?.length ? p.history : state.schoolProfile?.history || [],
+        coreValues: p.core_values?.length ? p.core_values : state.schoolProfile?.coreValues || [],
+      };
+    }
+
+    // Merge Staff Members (GTK) if relational table has rows
+    if (staffRes.status === 'fulfilled' && staffRes.value.data && staffRes.value.data.length > 0) {
+      state.staffList = staffRes.value.data.map((s: any, idx: number) => ({
+        id: s.id,
+        name: s.name,
+        role: s.role,
+        category: s.category as any,
+        nipOrNuptk: s.nip_or_nuptk || '-',
+        education: s.education || '',
+        subjects: s.subjects || '',
+        photoUrl: s.photo_url || 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80',
+        phone: s.phone || '',
+        order: s.order_num ?? (idx + 1),
+        status: 'Aktif' as const,
+      }));
+    }
+
+    if (state.schoolProfile || (state.staffList && state.staffList.length > 0)) {
+      return state;
+    }
+
     return null;
   } catch (err) {
     console.warn('Could not load from Supabase:', err);

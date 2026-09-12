@@ -69,8 +69,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPPDB, activeSection = 'ber
                 alt="Logo MI Ma'arif Al Ihsan Soborejo"
                 className="w-full h-full object-contain p-1"
                 onError={(e) => {
-                  // Fallback to emblem if image fails
-                  (e.target as HTMLImageElement).style.display = 'none';
+                  (e.target as HTMLImageElement).src = '/assets/logo-maarif.svg';
                 }}
               />
             ) : (

@@ -294,8 +294,28 @@ export async function getAllMadrasahOnlineData() {
       settingsMap[row.settingKey] = row.settingValue;
     });
 
+    const activeProfile = settingsMap['school_profile'] || SCHOOL_PROFILE;
+    // Ensure logoUrl is present and valid
+    if (!activeProfile.logoUrl || activeProfile.logoUrl.includes('wikimedia.org')) {
+      activeProfile.logoUrl = '/assets/logo-maarif.svg';
+    }
+
+    const mappedStaff = dbStaff.length > 0 ? dbStaff.map((s, idx) => ({
+      id: s.id,
+      name: s.name,
+      role: s.role,
+      category: s.category as any,
+      nipOrNuptk: s.nip || (s as any).nipOrNuptk || '-',
+      education: s.education || '',
+      subjects: s.subject || (s as any).subjects || '',
+      photoUrl: s.photoUrl || '',
+      phone: (s as any).phone || '',
+      order: s.orderNum ?? (s as any).order ?? (idx + 1),
+      status: 'Aktif' as const,
+    })) : STAFF_DATA;
+
     return {
-      schoolProfile: settingsMap['school_profile'] || SCHOOL_PROFILE,
+      schoolProfile: activeProfile,
       statsList: settingsMap['stats_list'] ?? STATS_DATA,
       programs: settingsMap['programs'] || PROGRAMS_DATA,
       extracurriculars: settingsMap['extracurriculars'] || EXTRACURRICULARS,
@@ -304,7 +324,7 @@ export async function getAllMadrasahOnlineData() {
       gallery: settingsMap['gallery'] || GALLERY_DATA,
       testimonials: settingsMap['testimonials'] || TESTIMONIALS,
       faqs: settingsMap['faqs'] || FAQ_DATA,
-      staffList: dbStaff.length > 0 ? dbStaff : STAFF_DATA,
+      staffList: mappedStaff,
       newsList: dbNews.length > 0 ? dbNews : INITIAL_NEWS,
       ppdbRegistrations: dbPPDB.length > 0 ? dbPPDB : INITIAL_PPDB_REGISTRATIONS,
     };
@@ -314,12 +334,12 @@ export async function getAllMadrasahOnlineData() {
   }
 }
 
-// Seed initial baseline into Cloud SQL if empty
+// Seed initial baseline into Cloud SQL if empty or incomplete
 export async function seedInitialDatabaseIfEmpty() {
   try {
-    const existingStaff = await db.select().from(staffMembers).limit(1);
-    if (existingStaff.length === 0) {
-      console.log('Seeding initial staff members into Cloud SQL...');
+    const existingStaff = await db.select().from(staffMembers);
+    if (existingStaff.length < STAFF_DATA.length) {
+      console.log('Seeding / updating full dewan guru & staf (GTK) into Cloud SQL...');
       for (const s of STAFF_DATA) {
         await db.insert(staffMembers).values({
           id: s.id,
@@ -332,7 +352,19 @@ export async function seedInitialDatabaseIfEmpty() {
           photoUrl: s.photoUrl || null,
           bio: null,
           orderNum: s.order || 0,
-        }).onConflictDoNothing();
+        }).onConflictDoUpdate({
+          target: staffMembers.id,
+          set: {
+            name: s.name,
+            role: s.role,
+            category: s.category,
+            nip: s.nipOrNuptk || null,
+            education: s.education || null,
+            subject: s.subjects || null,
+            photoUrl: s.photoUrl || null,
+            orderNum: s.order || 0,
+          }
+        });
       }
     }
 
@@ -381,9 +413,12 @@ export async function seedInitialDatabaseIfEmpty() {
       }
     }
 
-    const existingProfile = await getAppSetting('school_profile');
-    if (!existingProfile) {
-      await setAppSetting('school_profile', SCHOOL_PROFILE);
+    const existingProfile = (await getAppSetting('school_profile')) as any;
+    if (!existingProfile || !existingProfile.logoUrl || String(existingProfile.logoUrl).includes('wikimedia.org')) {
+      await setAppSetting('school_profile', {
+        ...(existingProfile || SCHOOL_PROFILE),
+        logoUrl: (existingProfile?.logoUrl && !String(existingProfile.logoUrl).includes('wikimedia.org')) ? existingProfile.logoUrl : '/assets/logo-maarif.svg'
+      });
     }
     const existingStats = await getAppSetting('stats_list');
     if (!existingStats) {

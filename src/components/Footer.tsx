@@ -28,8 +28,15 @@ export const Footer: React.FC<FooterProps> = ({ onOpenPPDB }) => {
           {/* Column 1: About */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-900 border border-[#d4af37] flex items-center justify-center text-[#d4af37] font-bold text-base">
-                MI
+              <div className="w-11 h-11 rounded-xl bg-white border border-[#d4af37] flex items-center justify-center overflow-hidden shrink-0 p-1 shadow-sm">
+                <img
+                  src={schoolProfile.logoUrl || '/assets/logo-maarif.svg'}
+                  alt="Logo Madrasah"
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/assets/logo-maarif.svg';
+                  }}
+                />
               </div>
               <div>
                 <h3 className="font-heading text-lg font-bold text-white tracking-wide">

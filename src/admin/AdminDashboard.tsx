@@ -651,6 +651,40 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  // Logo Upload with SVG and Image Support
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        if (file.type.includes('svg') || file.name.endsWith('.svg')) {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            setProfileForm((prev) => ({ ...prev, logoUrl: ev.target?.result as string }));
+          };
+          reader.readAsDataURL(file);
+        } else {
+          const compressed = await compressImage(file, 600, 600, 0.9);
+          setProfileForm((prev) => ({ ...prev, logoUrl: compressed }));
+        }
+      } catch (err) {
+        console.error('Gagal memproses unggah logo:', err);
+      }
+    }
+  };
+
+  // Staff (GTK) Photo Upload with Compression
+  const handleStaffPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        const compressed = await compressImage(file, 800, 1000, 0.85);
+        setStaffForm((prev) => ({ ...prev, photoUrl: compressed }));
+      } catch (err) {
+        console.error('Gagal mengompres foto GTK:', err);
+      }
+    }
+  };
+
   // Achievement Handlers
   const handleAchFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1910,15 +1944,15 @@ export const AdminDashboard: React.FC = () => {
                   </h3>
 
                   {/* Logo Management */}
-                  <div className="mb-4 p-3 bg-white rounded-lg border border-gray-200 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                    <div className="w-16 h-16 rounded-xl border-2 border-[#d4af37] bg-white flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+                  <div className="mb-4 p-4 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <div className="w-20 h-20 rounded-xl border-2 border-[#d4af37] bg-emerald-50/50 flex items-center justify-center overflow-hidden shrink-0 shadow-sm p-1.5">
                       {profileForm.logoUrl ? (
                         <img
                           src={profileForm.logoUrl}
                           alt="Pratinjau Logo"
-                          className="w-full h-full object-contain p-1"
+                          className="w-full h-full object-contain"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Logo_Nahdlatul_Ulama.svg/400px-Logo_Nahdlatul_Ulama.svg.png';
+                            (e.target as HTMLImageElement).src = '/assets/logo-maarif.svg';
                           }}
                         />
                       ) : (
@@ -1927,30 +1961,50 @@ export const AdminDashboard: React.FC = () => {
                         </div>
                       )}
                     </div>
-                    <div className="flex-1 w-full">
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        URL Logo Madrasah (Ditampilkan pada Navbar & Dokumen)
-                      </label>
-                      <input
-                        type="url"
-                        placeholder="https://... URL tautan gambar logo resmi madrasah (.png / .jpg / .svg)"
-                        value={profileForm.logoUrl || ''}
-                        onChange={(e) => setProfileForm({ ...profileForm, logoUrl: e.target.value })}
-                        className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#0b3c26]"
-                      />
-                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <div className="flex-1 w-full space-y-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                        <label className="block text-xs font-bold text-gray-800">
+                          Logo Resmi Madrasah (Navbar, Kop Surat, & Seluruh Perangkat)
+                        </label>
+                        <span className="text-[11px] text-emerald-800 font-semibold">
+                          Tersinkron Online & Realtime
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <input
+                          type="text"
+                          placeholder="https://... URL tautan gambar logo (.png, .jpg, .svg)"
+                          value={profileForm.logoUrl || ''}
+                          onChange={(e) => setProfileForm({ ...profileForm, logoUrl: e.target.value })}
+                          className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#0b3c26] font-mono text-[11px]"
+                        />
+
+                        {/* File Upload Button */}
+                        <label className="cursor-pointer shrink-0 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-[#0b3c26] text-[#f3e5ab] text-xs font-semibold rounded-lg hover:bg-[#072217] transition-all shadow-sm">
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>Unggah Logo</span>
+                          <input
+                            type="file"
+                            accept="image/*,.svg"
+                            onChange={handleLogoUpload}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
                         <button
                           type="button"
                           onClick={() =>
                             setProfileForm({
                               ...profileForm,
-                              logoUrl:
-                                'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Logo_Nahdlatul_Ulama.svg/400px-Logo_Nahdlatul_Ulama.svg.png',
+                              logoUrl: '/assets/logo-maarif.svg',
                             })
                           }
-                          className="text-[11px] text-emerald-800 hover:text-emerald-950 font-medium underline"
+                          className="text-[11px] text-emerald-800 hover:text-emerald-950 font-semibold underline inline-flex items-center gap-1"
                         >
-                          Gunakan Logo LP Ma'arif NU
+                          ✓ Gunakan Logo Resmi LP Ma'arif NU (Vektor SVG)
                         </button>
                         <span className="text-gray-300">•</span>
                         <button
@@ -2670,15 +2724,41 @@ export const AdminDashboard: React.FC = () => {
 
                         <div className="sm:col-span-2">
                           <label className="block text-xs font-semibold text-gray-700 mb-1">
-                            URL Foto Profil Guru / Staf
+                            Foto Profil Guru / Staf (URL atau Unggah File)
                           </label>
-                          <input
-                            type="url"
-                            placeholder="https://images.unsplash.com/..."
-                            value={staffForm.photoUrl}
-                            onChange={(e) => setStaffForm({ ...staffForm, photoUrl: e.target.value })}
-                            className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#0b3c26]"
-                          />
+                          <div className="flex flex-col sm:flex-row items-center gap-3">
+                            <div className="w-12 h-14 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
+                              {staffForm.photoUrl ? (
+                                <img
+                                  src={staffForm.photoUrl}
+                                  alt="Preview"
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80';
+                                  }}
+                                />
+                              ) : (
+                                <span className="text-[10px] text-gray-400">Foto</span>
+                              )}
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="https://images.unsplash.com/... atau unggah dari perangkat"
+                              value={staffForm.photoUrl}
+                              onChange={(e) => setStaffForm({ ...staffForm, photoUrl: e.target.value })}
+                              className="flex-1 w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#0b3c26]"
+                            />
+                            <label className="cursor-pointer shrink-0 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-800 text-white text-xs font-semibold rounded-lg hover:bg-emerald-900 transition-all">
+                              <Upload className="w-3.5 h-3.5" />
+                              <span>Unggah Foto</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleStaffPhotoUpload}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
                         </div>
                       </div>
 
