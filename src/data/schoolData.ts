@@ -241,19 +241,6 @@ export const STAFF_DATA: StaffMember[] = [
     status: "Aktif"
   },
   {
-    id: "staff-11",
-    name: "Fitri Handayani, S.Pd.",
-    role: "Guru Bahasa Inggris & SBdP",
-    category: "Guru Bidang Studi",
-    nipOrNuptk: "-",
-    education: "S.Pd.",
-    photoUrl: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=600&q=80",
-    phone: "",
-    subjects: "Bahasa Inggris Dasar & Seni Budaya / Prakarya",
-    order: 11,
-    status: "Aktif"
-  },
-  {
     id: "staff-12",
     name: "Agus Supriyadi, S.Kom.",
     role: "Operator Madrasah & Data EMIS",
@@ -263,7 +250,7 @@ export const STAFF_DATA: StaffMember[] = [
     photoUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=600&q=80",
     phone: "",
     subjects: "Pendataan EMIS, SIMPATIKA, VervalPD & Asesmen Nasional",
-    order: 12,
+    order: 11,
     status: "Aktif"
   },
   {
@@ -276,7 +263,7 @@ export const STAFF_DATA: StaffMember[] = [
     photoUrl: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=600&q=80",
     phone: "",
     subjects: "Administrasi Persuratan & Keuangan Madrasah",
-    order: 13,
+    order: 12,
     status: "Aktif"
   }
 ];

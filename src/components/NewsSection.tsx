@@ -2,11 +2,17 @@ import React, { useState } from 'react';
 import { useDataContext } from '../context/DataContext';
 import { NewsArticle } from '../types';
 import { Calendar, User, ArrowRight, X, Share2, Check } from 'lucide-react';
+import { formatDisplayDate, parseDateTimestamp } from '../lib/dateUtils';
 
 export const NewsSection: React.FC = () => {
   const { newsList } = useDataContext();
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Urutkan berita berdasarkan tanggal terbit terbaru secara otomatis
+  const sortedNews = [...newsList].sort((a, b) => {
+    return parseDateTimestamp(b.date) - parseDateTimestamp(a.date);
+  });
 
   const handleShare = (article: NewsArticle) => {
     if (navigator.clipboard) {
@@ -31,9 +37,9 @@ export const NewsSection: React.FC = () => {
         </p>
       </div>
 
-      {newsList.length > 0 ? (
+      {sortedNews.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {newsList.map((article) => (
+          {sortedNews.map((article) => (
             <article
               key={article.id}
               id={`news-card-${article.id}`}
@@ -53,7 +59,7 @@ export const NewsSection: React.FC = () => {
               <div className="p-6 flex-1 flex flex-col justify-between">
                 <div>
                   <span className="text-xs font-semibold text-[#d4af37] uppercase tracking-wider block mb-2">
-                    {article.date}
+                    {formatDisplayDate(article.date)}
                   </span>
 
                   <h4 className="font-heading text-lg font-bold text-[#072217] group-hover:text-[#0b3c26] transition-colors leading-snug mb-3">
@@ -130,9 +136,9 @@ export const NewsSection: React.FC = () => {
             <div className="p-6 sm:p-8">
               <div className="flex flex-wrap items-center justify-between gap-4 pb-4 mb-6 border-b border-gray-100 text-xs text-gray-500">
                 <div className="flex items-center gap-4">
-                  <span className="flex items-center gap-1.5">
+                  <span className="flex items-center gap-1.5 font-medium text-gray-700">
                     <Calendar className="w-3.5 h-3.5 text-[#d4af37]" />
-                    {selectedArticle.date}
+                    {formatDisplayDate(selectedArticle.date)}
                   </span>
                   <span className="flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-[#d4af37]" />

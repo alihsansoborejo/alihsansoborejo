@@ -50,6 +50,12 @@ import {
 } from 'lucide-react';
 import { compressImage } from '../lib/imageCompressor';
 import {
+  toDateInputValue,
+  formatDisplayDate,
+  getDaysAgoDate,
+  parseDateTimestamp
+} from '../lib/dateUtils';
+import {
   SUPABASE_SQL_SCRIPT,
   SUPABASE_URL,
   SUPABASE_PROJECT_REF,
@@ -598,6 +604,8 @@ export const AdminDashboard: React.FC = () => {
       .map((p) => p.trim())
       .filter(Boolean);
 
+    const finalDate = toDateInputValue(newsForm.date);
+
     if (editingNews) {
       updateNews(editingNews.id, {
         title: newsForm.title,
@@ -607,7 +615,7 @@ export const AdminDashboard: React.FC = () => {
         author: newsForm.author,
         readTime: newsForm.readTime,
         imageUrl: newsForm.imageUrl,
-        date: newsForm.date
+        date: finalDate
       });
       notify('Berita berhasil diperbarui!');
       setEditingNews(null);
@@ -620,7 +628,7 @@ export const AdminDashboard: React.FC = () => {
         author: newsForm.author,
         readTime: newsForm.readTime,
         imageUrl: newsForm.imageUrl,
-        date: newsForm.date
+        date: finalDate
       });
       notify('Berita baru berhasil dipublikasikan!');
       setIsAddingNews(false);
@@ -3131,7 +3139,9 @@ export const AdminDashboard: React.FC = () => {
 
               {/* News List */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {newsList.map((article) => (
+                {[...newsList]
+                  .sort((a, b) => parseDateTimestamp(b.date) - parseDateTimestamp(a.date))
+                  .map((article) => (
                   <div
                     key={article.id}
                     className="border border-gray-200 rounded-xl p-4 flex gap-3 hover:border-[#0b3c26] transition-colors relative group"
@@ -3146,7 +3156,10 @@ export const AdminDashboard: React.FC = () => {
                         <span className="text-[9px] font-bold uppercase tracking-wider text-[#0b3c26] bg-[#e8f3ee] px-2 py-0.5 rounded">
                           {article.category}
                         </span>
-                        <span className="text-[10px] text-gray-400">{article.date}</span>
+                        <span className="text-[10px] text-gray-500 font-medium flex items-center gap-1">
+                          <Calendar className="w-3 h-3 text-[#0b3c26]" />
+                          {formatDisplayDate(article.date)}
+                        </span>
                       </div>
                       <h4 className="font-heading text-xs sm:text-sm font-bold text-[#072217] line-clamp-1">
                         {article.title}
@@ -3171,7 +3184,7 @@ export const AdminDashboard: React.FC = () => {
                             author: article.author,
                             readTime: article.readTime,
                             imageUrl: article.imageUrl,
-                            date: article.date
+                            date: toDateInputValue(article.date)
                           });
                           setIsAddingNews(true);
                         }}
@@ -3222,9 +3235,9 @@ export const AdminDashboard: React.FC = () => {
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="block font-semibold text-gray-700 mb-1">Kategori</label>
+                          <label className="block font-semibold text-gray-700 mb-1">Kategori Berita</label>
                           <select
                             value={newsForm.category}
                             onChange={(e) => setNewsForm({ ...newsForm, category: e.target.value as any })}
@@ -3238,15 +3251,78 @@ export const AdminDashboard: React.FC = () => {
                           </select>
                         </div>
                         <div>
-                          <label className="block font-semibold text-gray-700 mb-1">Penulis</label>
+                          <label className="block font-semibold text-gray-700 mb-1">Penulis / Redaksi</label>
                           <input
                             type="text"
                             required
                             value={newsForm.author}
                             onChange={(e) => setNewsForm({ ...newsForm, author: e.target.value })}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                            placeholder="Contoh: Admin Madrasah / Tim Humas"
                           />
                         </div>
+                      </div>
+
+                      {/* Tanggal Terbit Manual Setting */}
+                      <div className="bg-[#fcfdfd] border border-emerald-100 rounded-xl p-3.5 space-y-2">
+                        <div className="flex flex-wrap items-center justify-between gap-1.5">
+                          <label className="font-semibold text-gray-800 flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-[#0b3c26]" />
+                            <span>Tanggal Terbit Berita *</span>
+                          </label>
+                          <div className="flex items-center gap-1 text-[11px]">
+                            <button
+                              type="button"
+                              onClick={() => setNewsForm({ ...newsForm, date: getDaysAgoDate(0) })}
+                              className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
+                                newsForm.date === getDaysAgoDate(0)
+                                  ? 'bg-[#0b3c26] text-white'
+                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                              }`}
+                            >
+                              Hari Ini
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setNewsForm({ ...newsForm, date: getDaysAgoDate(1) })}
+                              className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
+                                newsForm.date === getDaysAgoDate(1)
+                                  ? 'bg-[#0b3c26] text-white'
+                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                              }`}
+                            >
+                              Kemarin
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setNewsForm({ ...newsForm, date: getDaysAgoDate(2) })}
+                              className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
+                                newsForm.date === getDaysAgoDate(2)
+                                  ? 'bg-[#0b3c26] text-white'
+                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                              }`}
+                            >
+                              2 Hari Lalu
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-center">
+                          <input
+                            type="date"
+                            required
+                            value={newsForm.date}
+                            onChange={(e) => setNewsForm({ ...newsForm, date: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white font-medium text-gray-800 text-xs focus:ring-2 focus:ring-[#0b3c26]/20 focus:border-[#0b3c26]"
+                          />
+                          <div className="text-[11px] text-gray-600 bg-white border border-gray-200 rounded-lg px-3 py-2 flex items-center justify-between">
+                            <span className="text-gray-400 text-[10px]">Tampilan Publik:</span>
+                            <strong className="text-[#072217] font-semibold">{formatDisplayDate(newsForm.date) || '-'}</strong>
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-gray-500 leading-tight">
+                          💡 <em>Tanggal terbit dapat disesuaikan mundur (backdate) jika admin terlambat mengunggah warta kegiatan. Berita akan otomatis terurut berdasarkan tanggal ini di halaman utama.</em>
+                        </p>
                       </div>
 
                       <div>
