@@ -10,7 +10,7 @@ export const Facilities: React.FC = () => {
   const [selectedGallery, setSelectedGallery] = useState<GalleryItem | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('Semua');
 
-  const galleryCategories = ['Semua', 'Ibadah & Karakter', 'Kegiatan Belajar', 'Ekstrakurikuler', 'Fasilitas'];
+  const galleryCategories = ['Semua', 'Prestasi', 'Ibadah & Karakter', 'Kegiatan Belajar', 'Ekstrakurikuler', 'Fasilitas'];
   const facilityCategories = ['Semua', 'Akademik', 'Spiritual', 'Teknologi', 'Olahraga', 'Kesehatan'];
 
   const filteredGallery = activeCategory === 'Semua'

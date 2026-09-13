@@ -21,7 +21,8 @@ import {
   FAQItem,
   PPDBRegistration,
   StaffMember,
-  StatItem
+  StatItem,
+  StudentItem
 } from '../types';
 import {
   SCHOOL_PROFILE,
@@ -35,7 +36,8 @@ import {
   FAQ_DATA,
   INITIAL_PPDB_REGISTRATIONS,
   STAFF_DATA,
-  STATS_DATA
+  STATS_DATA,
+  INITIAL_STUDENTS
 } from '../data/schoolData';
 
 const STORAGE_KEY = 'mi_al_ihsan_data_v4';
@@ -68,6 +70,7 @@ export async function apiRequest(url: string, options: RequestInit = {}) {
 export interface AppStorageState {
   schoolProfile: SchoolProfile;
   staffList: StaffMember[];
+  studentList: StudentItem[];
   statsList: StatItem[];
   programs: ProgramItem[];
   extracurriculars: ExtracurricularItem[];
@@ -88,8 +91,15 @@ interface DataContextType {
 
   staffList: StaffMember[];
   addStaff: (item: Omit<StaffMember, 'id'>) => void;
+  addStaffBatch: (items: Omit<StaffMember, 'id'>[], replaceAll?: boolean) => void;
   updateStaff: (id: string, item: Partial<StaffMember>) => void;
   deleteStaff: (id: string) => void;
+
+  studentList: StudentItem[];
+  addStudent: (item: Omit<StudentItem, 'id'>) => void;
+  addStudentsBatch: (items: Omit<StudentItem, 'id'>[], replaceAll?: boolean) => void;
+  updateStudent: (id: string, item: Partial<StudentItem>) => void;
+  deleteStudent: (id: string) => void;
 
   statsList: StatItem[];
   setStatsList: (stats: StatItem[]) => void;
@@ -170,6 +180,7 @@ const DataContext = createContext<DataContextType | null>(null);
 const DEFAULT_DATA: AppStorageState = {
   schoolProfile: SCHOOL_PROFILE,
   staffList: STAFF_DATA,
+  studentList: INITIAL_STUDENTS,
   statsList: STATS_DATA,
   programs: PROGRAMS_DATA,
   extracurriculars: EXTRACURRICULARS,
@@ -225,6 +236,7 @@ export const sanitizeAppState = (raw: any): AppStorageState => {
   return {
     schoolProfile,
     staffList: ensureUniqueIds(raw.staffList || DEFAULT_DATA.staffList, 'staff'),
+    studentList: ensureUniqueIds(raw.studentList || DEFAULT_DATA.studentList, 'std'),
     statsList: ensureUniqueIds(raw.statsList !== undefined ? raw.statsList : DEFAULT_DATA.statsList, 'stat'),
     programs: ensureUniqueIds(raw.programs || DEFAULT_DATA.programs, 'prog'),
     extracurriculars: ensureUniqueIds(raw.extracurriculars || DEFAULT_DATA.extracurriculars, 'ekskul'),
@@ -276,9 +288,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const isInitialMount = useRef(true);
   const isRemoteUpdating = useRef(false);
+  const isCloudLoadedRef = useRef(false);
+  const hasUserEditedRef = useRef(false);
   const lastKnownVersionRef = useRef<number>(0);
   const lastLocalEditTimeRef = useRef<number>(0);
   const isSelfPushingRef = useRef<boolean>(false);
+
+  // Mark local user modification so auto-sync knows an intentional edit occurred
+  const markLocalEdit = useCallback(() => {
+    lastLocalEditTimeRef.current = Date.now();
+    hasUserEditedRef.current = true;
+    setCloudSyncStatus('syncing');
+  }, []);
 
   // Fetch online data from Cloud SQL on initial load or on real-time event
   const refreshFromCloud = useCallback(async (silent: boolean = false) => {
@@ -296,6 +317,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // If user edited locally very recently, do not overwrite in-progress edits
           if (Date.now() - lastLocalEditTimeRef.current < 2500) {
             setCloudSyncStatus('synced');
+            isCloudLoadedRef.current = true;
             return;
           }
 
@@ -322,6 +344,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
             return sanitized;
           });
+          isCloudLoadedRef.current = true;
           setCloudSyncStatus('synced');
           setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
           return;
@@ -332,14 +355,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const remoteState = await loadFromSupabase();
       if (remoteState && remoteState.schoolProfile) {
         if (Date.now() - lastLocalEditTimeRef.current < 2500) {
+          isCloudLoadedRef.current = true;
           setCloudSyncStatus('synced');
           return;
         }
         isRemoteUpdating.current = true;
         setData(sanitizeAppState(remoteState));
+        isCloudLoadedRef.current = true;
         setCloudSyncStatus('synced');
         setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
       } else {
+        isCloudLoadedRef.current = true;
         setCloudSyncStatus('connected');
       }
     } catch (err) {
@@ -348,16 +374,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const remoteState = await loadFromSupabase();
         if (remoteState && remoteState.schoolProfile) {
           if (Date.now() - lastLocalEditTimeRef.current < 2500) {
+            isCloudLoadedRef.current = true;
             setCloudSyncStatus('synced');
             return;
           }
           isRemoteUpdating.current = true;
           setData(sanitizeAppState(remoteState));
+          isCloudLoadedRef.current = true;
           setCloudSyncStatus('synced');
           setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
           return;
         }
       } catch (e) {}
+      isCloudLoadedRef.current = true;
       if (Date.now() - lastLocalEditTimeRef.current > 3000) {
         setCloudSyncStatus('offline');
       } else {
@@ -396,8 +425,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (e) {}
   };
 
-  // Push all data to Cloud SQL + Supabase
-  const pushAllToCloud = useCallback(async (authToken?: string | null): Promise<boolean> => {
+  // Push all data to Cloud SQL + Supabase with strict anti-overwrite safeguards
+  const pushAllToCloud = useCallback(async (authToken?: string | null, force: boolean = false): Promise<boolean> => {
+    // 1. Only admins can push data to Cloud SQL / Supabase
+    if (!isAdmin && !authToken && !force) {
+      return false;
+    }
+
+    // 2. Never push unhydrated state before cloud data has loaded
+    if (!isCloudLoadedRef.current && !force) {
+      console.warn('Sync aborted: Cloud data has not completed initial hydration.');
+      return false;
+    }
+
+    // 3. Never push if no user edits were made in this session
+    if (!hasUserEditedRef.current && !force) {
+      return false;
+    }
+
     try {
       setCloudSyncStatus('syncing');
       isSelfPushingRef.current = true;
@@ -413,6 +458,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         testimonials: data.testimonials,
         faqs: data.faqs,
         staffList: data.staffList,
+        studentList: data.studentList,
         newsList: data.newsList,
       };
 
@@ -428,7 +474,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return res;
       });
 
-      const supabasePromise = saveAllToSupabase(data);
+      const supabasePromise = saveAllToSupabase(data, {
+        isAuthorizedAdmin: true,
+        force,
+      });
 
       const [cloudSqlRes, supabaseRes] = await Promise.allSettled([
         cloudSqlPromise,
@@ -448,6 +497,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (cloudSqlSuccess || supabaseSuccess) {
         setCloudSyncStatus('synced');
         setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+        hasUserEditedRef.current = false;
         return true;
       } else {
         console.warn('Both Cloud SQL and Supabase sync failed');
@@ -456,11 +506,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (err) {
       console.error('Failed to push to Cloud SQL:', err);
-      saveAllToSupabase(data)
+      saveAllToSupabase(data, { isAuthorizedAdmin: true, force })
         .then((res) => {
           if (res?.success) {
             setCloudSyncStatus('synced');
             setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+            hasUserEditedRef.current = false;
           } else {
             setCloudSyncStatus('offline');
           }
@@ -474,9 +525,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isSelfPushingRef.current = false;
       }, 2500);
     }
-  }, [data]);
+  }, [data, isAdmin]);
 
-  // Automatic Debounced Cloud Push on local changes
+  // Automatic Debounced Cloud Push ONLY on real admin edits
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
@@ -488,13 +539,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    // Auto debounce push to Cloud SQL + Supabase on every user action
+    // STRICT DEFENSE AGAINST ACCIDENTAL OVERWRITES:
+    // 1. Never push if user is not authenticated admin
+    if (!isAdmin) {
+      return;
+    }
+
+    // 2. Never push before initial cloud data has loaded
+    if (!isCloudLoadedRef.current) {
+      return;
+    }
+
+    // 3. Never push unless an admin actually performed a mutation in this session
+    if (!hasUserEditedRef.current) {
+      return;
+    }
+
+    // Auto debounce push to Cloud SQL + Supabase on verified admin edits
     const timer = setTimeout(() => {
       pushAllToCloud();
-    }, 400);
+    }, 600);
 
     return () => clearTimeout(timer);
-  }, [data, pushAllToCloud]);
+  }, [data, isAdmin, pushAllToCloud]);
 
   // 1. Realtime SSE Connection to /api/realtime/stream
   useEffect(() => {
@@ -676,14 +743,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // Explicit Sync to Supabase
-  const syncToSupabase = async (): Promise<{ success: boolean; message: string }> => {
+  // Explicit Sync to Supabase (Authorized Admin Only)
+  const syncToSupabase = async (force: boolean = false): Promise<{ success: boolean; message: string }> => {
     try {
+      if (!isAdmin && !force) {
+        return { success: false, message: 'Akses ditolak: Hanya Administrator yang dapat menyinkronkan data ke Supabase' };
+      }
       setCloudSyncStatus('syncing');
-      const res = await saveAllToSupabase(data);
+      const res = await saveAllToSupabase(data, { isAuthorizedAdmin: true, force });
       if (res.success) {
         setCloudSyncStatus('synced');
         setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+        hasUserEditedRef.current = false;
       }
       return res;
     } catch (err: any) {
@@ -700,6 +771,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const cleanState = sanitizeAppState(remoteState);
         isRemoteUpdating.current = true;
         setData(cleanState);
+        isCloudLoadedRef.current = true;
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanState));
         } catch (e) {}
@@ -716,8 +788,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // School Profile
   const updateSchoolProfile = (partial: Partial<SchoolProfile>) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     setData((prev) => {
       const updated = { ...prev.schoolProfile, ...partial };
       return { ...prev, schoolProfile: updated };
@@ -726,15 +797,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Guru dan Tenaga Kependidikan (GTK)
   const addStaff = (item: Omit<StaffMember, 'id'>) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     const newItem: StaffMember = { ...item, id: generateUniqueId('staff') };
     setData((prev) => ({ ...prev, staffList: [...prev.staffList, newItem] }));
   };
 
+  const addStaffBatch = (items: Omit<StaffMember, 'id'>[], replaceAll: boolean = false) => {
+    markLocalEdit();
+    const newItems: StaffMember[] = items.map((item, idx) => ({
+      ...item,
+      id: generateUniqueId(`staff-batch-${idx}`),
+    }));
+    setData((prev) => ({
+      ...prev,
+      staffList: replaceAll ? newItems : [...prev.staffList, ...newItems],
+    }));
+  };
+
   const updateStaff = (id: string, updated: Partial<StaffMember>) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     setData((prev) => ({
       ...prev,
       staffList: prev.staffList.map((s) => (s.id === id ? { ...s, ...updated } : s)),
@@ -742,8 +823,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteStaff = (id: string) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     setData((prev) => ({
       ...prev,
       staffList: prev.staffList.filter((s) => s.id !== id),
@@ -752,17 +832,53 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     apiRequest(`/api/staff/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
+  // Manajemen Siswa (Santri)
+  const addStudent = (item: Omit<StudentItem, 'id'>) => {
+    markLocalEdit();
+    const newItem: StudentItem = { ...item, id: generateUniqueId('std') };
+    setData((prev) => ({
+      ...prev,
+      studentList: [newItem, ...(prev.studentList || [])],
+    }));
+  };
+
+  const addStudentsBatch = (items: Omit<StudentItem, 'id'>[], replaceAll: boolean = false) => {
+    markLocalEdit();
+    const newItems: StudentItem[] = items.map((item, idx) => ({
+      ...item,
+      id: generateUniqueId(`std-batch-${idx}`),
+    }));
+    setData((prev) => ({
+      ...prev,
+      studentList: replaceAll ? newItems : [...newItems, ...(prev.studentList || [])],
+    }));
+  };
+
+  const updateStudent = (id: string, updated: Partial<StudentItem>) => {
+    markLocalEdit();
+    setData((prev) => ({
+      ...prev,
+      studentList: (prev.studentList || []).map((s) => (s.id === id ? { ...s, ...updated } : s)),
+    }));
+  };
+
+  const deleteStudent = (id: string) => {
+    markLocalEdit();
+    setData((prev) => ({
+      ...prev,
+      studentList: (prev.studentList || []).filter((s) => s.id !== id),
+    }));
+  };
+
   // Statistik Madrasah
   const setStatsList = (stats: StatItem[]) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     const clean = ensureUniqueIds(stats, 'stat');
     setData((prev) => ({ ...prev, statsList: clean }));
   };
 
   const addStat = (item: Omit<StatItem, 'id'> & { id?: string }) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     const newItem: StatItem = { ...item, id: item.id && item.id.trim() ? item.id : generateUniqueId('stat') };
     setData((prev) => {
       const filtered = (prev.statsList || []).filter((s) => s.id !== newItem.id);
@@ -771,8 +887,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateStat = (id: string, updated: Partial<StatItem>) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     setData((prev) => ({
       ...prev,
       statsList: (prev.statsList || []).map((s) => (s.id === id ? { ...s, ...updated } : s)),
@@ -780,8 +895,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteStat = (id: string) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     setData((prev) => ({
       ...prev,
       statsList: (prev.statsList || []).filter((s) => s.id !== id),
@@ -790,8 +904,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Programs
   const addProgram = (item: Omit<ProgramItem, 'id'>) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     const newItem: ProgramItem = { ...item, id: generateUniqueId('prog') };
     setData((prev) => ({
       ...prev,
@@ -800,8 +913,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateProgram = (id: string, updated: Partial<ProgramItem>) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     setData((prev) => ({
       ...prev,
       programs: prev.programs.map((p) => (p.id === id ? { ...p, ...updated } : p)),
@@ -809,8 +921,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteProgram = (id: string) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     setData((prev) => ({
       ...prev,
       programs: prev.programs.filter((p) => p.id !== id),
@@ -819,8 +930,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Extracurriculars
   const addExtracurricular = (item: Omit<ExtracurricularItem, 'id'>) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     const newItem: ExtracurricularItem = { ...item, id: generateUniqueId('ekskul') };
     setData((prev) => ({
       ...prev,
@@ -829,8 +939,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateExtracurricular = (id: string, updated: Partial<ExtracurricularItem>) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     setData((prev) => ({
       ...prev,
       extracurriculars: prev.extracurriculars.map((e) => (e.id === id ? { ...e, ...updated } : e)),
@@ -838,8 +947,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteExtracurricular = (id: string) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     setData((prev) => ({
       ...prev,
       extracurriculars: prev.extracurriculars.filter((e) => e.id !== id),
@@ -848,8 +956,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Achievements
   const addAchievement = (item: Omit<AchievementItem, 'id'>) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     const newItem: AchievementItem = { ...item, id: generateUniqueId('ach') };
     setData((prev) => ({
       ...prev,
@@ -858,8 +965,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateAchievement = (id: string, updated: Partial<AchievementItem>) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     setData((prev) => ({
       ...prev,
       achievements: prev.achievements.map((a) => (a.id === id ? { ...a, ...updated } : a)),
@@ -867,8 +973,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteAchievement = (id: string) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     setData((prev) => ({
       ...prev,
       achievements: prev.achievements.filter((a) => a.id !== id),
@@ -877,24 +982,124 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // News
   const addNews = (item: Omit<NewsArticle, 'id'>) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     const newItem: NewsArticle = { ...item, id: generateUniqueId('news') };
-    setData((prev) => ({ ...prev, newsList: [newItem, ...prev.newsList] }));
+    
+    setData((prev) => {
+      let updatedGallery = [...prev.gallery];
+      let updatedAchievements = [...prev.achievements];
+
+      // 1. Seluruh foto yang terpasang di berita otomatis masuk ke Galeri (jika belum ada)
+      if (newItem.imageUrl && newItem.imageUrl.trim()) {
+        const photoExists = updatedGallery.some((g) => g.imageUrl === newItem.imageUrl);
+        if (!photoExists) {
+          const galleryCategory: GalleryItem['category'] =
+            newItem.category === 'Prestasi' ? 'Prestasi' : 'Kegiatan Belajar';
+          
+          const newGalleryItem: GalleryItem = {
+            id: generateUniqueId('gal'),
+            title: newItem.title,
+            category: galleryCategory,
+            imageUrl: newItem.imageUrl,
+            description: newItem.summary || newItem.title,
+            date: newItem.date || new Date().toISOString().split('T')[0],
+          };
+          updatedGallery = [newGalleryItem, ...updatedGallery];
+        }
+      }
+
+      // 2. Jika kategori berita adalah "Prestasi", otomatis masuk juga ke bagian Prestasi
+      if (newItem.category === 'Prestasi') {
+        const achExists = updatedAchievements.some(
+          (a) => a.title.toLowerCase() === newItem.title.toLowerCase() || (newItem.imageUrl && a.imageUrl === newItem.imageUrl)
+        );
+        if (!achExists) {
+          const newAch: AchievementItem = {
+            id: generateUniqueId('ach'),
+            title: newItem.title,
+            winner: newItem.author && newItem.author !== 'Admin Madrasah' ? newItem.author : 'Santri Berprestasi MI Ma\'arif Al Ihsan',
+            category: 'Akademik & Sains',
+            level: 'Kabupaten Temanggung',
+            year: newItem.date ? newItem.date.split('-')[0] : new Date().getFullYear().toString(),
+            rank: 'Juara',
+            description: newItem.summary || newItem.title,
+            imageUrl: newItem.imageUrl,
+          };
+          updatedAchievements = [newAch, ...updatedAchievements];
+        }
+      }
+
+      return {
+        ...prev,
+        newsList: [newItem, ...prev.newsList],
+        gallery: updatedGallery,
+        achievements: updatedAchievements,
+      };
+    });
   };
 
   const updateNews = (id: string, updated: Partial<NewsArticle>) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
-    setData((prev) => ({
-      ...prev,
-      newsList: prev.newsList.map((n) => (n.id === id ? { ...n, ...updated } : n)),
-    }));
+    markLocalEdit();
+    setData((prev) => {
+      const existingNews = prev.newsList.find((n) => n.id === id);
+      const mergedNews: NewsArticle | undefined = existingNews ? { ...existingNews, ...updated } : undefined;
+      
+      let updatedGallery = [...prev.gallery];
+      let updatedAchievements = [...prev.achievements];
+
+      if (mergedNews) {
+        // Otomatis masukkan foto ke galeri jika ada foto baru dan belum tercatat
+        if (mergedNews.imageUrl && mergedNews.imageUrl.trim()) {
+          const photoExists = updatedGallery.some((g) => g.imageUrl === mergedNews.imageUrl);
+          if (!photoExists) {
+            const galleryCategory: GalleryItem['category'] =
+              mergedNews.category === 'Prestasi' ? 'Prestasi' : 'Kegiatan Belajar';
+
+            const newGalleryItem: GalleryItem = {
+              id: generateUniqueId('gal'),
+              title: mergedNews.title,
+              category: galleryCategory,
+              imageUrl: mergedNews.imageUrl,
+              description: mergedNews.summary || mergedNews.title,
+              date: mergedNews.date || new Date().toISOString().split('T')[0],
+            };
+            updatedGallery = [newGalleryItem, ...updatedGallery];
+          }
+        }
+
+        // Jika kategori menjadi 'Prestasi', pastikan masuk ke prestasi
+        if (mergedNews.category === 'Prestasi') {
+          const achExists = updatedAchievements.some(
+            (a) => a.title.toLowerCase() === mergedNews.title.toLowerCase() || (mergedNews.imageUrl && a.imageUrl === mergedNews.imageUrl)
+          );
+          if (!achExists) {
+            const newAch: AchievementItem = {
+              id: generateUniqueId('ach'),
+              title: mergedNews.title,
+              winner: mergedNews.author && mergedNews.author !== 'Admin Madrasah' ? mergedNews.author : 'Santri Berprestasi MI Ma\'arif Al Ihsan',
+              category: 'Akademik & Sains',
+              level: 'Kabupaten Temanggung',
+              year: mergedNews.date ? mergedNews.date.split('-')[0] : new Date().getFullYear().toString(),
+              rank: 'Juara',
+              description: mergedNews.summary || mergedNews.title,
+              imageUrl: mergedNews.imageUrl,
+            };
+            updatedAchievements = [newAch, ...updatedAchievements];
+          }
+        }
+      }
+
+      return {
+        ...prev,
+        newsList: prev.newsList.map((n) => (n.id === id ? { ...n, ...updated } : n)),
+        gallery: updatedGallery,
+        achievements: updatedAchievements,
+      };
+    });
   };
 
   const deleteNews = (id: string) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     setData((prev) => ({
       ...prev,
       newsList: prev.newsList.filter((n) => n.id !== id),
@@ -904,8 +1109,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Facilities
   const addFacility = (item: Omit<FacilityItem, 'id'>) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     const newItem: FacilityItem = { ...item, id: generateUniqueId('fac') };
     setData((prev) => ({
       ...prev,
@@ -914,8 +1118,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateFacility = (id: string, updated: Partial<FacilityItem>) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     setData((prev) => ({
       ...prev,
       facilities: prev.facilities.map((f) => (f.id === id ? { ...f, ...updated } : f)),
@@ -923,8 +1126,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteFacility = (id: string) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     setData((prev) => ({
       ...prev,
       facilities: prev.facilities.filter((f) => f.id !== id),
@@ -933,8 +1135,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Gallery
   const addGalleryItem = (item: Omit<GalleryItem, 'id'>) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     const newItem: GalleryItem = { ...item, id: generateUniqueId('gal') };
     setData((prev) => ({
       ...prev,
@@ -943,8 +1144,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateGalleryItem = (id: string, updated: Partial<GalleryItem>) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     setData((prev) => ({
       ...prev,
       gallery: prev.gallery.map((g) => (g.id === id ? { ...g, ...updated } : g)),
@@ -952,8 +1152,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteGalleryItem = (id: string) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     setData((prev) => ({
       ...prev,
       gallery: prev.gallery.filter((g) => g.id !== id),
@@ -962,8 +1161,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Testimonials
   const addTestimonial = (item: Omit<TestimonialItem, 'id'>) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     const newItem: TestimonialItem = { ...item, id: generateUniqueId('testi') };
     setData((prev) => ({
       ...prev,
@@ -972,8 +1170,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateTestimonial = (id: string, updated: Partial<TestimonialItem>) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     setData((prev) => ({
       ...prev,
       testimonials: prev.testimonials.map((t) => (t.id === id ? { ...t, ...updated } : t)),
@@ -981,8 +1178,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteTestimonial = (id: string) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     setData((prev) => ({
       ...prev,
       testimonials: prev.testimonials.filter((t) => t.id !== id),
@@ -991,8 +1187,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // FAQ
   const addFAQ = (item: Omit<FAQItem, 'id'>) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     const newItem: FAQItem = { ...item, id: generateUniqueId('faq') };
     setData((prev) => ({
       ...prev,
@@ -1001,8 +1196,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateFAQ = (id: string, updated: Partial<FAQItem>) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     setData((prev) => ({
       ...prev,
       faqs: prev.faqs.map((f) => (f.id === id ? { ...f, ...updated } : f)),
@@ -1010,15 +1204,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteFAQ = (id: string) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     setData((prev) => ({
       ...prev,
       faqs: prev.faqs.filter((f) => f.id !== id),
     }));
   };
 
-  // PPDB Registrations (Real-time Cloud SQL Sync)
+  // PPDB Registrations (Real-time Cloud SQL + Supabase Sync)
   const addPPDBRegistration = async (reg: Omit<PPDBRegistration, 'id' | 'submissionDate'>): Promise<string> => {
     lastLocalEditTimeRef.current = Date.now();
     const today = new Date().toISOString().split('T')[0];
@@ -1065,12 +1258,33 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Failed to post PPDB online to Cloud SQL:', err);
     }
 
+    // Save individual registration to Supabase without touching other tables
+    try {
+      await supabase.from('ppdb_registrations').upsert({
+        id: newReg.id,
+        registration_number: newReg.registrationNumber,
+        student_name: newReg.studentName,
+        nik: newReg.nik || null,
+        nisn: newReg.nisn || null,
+        gender: newReg.gender,
+        birth_place: newReg.birthPlace || null,
+        birth_date: newReg.birthDate,
+        target_class: newReg.targetClass || 'Kelas 1 (Satu)',
+        origin_school: newReg.originSchool,
+        parent_name: newReg.parentName,
+        parent_phone: newReg.parentPhone,
+        parent_address: newReg.address,
+        submission_date: newReg.submissionDate,
+        status: newReg.status,
+        notes: newReg.notes || null,
+      });
+    } catch (_) {}
+
     return code;
   };
 
   const updatePPDBStatus = async (id: string, status: PPDBRegistration['status'], notes?: string) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     setData((prev) => ({
       ...prev,
       ppdbRegistrations: prev.ppdbRegistrations.map((r) =>
@@ -1088,11 +1302,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       console.error('Failed to update PPDB status online:', err);
     }
+
+    try {
+      await supabase.from('ppdb_registrations').update({
+        status,
+        ...(notes !== undefined ? { notes } : {}),
+      }).eq('id', id);
+    } catch (_) {}
   };
 
   const deletePPDBRegistration = async (id: string) => {
-    lastLocalEditTimeRef.current = Date.now();
-    setCloudSyncStatus('syncing');
+    markLocalEdit();
     setData((prev) => ({
       ...prev,
       ppdbRegistrations: prev.ppdbRegistrations.filter((r) => r.id !== id),
@@ -1105,6 +1325,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       console.error('Failed to delete PPDB online:', err);
     }
+
+    try {
+      await supabase.from('ppdb_registrations').delete().eq('id', id);
+    } catch (_) {}
   };
 
   // Backup & Reset
@@ -1153,8 +1377,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         staffList: data.staffList,
         addStaff,
+        addStaffBatch,
         updateStaff,
         deleteStaff,
+
+        studentList: data.studentList || [],
+        addStudent,
+        addStudentsBatch,
+        updateStudent,
+        deleteStudent,
 
         statsList: data.statsList,
         setStatsList,

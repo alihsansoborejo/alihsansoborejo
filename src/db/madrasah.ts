@@ -18,7 +18,8 @@ import {
   INITIAL_NEWS,
   TESTIMONIALS,
   FAQ_DATA,
-  INITIAL_PPDB_REGISTRATIONS
+  INITIAL_PPDB_REGISTRATIONS,
+  INITIAL_STUDENTS
 } from '../data/schoolData.ts';
 
 // PPDB Operations
@@ -337,6 +338,7 @@ export async function getAllMadrasahOnlineData() {
       testimonials: settingsMap['testimonials'] || TESTIMONIALS,
       faqs: settingsMap['faqs'] || FAQ_DATA,
       staffList: mappedStaff,
+      studentList: settingsMap['student_list'] || INITIAL_STUDENTS,
       newsList: dbNews.length > 0 ? dbNews : INITIAL_NEWS,
       ppdbRegistrations: dbPPDB.length > 0 ? dbPPDB : INITIAL_PPDB_REGISTRATIONS,
     };
@@ -346,12 +348,12 @@ export async function getAllMadrasahOnlineData() {
   }
 }
 
-// Seed initial baseline into Cloud SQL if empty or incomplete
+// Seed initial baseline into Cloud SQL only if tables are completely empty
 export async function seedInitialDatabaseIfEmpty() {
   try {
-    const existingStaff = await db.select().from(staffMembers);
-    if (existingStaff.length < STAFF_DATA.length) {
-      console.log('Seeding / updating full dewan guru & staf (GTK) into Cloud SQL...');
+    const existingStaff = await db.select().from(staffMembers).limit(1);
+    if (existingStaff.length === 0) {
+      console.log('Seeding initial dewan guru & staf (GTK) into Cloud SQL...');
       for (const s of STAFF_DATA) {
         await db.insert(staffMembers).values({
           id: s.id,
@@ -364,19 +366,7 @@ export async function seedInitialDatabaseIfEmpty() {
           photoUrl: s.photoUrl || null,
           bio: null,
           orderNum: s.order || 0,
-        }).onConflictDoUpdate({
-          target: staffMembers.id,
-          set: {
-            name: s.name,
-            role: s.role,
-            category: s.category,
-            nip: s.nipOrNuptk || null,
-            education: s.education || null,
-            subject: s.subjects || null,
-            photoUrl: s.photoUrl || null,
-            orderNum: s.order || 0,
-          }
-        });
+        }).onConflictDoNothing();
       }
     }
 
@@ -426,11 +416,8 @@ export async function seedInitialDatabaseIfEmpty() {
     }
 
     const existingProfile = (await getAppSetting('school_profile')) as any;
-    if (!existingProfile || !existingProfile.logoUrl || String(existingProfile.logoUrl).includes('wikimedia.org')) {
-      await setAppSetting('school_profile', {
-        ...(existingProfile || SCHOOL_PROFILE),
-        logoUrl: (existingProfile?.logoUrl && !String(existingProfile.logoUrl).includes('wikimedia.org')) ? existingProfile.logoUrl : '/assets/logo-maarif.svg'
-      });
+    if (!existingProfile) {
+      await setAppSetting('school_profile', SCHOOL_PROFILE);
     }
     const existingStats = await getAppSetting('stats_list');
     if (!existingStats) {

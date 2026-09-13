@@ -38,50 +38,193 @@ export const NewsSection: React.FC = () => {
       </div>
 
       {sortedNews.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {sortedNews.map((article) => (
-            <article
-              key={article.id}
-              id={`news-card-${article.id}`}
-              className="group bg-white rounded-2xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_40px_rgba(11,60,38,0.15)] border border-black/5 hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between"
-            >
-              <div className="relative h-52 overflow-hidden">
-                <img
-                  src={article.imageUrl}
-                  alt={article.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <span className="absolute top-3 left-3 bg-[#072217]/85 backdrop-blur-md text-[#d4af37] text-[10px] uppercase font-bold tracking-wider px-3 py-1 rounded-full border border-[#d4af37]/30">
-                  {article.category}
+        <div className="space-y-12">
+          {/* 1. Berita Terbaru (Lebar / Featured Banner) */}
+          {sortedNews[0] && (() => {
+            const latest = sortedNews[0];
+            const fullContent = (latest.content && latest.content.length > 0)
+              ? latest.content.join('\n\n')
+              : latest.summary;
+            const isLongArticle = fullContent.length > 400 || (latest.content && latest.content.length > 2);
+
+            return (
+              <div
+                id={`featured-news-${latest.id}`}
+                className="bg-white rounded-3xl overflow-hidden shadow-[0_15px_40px_rgba(7,34,23,0.08)] border border-[#0b3c26]/10 hover:border-[#d4af37]/40 transition-all duration-300"
+              >
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
+                  {/* Foto Berita Terbaru */}
+                  <div className="lg:col-span-6 relative min-h-[300px] lg:min-h-[440px] overflow-hidden bg-slate-900 group">
+                    <img
+                      src={latest.imageUrl}
+                      alt={latest.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    <div className="absolute top-4 left-4 flex flex-wrap items-center gap-2">
+                      <span className="bg-[#d4af37] text-[#072217] text-xs uppercase font-extrabold tracking-wider px-3 py-1 rounded-full shadow-md">
+                        ★ Berita Terkini
+                      </span>
+                      <span className="bg-[#072217]/90 backdrop-blur-md text-[#f3e5ab] text-xs uppercase font-bold tracking-wider px-3 py-1 rounded-full border border-[#d4af37]/40">
+                        {latest.category}
+                      </span>
+                    </div>
+
+                    <div className="absolute bottom-4 left-4 right-4 text-white text-xs flex items-center gap-4">
+                      <span className="flex items-center gap-1.5 font-medium text-[#f3e5ab]">
+                        <Calendar className="w-3.5 h-3.5" />
+                        {formatDisplayDate(latest.date)}
+                      </span>
+                      <span className="flex items-center gap-1.5 text-gray-200">
+                        <User className="w-3.5 h-3.5" />
+                        {latest.author}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Isi Berita Terbaru yang Lebar dan Nyaman Dibaca */}
+                  <div className="lg:col-span-6 p-6 sm:p-10 flex flex-col justify-between bg-gradient-to-br from-white via-emerald-50/20 to-white">
+                    <div>
+                      <div className="flex items-center gap-2 text-xs font-semibold text-[#d4af37] uppercase tracking-wider mb-2">
+                        <span>Warta Utama Madrasah</span>
+                        <span>•</span>
+                        <span>{latest.readTime || '3 Menit'} Baca</span>
+                      </div>
+
+                      <h3 className="font-heading text-2xl sm:text-3xl lg:text-3xl font-bold text-[#072217] leading-tight mb-4">
+                        {latest.title}
+                      </h3>
+
+                      {/* Paragraf / Isi Berita */}
+                      <div className="font-body text-sm sm:text-base text-gray-700 leading-relaxed space-y-3">
+                        {latest.content && latest.content.length > 0 ? (
+                          <>
+                            <p className="font-medium text-gray-900 leading-relaxed">
+                              {latest.content[0]}
+                            </p>
+                            {latest.content.slice(1, 3).map((p, idx) => (
+                              <p key={idx} className="line-clamp-3">
+                                {p}
+                              </p>
+                            ))}
+                          </>
+                        ) : (
+                          <p className="leading-relaxed">
+                            {latest.summary}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Tombol Baca Selengkapnya & Aksi */}
+                    <div className="pt-6 mt-6 border-t border-emerald-950/10 flex flex-wrap items-center justify-between gap-4">
+                      {isLongArticle ? (
+                        <button
+                          id={`read-featured-btn-${latest.id}`}
+                          onClick={() => setSelectedArticle(latest)}
+                          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0b3c26] text-[#f3e5ab] hover:bg-[#072217] font-semibold text-xs sm:text-sm tracking-wide transition-all shadow-md group"
+                        >
+                          <span>Baca Selengkapnya</span>
+                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        </button>
+                      ) : (
+                        <button
+                          id={`read-featured-btn-${latest.id}`}
+                          onClick={() => setSelectedArticle(latest)}
+                          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0b3c26]/10 text-[#0b3c26] hover:bg-[#0b3c26] hover:text-[#f3e5ab] font-semibold text-xs sm:text-sm tracking-wide transition-all group"
+                        >
+                          <span>Buka Detail Berita</span>
+                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => handleShare(latest)}
+                        className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#0b3c26] font-medium transition-colors"
+                      >
+                        {copied ? (
+                          <>
+                            <Check className="w-4 h-4 text-green-600" />
+                            <span className="text-green-600 font-semibold">Tautan Tersalin!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Share2 className="w-4 h-4 text-[#d4af37]" />
+                            <span>Bagikan Warta</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* 2. Berita-Berita Terdahulu (Grid Standar) */}
+          {sortedNews.length > 1 && (
+            <div className="pt-6">
+              <div className="flex items-center justify-between mb-8 pb-3 border-b border-gray-200/80">
+                <div>
+                  <h4 className="font-heading text-xl sm:text-2xl font-bold text-[#072217]">
+                    Berita & Kabar Terdahulu
+                  </h4>
+                  <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                    Arsip warta, liputan acara, dan pengumuman madrasah sebelumnya.
+                  </p>
+                </div>
+                <span className="hidden sm:inline-block text-xs font-semibold px-3 py-1 bg-gray-100 text-gray-600 rounded-full">
+                  {sortedNews.length - 1} Berita Lainnya
                 </span>
               </div>
 
-              <div className="p-6 flex-1 flex flex-col justify-between">
-                <div>
-                  <span className="text-xs font-semibold text-[#d4af37] uppercase tracking-wider block mb-2">
-                    {formatDisplayDate(article.date)}
-                  </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {sortedNews.slice(1).map((article) => (
+                  <article
+                    key={article.id}
+                    id={`news-card-${article.id}`}
+                    className="group bg-white rounded-2xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_40px_rgba(11,60,38,0.15)] border border-black/5 hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between"
+                  >
+                    <div className="relative h-52 overflow-hidden">
+                      <img
+                        src={article.imageUrl}
+                        alt={article.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <span className="absolute top-3 left-3 bg-[#072217]/85 backdrop-blur-md text-[#d4af37] text-[10px] uppercase font-bold tracking-wider px-3 py-1 rounded-full border border-[#d4af37]/30">
+                        {article.category}
+                      </span>
+                    </div>
 
-                  <h4 className="font-heading text-lg font-bold text-[#072217] group-hover:text-[#0b3c26] transition-colors leading-snug mb-3">
-                    {article.title}
-                  </h4>
+                    <div className="p-6 flex-1 flex flex-col justify-between">
+                      <div>
+                        <span className="text-xs font-semibold text-[#d4af37] uppercase tracking-wider block mb-2">
+                          {formatDisplayDate(article.date)}
+                        </span>
 
-                  <p className="font-body text-xs sm:text-sm text-[#52635c] leading-relaxed mb-5 line-clamp-3">
-                    {article.summary}
-                  </p>
-                </div>
+                        <h4 className="font-heading text-lg font-bold text-[#072217] group-hover:text-[#0b3c26] transition-colors leading-snug mb-3">
+                          {article.title}
+                        </h4>
 
-                <button
-                  id={`read-news-btn-${article.id}`}
-                  onClick={() => setSelectedArticle(article)}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0b3c26] hover:text-[#d4af37] transition-colors"
-                >
-                  <span>Baca Selengkapnya</span>
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </button>
+                        <p className="font-body text-xs sm:text-sm text-[#52635c] leading-relaxed mb-5 line-clamp-3">
+                          {article.summary}
+                        </p>
+                      </div>
+
+                      <button
+                        id={`read-news-btn-${article.id}`}
+                        onClick={() => setSelectedArticle(article)}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0b3c26] hover:text-[#d4af37] transition-colors"
+                      >
+                        <span>Baca Selengkapnya</span>
+                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                      </button>
+                    </div>
+                  </article>
+                ))}
               </div>
-            </article>
-          ))}
+            </div>
+          )}
         </div>
       ) : (
         <div className="bg-white rounded-2xl p-10 text-center max-w-xl mx-auto border border-gray-100 shadow-sm">

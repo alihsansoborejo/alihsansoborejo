@@ -46,7 +46,9 @@ import {
   Award,
   Sliders,
   ZoomIn,
-  MoveVertical
+  MoveVertical,
+  UserCheck,
+  FileSpreadsheet
 } from 'lucide-react';
 import { compressImage } from '../lib/imageCompressor';
 import {
@@ -75,14 +77,23 @@ import {
   FAQItem,
   PPDBRegistration,
   StaffMember,
-  StatItem
+  StatItem,
+  StudentItem
 } from '../types';
+import { StudentManagement } from './StudentManagement';
+import { StaffCsvImportModal } from './StaffCsvImportModal';
+import {
+  generateCSV,
+  downloadCSV,
+  STAFF_CSV_HEADERS
+} from '../lib/csvHelper';
 
 type AdminTab =
   | 'overview'
   | 'hero_stats'
   | 'profile'
   | 'staff'
+  | 'students'
   | 'ppdb'
   | 'news'
   | 'programs'
@@ -151,7 +162,13 @@ export const AdminDashboard: React.FC = () => {
     pullFromSupabase,
     resetToDefaultData,
     exportBackupJSON,
-    importBackupJSON
+    importBackupJSON,
+    studentList,
+    addStudent,
+    updateStudent,
+    deleteStudent,
+    addStudentsBatch,
+    addStaffBatch
   } = useDataContext();
 
   const { user, authUser, signInWithGoogle, signOut, getToken } = useAuth();
@@ -159,6 +176,29 @@ export const AdminDashboard: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [isStaffCsvModalOpen, setIsStaffCsvModalOpen] = useState(false);
+
+  const handleExportStaffCSV = () => {
+    if (staffList.length === 0) {
+      alert('Belum ada data GTK untuk diekspor.');
+      return;
+    }
+    const rows = staffList.map((s) => [
+      s.name,
+      s.role,
+      s.category,
+      s.nipOrNuptk || '',
+      s.education || '',
+      s.subjects || '',
+      s.phone || '',
+      s.photoUrl || '',
+      s.status || 'Aktif Mengajar',
+      String(s.order || 99),
+    ]);
+    const csvContent = generateCSV(STAFF_CSV_HEADERS, rows);
+    downloadCSV(`data_gtk_mi_al_ihsan_${new Date().toISOString().split('T')[0]}.csv`, csvContent);
+    notify(`${staffList.length} data GTK berhasil diekspor ke file CSV!`);
+  };
 
   const notify = (msg: string) => {
     setSuccessToast(msg);
@@ -617,7 +657,11 @@ export const AdminDashboard: React.FC = () => {
         imageUrl: newsForm.imageUrl,
         date: finalDate
       });
-      notify('Berita berhasil diperbarui!');
+      if (newsForm.category === 'Prestasi') {
+        notify('Berita berhasil diperbarui & disinkronkan ke Galeri serta Prestasi!');
+      } else {
+        notify('Berita berhasil diperbarui & foto otomatis tersimpan ke Galeri!');
+      }
       setEditingNews(null);
     } else {
       addNews({
@@ -630,7 +674,11 @@ export const AdminDashboard: React.FC = () => {
         imageUrl: newsForm.imageUrl,
         date: finalDate
       });
-      notify('Berita baru berhasil dipublikasikan!');
+      if (newsForm.category === 'Prestasi') {
+        notify('Berita baru terbit! Foto otomatis masuk ke Galeri dan warta terdaftar di Prestasi.');
+      } else {
+        notify('Berita baru terbit! Foto berita otomatis tersimpan di Galeri.');
+      }
       setIsAddingNews(false);
     }
 
@@ -1190,6 +1238,7 @@ export const AdminDashboard: React.FC = () => {
               { id: 'hero_stats', label: 'Teks Beranda & Statistik', icon: Sparkles, badge: statsList.length },
               { id: 'profile', label: 'Profil & Identitas', icon: Building },
               { id: 'staff', label: 'Manajemen GTK (Guru)', icon: GraduationCap, badge: staffList.length },
+              { id: 'students', label: 'Data Siswa (Santri)', icon: UserCheck, badge: studentList.length },
               { id: 'ppdb', label: 'Pendaftar PPDB Online', icon: Users, badge: ppdbRegistrations.length },
               { id: 'news', label: 'Berita & Pengumuman', icon: Newspaper, badge: newsList.length },
               { id: 'programs', label: 'Program Unggulan', icon: BookOpen },
@@ -1324,7 +1373,22 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               {/* Metric Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+                <div
+                  onClick={() => setActiveTab('students')}
+                  className="p-4 rounded-xl bg-[#f8faf9] border border-gray-200 hover:border-[#0b3c26] cursor-pointer transition-colors"
+                >
+                  <div className="text-xs text-gray-500 font-medium">Data Siswa (Santri)</div>
+                  <div className="font-heading text-2xl font-bold text-[#0b3c26] mt-1">
+                    {studentList.length}
+                  </div>
+                  <div className="text-[10px] text-emerald-600 mt-1 flex items-center gap-1 font-semibold">
+                    <span>
+                      {studentList.filter((s) => s.status === 'Aktif').length} Santri Aktif
+                    </span>
+                  </div>
+                </div>
+
                 <div
                   onClick={() => setActiveTab('ppdb')}
                   className="p-4 rounded-xl bg-[#f8faf9] border border-gray-200 hover:border-[#0b3c26] cursor-pointer transition-colors"
@@ -2483,28 +2547,49 @@ export const AdminDashboard: React.FC = () => {
                   </p>
                 </div>
 
-                <button
-                  onClick={() => {
-                    setEditingStaff(null);
-                    setStaffForm({
-                      name: '',
-                      role: '',
-                      category: 'Guru Kelas',
-                      education: 'S.Pd.',
-                      nipOrNuptk: '-',
-                      subjects: '',
-                      phone: '',
-                      photoUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80',
-                      status: 'Aktif Mengajar',
-                      order: (staffList.length + 1) * 10,
-                    });
-                    setIsAddingStaff(true);
-                  }}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-[#0b3c26] hover:bg-[#072217] text-[#f3e5ab] text-xs font-bold rounded-xl transition-all shadow-sm"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Tambah Guru / Staf Baru</span>
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setEditingStaff(null);
+                      setStaffForm({
+                        name: '',
+                        role: '',
+                        category: 'Guru Kelas',
+                        education: 'S.Pd.',
+                        nipOrNuptk: '-',
+                        subjects: '',
+                        phone: '',
+                        photoUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80',
+                        status: 'Aktif Mengajar',
+                        order: (staffList.length + 1) * 10,
+                      });
+                      setIsAddingStaff(true);
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-[#0b3c26] hover:bg-[#072217] text-[#f3e5ab] text-xs font-bold rounded-xl transition-all shadow-sm"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-[#d4af37]" />
+                    <span>Tambah GTK Manual</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsStaffCsvModalOpen(true)}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-emerald-50 text-[#0b3c26] border border-emerald-300 text-xs font-bold rounded-xl transition-all shadow-sm"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-[#d4af37]" />
+                    <span>Import CSV GTK</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleExportStaffCSV}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition-all"
+                    title="Download CSV data GTK madrasah"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Ekspor CSV</span>
+                  </button>
+                </div>
               </div>
 
               {/* Category Filter */}
@@ -2792,7 +2877,34 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                 </div>
               )}
+
+              {/* Staff CSV Import Modal */}
+              <StaffCsvImportModal
+                isOpen={isStaffCsvModalOpen}
+                onClose={() => setIsStaffCsvModalOpen(false)}
+                currentStaffCount={staffList.length}
+                onImportSuccess={(newStaff, replaceAll) => {
+                  addStaffBatch(newStaff, replaceAll);
+                  notify(
+                    replaceAll
+                      ? `Berhasil mengganti data GTK dengan ${newStaff.length} data dari CSV!`
+                      : `Berhasil menambahkan ${newStaff.length} GTK baru dari file CSV!`
+                  );
+                }}
+              />
             </div>
+          )}
+
+          {/* TAB: MANAJEMEN DATA SISWA (SANTRI) */}
+          {activeTab === 'students' && (
+            <StudentManagement
+              students={studentList}
+              onAddStudent={addStudent}
+              onAddStudentsBatch={addStudentsBatch}
+              onUpdateStudent={updateStudent}
+              onDeleteStudent={deleteStudent}
+              notify={notify}
+            />
           )}
 
           {/* TAB 3: KELOLA PPDB */}
@@ -3334,6 +3446,12 @@ export const AdminDashboard: React.FC = () => {
                           onChange={(e) => setNewsForm({ ...newsForm, imageUrl: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-[11px]"
                         />
+                        <div className="mt-1.5 p-2 bg-emerald-50 border border-emerald-200/60 rounded-lg text-[11px] text-[#0b3c26] space-y-1">
+                          <p>📸 <strong>Otomatis ke Galeri:</strong> Foto ini akan langsung ditambahkan ke Galeri Foto Madrasah.</p>
+                          {newsForm.category === 'Prestasi' && (
+                            <p className="text-amber-800">🏆 <strong>Kategori Prestasi:</strong> Karena kategori dipilih <em>Prestasi</em>, berita dan foto ini juga otomatis tercatat di bagian Prestasi Madrasah.</p>
+                          )}
+                        </div>
                       </div>
 
                       <div>

@@ -300,6 +300,7 @@ app.post('/api/sync-all', requireAuth, async (req: AuthRequest, res) => {
       testimonials,
       faqs,
       staffList,
+      studentList,
       newsList,
     } = req.body;
 
@@ -314,6 +315,7 @@ app.post('/api/sync-all', requireAuth, async (req: AuthRequest, res) => {
     if (gallery) tasks.push(setAppSetting('gallery', gallery));
     if (testimonials) tasks.push(setAppSetting('testimonials', testimonials));
     if (faqs) tasks.push(setAppSetting('faqs', faqs));
+    if (studentList && Array.isArray(studentList)) tasks.push(setAppSetting('student_list', studentList));
 
     if (staffList && Array.isArray(staffList)) {
       for (const s of staffList) {

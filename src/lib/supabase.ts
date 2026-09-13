@@ -366,9 +366,40 @@ export async function checkSupabaseStatus(): Promise<SupabaseHealthResult> {
 }
 
 /**
- * Save complete application state to Supabase
+ * Save complete application state to Supabase with anti-wipe protection
  */
-export async function saveAllToSupabase(state: AppStorageState): Promise<{ success: boolean; message: string }> {
+export async function saveAllToSupabase(
+  state: AppStorageState,
+  options?: { isAuthorizedAdmin?: boolean; force?: boolean }
+): Promise<{ success: boolean; message: string }> {
+  // Guard 1: Basic validation
+  if (!state || !state.schoolProfile) {
+    return { success: false, message: 'Data tidak valid untuk disimpan ke Supabase' };
+  }
+
+  // Guard 2: Authorization check - prevent unauthorized visitors or bots from overwriting database
+  if (options?.isAuthorizedAdmin === false && !options?.force) {
+    console.warn('saveAllToSupabase rejected: unauthorized write attempt blocked');
+    return { success: false, message: 'Akses ditolak: Hanya Administrator yang berhak menyinkronkan data ke Supabase' };
+  }
+
+  // Guard 3: Anti-wipe safeguard!
+  // Before overwriting tables in Supabase, verify that incoming payload doesn't wipe out existing database records
+  try {
+    if (!options?.force) {
+      const { count: remoteStaffCount } = await supabase
+        .from('staff_members')
+        .select('id', { count: 'exact', head: true });
+
+      if ((remoteStaffCount ?? 0) > 0 && (!state.staffList || state.staffList.length === 0)) {
+        console.warn('Anti-wipe safeguard triggered: Supabase has staff data but incoming state is empty.');
+        return { success: false, message: 'Dibatalkan demi keamanan: Data GTK lokal kosong sehingga dicegah menimpa database Supabase.' };
+      }
+    }
+  } catch (checkErr) {
+    // Non-blocking network check failure
+  }
+
   try {
     // 1. Save master snapshot into madrasah_store
     const { error: storeError } = await supabase
@@ -743,29 +774,34 @@ export async function upsertSchoolProfileToSupabase(sp: any) {
  */
 export async function loadFromSupabase(): Promise<AppStorageState | null> {
   try {
-    // 1. Fetch snapshot from madrasah_store
-    const storePromise = supabase
-      .from('madrasah_store')
-      .select('data')
-      .eq('id', 'main')
-      .single();
-
-    // 2. In parallel, fetch individual relational tables for high fidelity
-    const profilePromise = supabase
-      .from('school_profile')
-      .select('*')
-      .eq('id', 'main')
-      .single();
-
-    const staffPromise = supabase
-      .from('staff_members')
-      .select('*')
-      .order('order_num', { ascending: true });
-
-    const [storeRes, profileRes, staffRes] = await Promise.allSettled([
-      storePromise,
-      profilePromise,
-      staffPromise,
+    const [
+      storeRes,
+      profileRes,
+      staffRes,
+      newsRes,
+      ppdbRes,
+      achieveRes,
+      progRes,
+      ekskulRes,
+      facRes,
+      galRes,
+      testiRes,
+      faqRes,
+      statRes,
+    ] = await Promise.allSettled([
+      supabase.from('madrasah_store').select('data').eq('id', 'main').single(),
+      supabase.from('school_profile').select('*').eq('id', 'main').single(),
+      supabase.from('staff_members').select('*').order('order_num', { ascending: true }),
+      supabase.from('news_articles').select('*'),
+      supabase.from('ppdb_registrations').select('*'),
+      supabase.from('achievements').select('*'),
+      supabase.from('programs').select('*'),
+      supabase.from('extracurriculars').select('*'),
+      supabase.from('facilities').select('*'),
+      supabase.from('gallery').select('*'),
+      supabase.from('testimonials').select('*'),
+      supabase.from('faqs').select('*'),
+      supabase.from('stats').select('*').order('order_num', { ascending: true }),
     ]);
 
     let state: AppStorageState | null = null;
@@ -774,12 +810,11 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
       state = storeRes.value.data.data as AppStorageState;
     }
 
-    // If no store snapshot exists yet, initialize minimal empty structure
     if (!state) {
       state = {} as any;
     }
 
-    // Merge School Profile if retrieved from relational table
+    // Merge School Profile
     if (profileRes.status === 'fulfilled' && profileRes.value.data) {
       const p = profileRes.value.data;
       state.schoolProfile = {
@@ -813,7 +848,7 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
       };
     }
 
-    // Merge Staff Members (GTK) if relational table has rows
+    // Merge Staff Members (GTK)
     if (staffRes.status === 'fulfilled' && staffRes.value.data && staffRes.value.data.length > 0) {
       state.staffList = staffRes.value.data.map((s: any, idx: number) => ({
         id: s.id,
@@ -830,7 +865,148 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
       }));
     }
 
-    if (state.schoolProfile || (state.staffList && state.staffList.length > 0)) {
+    // Merge News Articles
+    if (newsRes.status === 'fulfilled' && newsRes.value.data && newsRes.value.data.length > 0) {
+      state.newsList = newsRes.value.data.map((n: any) => ({
+        id: n.id,
+        title: n.title,
+        category: n.category as any,
+        summary: n.summary || '',
+        content: n.content,
+        imageUrl: n.image_url || '',
+        author: n.author || 'Admin Madrasah',
+        date: n.date || n.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+        readTime: n.read_time || '3 menit',
+      }));
+    }
+
+    // Merge PPDB
+    if (ppdbRes.status === 'fulfilled' && ppdbRes.value.data && ppdbRes.value.data.length > 0) {
+      state.ppdbRegistrations = ppdbRes.value.data.map((p: any) => ({
+        id: p.id,
+        registrationNumber: p.registration_number,
+        studentName: p.student_name,
+        nik: p.nik || '',
+        nisn: p.nisn || '',
+        gender: p.gender,
+        birthPlace: p.birth_place || '',
+        birthDate: p.birth_date || '',
+        targetClass: p.target_class || 'Kelas 1 (Satu)',
+        originSchool: p.origin_school || '',
+        parentName: p.parent_name || '',
+        parentPhone: p.parent_phone || '',
+        address: p.parent_address || '',
+        submissionDate: p.submission_date || '',
+        status: p.status || 'Menunggu',
+        notes: p.notes || '',
+      }));
+    }
+
+    // Merge Achievements
+    if (achieveRes.status === 'fulfilled' && achieveRes.value.data && achieveRes.value.data.length > 0) {
+      state.achievements = achieveRes.value.data.map((a: any) => ({
+        id: a.id,
+        title: a.title,
+        winner: a.winner,
+        category: a.category as any,
+        level: a.level as any,
+        year: a.year,
+        rank: a.rank,
+        description: a.description || '',
+        imageUrl: a.image_url || '',
+      }));
+    }
+
+    // Merge Programs
+    if (progRes.status === 'fulfilled' && progRes.value.data && progRes.value.data.length > 0) {
+      state.programs = progRes.value.data.map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        category: p.category as any,
+        iconName: p.icon || 'BookOpen',
+        shortDesc: p.description || '',
+        fullDesc: p.full_desc || '',
+        highlights: Array.isArray(p.highlights) ? p.highlights : [],
+        target: p.target || '',
+        schedule: p.schedule || '',
+      }));
+    }
+
+    // Merge Extracurriculars
+    if (ekskulRes.status === 'fulfilled' && ekskulRes.value.data && ekskulRes.value.data.length > 0) {
+      state.extracurriculars = ekskulRes.value.data.map((e: any) => ({
+        id: e.id,
+        name: e.name,
+        category: e.category as any,
+        schedule: e.schedule || '',
+        coach: e.coach || '',
+        description: e.description || '',
+        iconName: e.icon || 'Star',
+        achievements: Array.isArray(e.achievements) ? e.achievements : [],
+        imageUrl: e.photo_url || '',
+      }));
+    }
+
+    // Merge Facilities
+    if (facRes.status === 'fulfilled' && facRes.value.data && facRes.value.data.length > 0) {
+      state.facilities = facRes.value.data.map((f: any) => ({
+        id: f.id,
+        name: f.name,
+        category: f.category as any,
+        description: f.description || '',
+        specifications: Array.isArray(f.specifications) ? f.specifications : [],
+        imageUrl: f.photo_url || '',
+      }));
+    }
+
+    // Merge Gallery
+    if (galRes.status === 'fulfilled' && galRes.value.data && galRes.value.data.length > 0) {
+      state.gallery = galRes.value.data.map((g: any) => ({
+        id: g.id,
+        title: g.title,
+        category: g.category as any,
+        imageUrl: g.image_url,
+        date: g.date || '',
+        description: g.description || '',
+      }));
+    }
+
+    // Merge Testimonials
+    if (testiRes.status === 'fulfilled' && testiRes.value.data && testiRes.value.data.length > 0) {
+      state.testimonials = testiRes.value.data.map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        role: t.role as any,
+        quote: t.quote,
+        childName: t.student_name || '',
+        childGrade: t.student_grade || '',
+        avatarUrl: t.avatar_url || '',
+      }));
+    }
+
+    // Merge FAQs
+    if (faqRes.status === 'fulfilled' && faqRes.value.data && faqRes.value.data.length > 0) {
+      state.faqs = faqRes.value.data.map((q: any) => ({
+        id: q.id,
+        question: q.question,
+        answer: q.answer,
+        category: q.category as any,
+      }));
+    }
+
+    // Merge Stats
+    if (statRes.status === 'fulfilled' && statRes.value.data && statRes.value.data.length > 0) {
+      state.statsList = statRes.value.data.map((s: any, idx: number) => ({
+        id: s.id,
+        label: s.label,
+        value: s.value,
+        suffix: s.suffix || '',
+        detail: s.detail || '',
+        order: s.order_num ?? (idx + 1),
+      }));
+    }
+
+    if (state.schoolProfile || (state.staffList && state.staffList.length > 0) || (state.newsList && state.newsList.length > 0)) {
       return state;
     }
 

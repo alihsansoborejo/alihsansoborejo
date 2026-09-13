@@ -60,6 +60,25 @@ export interface StaffMember {
   status?: 'Aktif' | 'Tugas Belajar' | 'Cuti';
 }
 
+export interface StudentItem {
+  id: string;
+  nis: string;
+  nisn?: string;
+  name: string;
+  gender: 'Laki-laki' | 'Perempuan';
+  grade: 'Kelas 1' | 'Kelas 2' | 'Kelas 3' | 'Kelas 4' | 'Kelas 5' | 'Kelas 6' | string;
+  classRoom?: string; // e.g. '1A', '1B', '2'
+  birthPlace?: string;
+  birthDate?: string; // YYYY-MM-DD
+  parentName?: string;
+  parentPhone?: string;
+  address?: string;
+  academicYear?: string; // e.g. '2024/2025'
+  status: 'Aktif' | 'Lulus' | 'Pindah' | 'Mutasi';
+  photoUrl?: string;
+  notes?: string;
+}
+
 export interface FacilityItem {
   id: string;
   name: string;
