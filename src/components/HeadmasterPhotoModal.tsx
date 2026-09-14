@@ -54,7 +54,7 @@ export const HeadmasterPhotoModal: React.FC<HeadmasterPhotoModalProps> = ({ isOp
   const { schoolProfile, updateSchoolProfile, pushAllToCloud } = useDataContext();
 
   const [photoUrl, setPhotoUrl] = useState<string>(
-    schoolProfile.headmasterPhotoUrl || PRESET_PHOTOS[0].url
+    schoolProfile.headmasterPhotoUrl || ''
   );
   const [position, setPosition] = useState<'top' | 'center' | 'bottom'>(
     schoolProfile.headmasterPhotoPosition || 'top'

@@ -4,6 +4,23 @@ import { NewsArticle } from '../types';
 import { Calendar, User, ArrowRight, X, Share2, Check } from 'lucide-react';
 import { formatDisplayDate, parseDateTimestamp } from '../lib/dateUtils';
 
+const extractParagraphs = (item: any): string[] => {
+  if (!item) return [];
+  if (Array.isArray(item.content)) {
+    return item.content.map(String).map((s: string) => s.trim()).filter(Boolean);
+  }
+  if (typeof item.content === 'string' && item.content.trim()) {
+    return item.content.split(/\n\n+/).map((p: string) => p.trim()).filter(Boolean);
+  }
+  if (item.summary && typeof item.summary === 'string' && item.summary.trim()) {
+    return [item.summary.trim()];
+  }
+  if (item.excerpt && typeof item.excerpt === 'string' && item.excerpt.trim()) {
+    return [item.excerpt.trim()];
+  }
+  return [];
+};
+
 export const NewsSection: React.FC = () => {
   const { newsList } = useDataContext();
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
@@ -42,10 +59,9 @@ export const NewsSection: React.FC = () => {
           {/* 1. Berita Terbaru (Lebar / Featured Banner) */}
           {sortedNews[0] && (() => {
             const latest = sortedNews[0];
-            const fullContent = (latest.content && latest.content.length > 0)
-              ? latest.content.join('\n\n')
-              : latest.summary;
-            const isLongArticle = fullContent.length > 400 || (latest.content && latest.content.length > 2);
+            const paragraphs = extractParagraphs(latest);
+            const fullContent = paragraphs.join('\n\n') || latest.summary || '';
+            const isLongArticle = fullContent.length > 400 || paragraphs.length > 2;
 
             return (
               <div
@@ -97,12 +113,12 @@ export const NewsSection: React.FC = () => {
 
                       {/* Paragraf / Isi Berita */}
                       <div className="font-body text-sm sm:text-base text-gray-700 leading-relaxed space-y-3">
-                        {latest.content && latest.content.length > 0 ? (
+                        {paragraphs.length > 0 ? (
                           <>
                             <p className="font-medium text-gray-900 leading-relaxed">
-                              {latest.content[0]}
+                              {paragraphs[0]}
                             </p>
-                            {latest.content.slice(1, 3).map((p, idx) => (
+                            {paragraphs.slice(1, 3).map((p, idx) => (
                               <p key={idx} className="line-clamp-3">
                                 {p}
                               </p>
@@ -309,7 +325,7 @@ export const NewsSection: React.FC = () => {
               </div>
 
               <div className="space-y-4 font-body text-sm text-gray-700 leading-relaxed">
-                {selectedArticle.content.map((paragraph, idx) => (
+                {extractParagraphs(selectedArticle).map((paragraph, idx) => (
                   <p key={idx}>{paragraph}</p>
                 ))}
               </div>

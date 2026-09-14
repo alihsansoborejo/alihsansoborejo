@@ -220,33 +220,54 @@ export const sanitizeAppState = (raw: any): AppStorageState => {
   const isOldDummyPhoto =
     rawProfile.headmasterPhotoUrl ===
       'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=800&q=80' ||
-    !rawProfile.headmasterPhotoUrl;
+    rawProfile.headmasterPhotoUrl ===
+      'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80';
 
   const schoolProfile = {
     ...DEFAULT_DATA.schoolProfile,
     ...rawProfile,
     headmasterPhotoUrl: isOldDummyPhoto
-      ? DEFAULT_DATA.schoolProfile.headmasterPhotoUrl
-      : rawProfile.headmasterPhotoUrl,
+      ? ''
+      : (rawProfile.headmasterPhotoUrl || ''),
     headmasterPhotoPosition: rawProfile.headmasterPhotoPosition || 'top',
     headmasterPhotoScale: rawProfile.headmasterPhotoScale ?? 100,
     headmasterPhotoFit: rawProfile.headmasterPhotoFit || 'cover',
   };
 
+  const sanitizedNewsList = (raw.newsList && Array.isArray(raw.newsList) ? raw.newsList : (DEFAULT_DATA.newsList || [])).map((n: any) => {
+    let contentArr: string[] = [];
+    if (Array.isArray(n.content)) {
+      contentArr = n.content.map(String).filter(Boolean);
+    } else if (typeof n.content === 'string' && n.content.trim()) {
+      contentArr = n.content.split(/\n\n+/).map((p: string) => p.trim()).filter(Boolean);
+    }
+    const summary = n.summary || n.excerpt || (contentArr[0] ? contentArr[0].slice(0, 160) : '') || '';
+    if (contentArr.length === 0 && summary) {
+      contentArr = [summary];
+    }
+    return {
+      ...n,
+      summary,
+      content: contentArr,
+      author: n.author || 'Admin Madrasah',
+      readTime: n.readTime || '3 menit',
+    };
+  });
+
   return {
     schoolProfile,
-    staffList: ensureUniqueIds(raw.staffList || DEFAULT_DATA.staffList, 'staff'),
-    studentList: ensureUniqueIds(raw.studentList || DEFAULT_DATA.studentList, 'std'),
-    statsList: ensureUniqueIds(raw.statsList !== undefined ? raw.statsList : DEFAULT_DATA.statsList, 'stat'),
-    programs: ensureUniqueIds(raw.programs || DEFAULT_DATA.programs, 'prog'),
-    extracurriculars: ensureUniqueIds(raw.extracurriculars || DEFAULT_DATA.extracurriculars, 'ekskul'),
-    achievements: ensureUniqueIds(raw.achievements || DEFAULT_DATA.achievements, 'ach'),
-    newsList: ensureUniqueIds(raw.newsList || DEFAULT_DATA.newsList, 'news'),
-    facilities: ensureUniqueIds(raw.facilities || DEFAULT_DATA.facilities, 'fac'),
-    gallery: ensureUniqueIds(raw.gallery || DEFAULT_DATA.gallery, 'gal'),
-    testimonials: ensureUniqueIds(raw.testimonials || DEFAULT_DATA.testimonials, 'testi'),
-    faqs: ensureUniqueIds(raw.faqs || DEFAULT_DATA.faqs, 'faq'),
-    ppdbRegistrations: ensureUniqueIds(raw.ppdbRegistrations || DEFAULT_DATA.ppdbRegistrations, 'reg'),
+    staffList: ensureUniqueIds(Array.isArray(raw.staffList) ? raw.staffList : DEFAULT_DATA.staffList, 'staff'),
+    studentList: ensureUniqueIds(Array.isArray(raw.studentList) ? raw.studentList : DEFAULT_DATA.studentList, 'std'),
+    statsList: ensureUniqueIds(Array.isArray(raw.statsList) ? raw.statsList : DEFAULT_DATA.statsList, 'stat'),
+    programs: ensureUniqueIds(Array.isArray(raw.programs) ? raw.programs : DEFAULT_DATA.programs, 'prog'),
+    extracurriculars: ensureUniqueIds(Array.isArray(raw.extracurriculars) ? raw.extracurriculars : DEFAULT_DATA.extracurriculars, 'ekskul'),
+    achievements: ensureUniqueIds(Array.isArray(raw.achievements) ? raw.achievements : DEFAULT_DATA.achievements, 'ach'),
+    newsList: ensureUniqueIds(sanitizedNewsList, 'news'),
+    facilities: ensureUniqueIds(Array.isArray(raw.facilities) ? raw.facilities : DEFAULT_DATA.facilities, 'fac'),
+    gallery: ensureUniqueIds(Array.isArray(raw.gallery) ? raw.gallery : DEFAULT_DATA.gallery, 'gal'),
+    testimonials: ensureUniqueIds(Array.isArray(raw.testimonials) ? raw.testimonials : DEFAULT_DATA.testimonials, 'testi'),
+    faqs: ensureUniqueIds(Array.isArray(raw.faqs) ? raw.faqs : DEFAULT_DATA.faqs, 'faq'),
+    ppdbRegistrations: ensureUniqueIds(Array.isArray(raw.ppdbRegistrations) ? raw.ppdbRegistrations : DEFAULT_DATA.ppdbRegistrations, 'reg'),
   };
 };
 
@@ -330,17 +351,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             const sanitized = sanitizeAppState({
               schoolProfile: rawProfile,
-              staffList: onlineData.staffList && onlineData.staffList.length > 0 ? onlineData.staffList : prev.staffList,
-              statsList: onlineData.statsList && onlineData.statsList.length > 0 ? onlineData.statsList : prev.statsList,
-              programs: onlineData.programs && onlineData.programs.length > 0 ? onlineData.programs : prev.programs,
-              extracurriculars: onlineData.extracurriculars && onlineData.extracurriculars.length > 0 ? onlineData.extracurriculars : prev.extracurriculars,
-              achievements: onlineData.achievements && onlineData.achievements.length > 0 ? onlineData.achievements : prev.achievements,
-              newsList: onlineData.newsList && onlineData.newsList.length > 0 ? onlineData.newsList : prev.newsList,
-              facilities: onlineData.facilities && onlineData.facilities.length > 0 ? onlineData.facilities : prev.facilities,
-              gallery: onlineData.gallery && onlineData.gallery.length > 0 ? onlineData.gallery : prev.gallery,
-              testimonials: onlineData.testimonials && onlineData.testimonials.length > 0 ? onlineData.testimonials : prev.testimonials,
-              faqs: onlineData.faqs && onlineData.faqs.length > 0 ? onlineData.faqs : prev.faqs,
-              ppdbRegistrations: onlineData.ppdbRegistrations && onlineData.ppdbRegistrations.length > 0 ? onlineData.ppdbRegistrations : prev.ppdbRegistrations,
+              staffList: Array.isArray(onlineData.staffList) ? onlineData.staffList : prev.staffList,
+              studentList: Array.isArray(onlineData.studentList) ? onlineData.studentList : prev.studentList,
+              statsList: Array.isArray(onlineData.statsList) ? onlineData.statsList : prev.statsList,
+              programs: Array.isArray(onlineData.programs) ? onlineData.programs : prev.programs,
+              extracurriculars: Array.isArray(onlineData.extracurriculars) ? onlineData.extracurriculars : prev.extracurriculars,
+              achievements: Array.isArray(onlineData.achievements) ? onlineData.achievements : prev.achievements,
+              newsList: Array.isArray(onlineData.newsList) ? onlineData.newsList : prev.newsList,
+              facilities: Array.isArray(onlineData.facilities) ? onlineData.facilities : prev.facilities,
+              gallery: Array.isArray(onlineData.gallery) ? onlineData.gallery : prev.gallery,
+              testimonials: Array.isArray(onlineData.testimonials) ? onlineData.testimonials : prev.testimonials,
+              faqs: Array.isArray(onlineData.faqs) ? onlineData.faqs : prev.faqs,
+              ppdbRegistrations: Array.isArray(onlineData.ppdbRegistrations) ? onlineData.ppdbRegistrations : prev.ppdbRegistrations,
             });
             return sanitized;
           });

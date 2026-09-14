@@ -327,20 +327,46 @@ export async function getAllMadrasahOnlineData() {
       status: 'Aktif' as const,
     })) : STAFF_DATA;
 
+    const mappedNews = dbNews.length > 0 ? dbNews.map((n) => {
+      let contentArr: string[] = [];
+      if (Array.isArray(n.content)) {
+        contentArr = n.content.map(String).filter(Boolean);
+      } else if (typeof n.content === 'string' && n.content.trim()) {
+        contentArr = n.content.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+      }
+
+      const summaryText = n.excerpt || (n as any).summary || (contentArr[0] ? contentArr[0].slice(0, 160) : '') || '';
+      if (contentArr.length === 0 && summaryText) {
+        contentArr = [summaryText];
+      }
+
+      return {
+        id: n.id,
+        title: n.title,
+        category: (n.category as any) || 'Berita Madrasah',
+        summary: summaryText,
+        content: contentArr,
+        imageUrl: n.imageUrl || '',
+        author: n.author || 'Admin Madrasah',
+        date: n.date || new Date().toISOString().split('T')[0],
+        readTime: n.readTime || '3 menit',
+      };
+    }) : [];
+
     return {
       schoolProfile: activeProfile,
-      statsList: settingsMap['stats_list'] ?? STATS_DATA,
+      statsList: settingsMap['stats_list'] ?? [],
       programs: settingsMap['programs'] || PROGRAMS_DATA,
       extracurriculars: settingsMap['extracurriculars'] || EXTRACURRICULARS,
-      achievements: settingsMap['achievements'] || ACHIEVEMENTS,
+      achievements: settingsMap['achievements'] || [],
       facilities: settingsMap['facilities'] || FACILITIES,
-      gallery: settingsMap['gallery'] || GALLERY_DATA,
-      testimonials: settingsMap['testimonials'] || TESTIMONIALS,
+      gallery: settingsMap['gallery'] || [],
+      testimonials: settingsMap['testimonials'] || [],
       faqs: settingsMap['faqs'] || FAQ_DATA,
       staffList: mappedStaff,
-      studentList: settingsMap['student_list'] || INITIAL_STUDENTS,
-      newsList: dbNews.length > 0 ? dbNews : INITIAL_NEWS,
-      ppdbRegistrations: dbPPDB.length > 0 ? dbPPDB : INITIAL_PPDB_REGISTRATIONS,
+      studentList: settingsMap['student_list'] || [],
+      newsList: mappedNews,
+      ppdbRegistrations: dbPPDB,
     };
   } catch (error) {
     console.error('Failed to get all madrasah online data:', error);
@@ -353,7 +379,7 @@ export async function seedInitialDatabaseIfEmpty() {
   try {
     const existingStaff = await db.select().from(staffMembers).limit(1);
     if (existingStaff.length === 0) {
-      console.log('Seeding initial dewan guru & staf (GTK) into Cloud SQL...');
+      console.log('Seeding initial headmaster into Cloud SQL...');
       for (const s of STAFF_DATA) {
         await db.insert(staffMembers).values({
           id: s.id,
@@ -366,51 +392,6 @@ export async function seedInitialDatabaseIfEmpty() {
           photoUrl: s.photoUrl || null,
           bio: null,
           orderNum: s.order || 0,
-        }).onConflictDoNothing();
-      }
-    }
-
-    const existingNews = await db.select().from(newsArticles).limit(1);
-    if (existingNews.length === 0) {
-      console.log('Seeding initial news articles into Cloud SQL...');
-      for (const n of INITIAL_NEWS) {
-        await db.insert(newsArticles).values({
-          id: n.id,
-          title: n.title,
-          slug: n.id,
-          category: n.category,
-          excerpt: n.summary || '',
-          content: Array.isArray(n.content) ? n.content.join('\n\n') : String(n.content || ''),
-          date: n.date,
-          author: n.author,
-          imageUrl: n.imageUrl || null,
-          readTime: n.readTime || '3 menit',
-          isPublished: true,
-        }).onConflictDoNothing();
-      }
-    }
-
-    const existingPPDB = await db.select().from(ppdbRegistrations).limit(1);
-    if (existingPPDB.length === 0) {
-      console.log('Seeding initial PPDB registrations into Cloud SQL...');
-      for (const p of INITIAL_PPDB_REGISTRATIONS) {
-        await db.insert(ppdbRegistrations).values({
-          id: p.id,
-          registrationNumber: p.registrationNumber,
-          fullName: p.studentName,
-          nisn: p.nisn || null,
-          nik: p.nik || null,
-          birthPlace: p.birthPlace || null,
-          birthDate: p.birthDate || null,
-          gender: p.gender,
-          parentName: p.parentName,
-          parentPhone: p.parentPhone,
-          parentAddress: p.address || null,
-          previousSchool: p.originSchool || null,
-          registrationDate: p.submissionDate,
-          status: p.status,
-          notes: p.notes || null,
-          documentsJson: null,
         }).onConflictDoNothing();
       }
     }
@@ -452,7 +433,7 @@ export async function seedInitialDatabaseIfEmpty() {
       await setAppSetting('faqs', FAQ_DATA);
     }
 
-    console.log('Cloud SQL baseline data ready.');
+    console.log('Cloud SQL baseline data check completed.');
   } catch (error) {
     console.error('Error seeding initial database data:', error);
   }

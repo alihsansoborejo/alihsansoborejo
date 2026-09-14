@@ -110,15 +110,31 @@ export const PrincipalWelcome: React.FC = () => {
                   </button>
 
                   <div className="w-full h-[340px] sm:h-[380px] overflow-hidden relative flex items-center justify-center bg-[#041a11]">
-                    <img
-                      src={schoolProfile.headmasterPhotoUrl || "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80"}
-                      alt={schoolProfile.headmasterName || "Kepala MI Ma'arif Al Ihsan Soborejo"}
-                      style={{
-                        transform: `scale(${photoScale / 100})`,
-                        transformOrigin,
-                      }}
-                      className={`w-full h-full filter contrast-105 transition-transform duration-300 ${fitClass} ${positionClass}`}
-                    />
+                    {schoolProfile.headmasterPhotoUrl ? (
+                      <img
+                        src={schoolProfile.headmasterPhotoUrl}
+                        alt={schoolProfile.headmasterName || "Kepala MI Ma'arif Al Ihsan Soborejo"}
+                        style={{
+                          transform: `scale(${photoScale / 100})`,
+                          transformOrigin,
+                        }}
+                        className={`w-full h-full filter contrast-105 transition-transform duration-300 ${fitClass} ${positionClass}`}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-gradient-to-br from-[#0b3c26] to-[#041a11]">
+                        <div className="w-24 h-24 rounded-full bg-emerald-900/50 border-2 border-[#d4af37]/60 flex items-center justify-center mb-3 text-[#d4af37] shadow-xl">
+                          <Camera className="w-10 h-10 opacity-70" />
+                        </div>
+                        <p className="text-white font-semibold text-sm">{schoolProfile.headmasterName || 'MUIN, S.Pd.I.'}</p>
+                        <p className="text-emerald-300/80 text-xs mt-0.5">{schoolProfile.headmasterTitle || 'Kepala Madrasah'}</p>
+                        <button
+                          onClick={() => setIsPhotoModalOpen(true)}
+                          className="mt-3 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#d4af37] text-emerald-950 hover:bg-[#c49f27] transition shadow"
+                        >
+                          Unggah Foto Resmi
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="p-4 bg-[#072217]/95 backdrop-blur-md border-t border-[#d4af37]/30 text-center">

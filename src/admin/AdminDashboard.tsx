@@ -3288,14 +3288,17 @@ export const AdminDashboard: React.FC = () => {
                       <button
                         onClick={() => {
                           setEditingNews(article);
+                          const articleContentString = Array.isArray(article.content)
+                            ? article.content.join('\n\n')
+                            : (typeof article.content === 'string' ? article.content : '');
                           setNewsForm({
                             title: article.title,
                             category: article.category,
-                            summary: article.summary,
-                            contentString: article.content.join('\n\n'),
-                            author: article.author,
-                            readTime: article.readTime,
-                            imageUrl: article.imageUrl,
+                            summary: article.summary || '',
+                            contentString: articleContentString,
+                            author: article.author || 'Admin Madrasah',
+                            readTime: article.readTime || '3 menit',
+                            imageUrl: article.imageUrl || '',
                             date: toDateInputValue(article.date)
                           });
                           setIsAddingNews(true);

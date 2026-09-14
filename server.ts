@@ -318,6 +318,18 @@ app.post('/api/sync-all', requireAuth, async (req: AuthRequest, res) => {
     if (studentList && Array.isArray(studentList)) tasks.push(setAppSetting('student_list', studentList));
 
     if (staffList && Array.isArray(staffList)) {
+      try {
+        const incomingStaffIds = new Set(staffList.map((s: any) => s.id).filter(Boolean));
+        const existingStaff = await getStaffList();
+        for (const ex of existingStaff) {
+          if (!incomingStaffIds.has(ex.id)) {
+            tasks.push(deleteStaff(ex.id).catch(() => {}));
+          }
+        }
+      } catch (err) {
+        console.warn('Could not check existing staff for deletion:', err);
+      }
+
       for (const s of staffList) {
         if (s.name && s.role) {
           tasks.push(upsertStaff(s).catch((err) => console.warn('Sync staff item note:', err.message)));

@@ -55,15 +55,21 @@ export const StaffSection: React.FC = () => {
               className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col group"
             >
               {/* Image & Category Tag */}
-              <div className="relative h-60 bg-gradient-to-t from-[#072217]/80 via-transparent to-transparent overflow-hidden">
-                <img
-                  src={staff.photoUrl || 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80'}
-                  alt={staff.name}
-                  className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=600&q=80';
-                  }}
-                />
+              <div className="relative h-60 bg-gradient-to-t from-[#072217]/80 via-transparent to-transparent overflow-hidden flex items-center justify-center">
+                {staff.photoUrl ? (
+                  <img
+                    src={staff.photoUrl}
+                    alt={staff.name}
+                    className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-[#0b3c26] to-[#072217] flex flex-col items-center justify-center text-white/80 p-4">
+                    <div className="w-20 h-20 rounded-full bg-white/10 border-2 border-[#d4af37]/40 flex items-center justify-center mb-2 shadow-inner">
+                      <GraduationCap className="w-10 h-10 text-[#d4af37]" />
+                    </div>
+                    <span className="text-xs font-semibold text-emerald-100/90 tracking-wide text-center px-2">{staff.role}</span>
+                  </div>
+                )}
                 <div className="absolute top-3 right-3">
                   <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#0b3c26]/90 text-white backdrop-blur-sm shadow">
                     {staff.category}

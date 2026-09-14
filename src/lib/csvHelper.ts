@@ -312,48 +312,15 @@ export const STAFF_CSV_HEADERS = [
 
 export const STAFF_CSV_SAMPLE_ROWS = [
   [
-    'MUIN, S.Pd.I.',
-    'Kepala Madrasah',
-    'Pimpinan',
-    '-',
-    'S1 Pendidikan Agama Islam',
-    'Manajerial & Keagamaan',
-    '085876543210',
-    'Aktif',
-    'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80'
-  ],
-  [
-    'SITI MASYITHOH, S.Pd.',
-    'Guru Kelas 1 & Koord. Keagamaan',
+    'Nama Lengkap Guru / Staf',
+    'Guru Kelas 1',
     'Guru Kelas',
     '-',
     'S1 PGMI',
-    'Tematik Kelas 1 & Tahfidz',
+    'Tematik Terpadu',
     '081234567890',
     'Aktif',
-    'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80'
-  ],
-  [
-    'AHMAD NUR HUDA, S.Pd.',
-    'Guru PJOK & Pembina Olahraga',
-    'Guru Bidang Studi',
-    '-',
-    'S1 Pendidikan Jasmani & Rekreasi',
-    'PJOK & Ekstrakurikuler Bulutangkis',
-    '085712345678',
-    'Aktif',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80'
-  ],
-  [
-    'FATMAWATI, A.Md.',
-    'Kepala Tata Usaha & Admin Madrasah',
-    'Tenaga Kependidikan',
-    '-',
-    'D3 Administrasi Perkantoran',
-    'Administrasi, Dapodik, & Persuratan',
-    '089612345678',
-    'Aktif',
-    'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=600&q=80'
+    ''
   ]
 ];
 
@@ -439,7 +406,7 @@ export function parseStaffFromCSV(csvText: string): {
       subjects: subjects.trim(),
       phone: phone.trim(),
       status,
-      photoUrl: photoUrl && photoUrl.trim() ? photoUrl.trim() : 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80',
+      photoUrl: photoUrl && photoUrl.trim() ? photoUrl.trim() : '',
       order: r * 10,
     });
   }

@@ -368,6 +368,20 @@ export async function checkSupabaseStatus(): Promise<SupabaseHealthResult> {
 /**
  * Save complete application state to Supabase with anti-wipe protection
  */
+async function syncTableRecords(table: string, currentIds: string[]) {
+  try {
+    const { data: existing } = await supabase.from(table).select('id');
+    if (existing && existing.length > 0) {
+      const toDelete = existing.filter((e: any) => !currentIds.includes(e.id)).map((e: any) => e.id);
+      if (toDelete.length > 0) {
+        await supabase.from(table).delete().in('id', toDelete);
+      }
+    }
+  } catch (err) {
+    console.warn(`Sync table cleanup failed for ${table}:`, err);
+  }
+}
+
 export async function saveAllToSupabase(
   state: AppStorageState,
   options?: { isAuthorizedAdmin?: boolean; force?: boolean }
@@ -449,6 +463,8 @@ export async function saveAllToSupabase(
 
     // 3. Save PPDB Registrations
     try {
+      const ppdbIds = (state.ppdbRegistrations || []).map((p) => p.id);
+      await syncTableRecords('ppdb_registrations', ppdbIds);
       if (state.ppdbRegistrations && state.ppdbRegistrations.length > 0) {
         await supabase.from('ppdb_registrations').upsert(
           state.ppdbRegistrations.map((p) => ({
@@ -475,6 +491,8 @@ export async function saveAllToSupabase(
 
     // 4. Save Staff Members (GTK)
     try {
+      const staffIds = (state.staffList || []).map((s) => s.id);
+      await syncTableRecords('staff_members', staffIds);
       if (state.staffList && state.staffList.length > 0) {
         await supabase.from('staff_members').upsert(
           state.staffList.map((s, idx) => ({
@@ -495,6 +513,8 @@ export async function saveAllToSupabase(
 
     // 5. Save Achievements
     try {
+      const achieveIds = (state.achievements || []).map((a) => a.id);
+      await syncTableRecords('achievements', achieveIds);
       if (state.achievements && state.achievements.length > 0) {
         await supabase.from('achievements').upsert(
           state.achievements.map((a) => ({
@@ -514,6 +534,8 @@ export async function saveAllToSupabase(
 
     // 6. Save News Articles
     try {
+      const newsIds = (state.newsList || []).map((n) => n.id);
+      await syncTableRecords('news_articles', newsIds);
       if (state.newsList && state.newsList.length > 0) {
         await supabase.from('news_articles').upsert(
           state.newsList.map((n) => ({
@@ -533,6 +555,8 @@ export async function saveAllToSupabase(
 
     // 7. Save Programs
     try {
+      const progIds = (state.programs || []).map((p) => p.id);
+      await syncTableRecords('programs', progIds);
       if (state.programs && state.programs.length > 0) {
         await supabase.from('programs').upsert(
           state.programs.map((p) => ({
@@ -552,6 +576,8 @@ export async function saveAllToSupabase(
 
     // 8. Save Extracurriculars
     try {
+      const ekskulIds = (state.extracurriculars || []).map((e) => e.id);
+      await syncTableRecords('extracurriculars', ekskulIds);
       if (state.extracurriculars && state.extracurriculars.length > 0) {
         await supabase.from('extracurriculars').upsert(
           state.extracurriculars.map((e) => ({
@@ -571,6 +597,8 @@ export async function saveAllToSupabase(
 
     // 9. Save Facilities
     try {
+      const facIds = (state.facilities || []).map((f) => f.id);
+      await syncTableRecords('facilities', facIds);
       if (state.facilities && state.facilities.length > 0) {
         await supabase.from('facilities').upsert(
           state.facilities.map((f) => ({
@@ -587,6 +615,8 @@ export async function saveAllToSupabase(
 
     // 10. Save Gallery
     try {
+      const galIds = (state.gallery || []).map((g) => g.id);
+      await syncTableRecords('gallery', galIds);
       if (state.gallery && state.gallery.length > 0) {
         await supabase.from('gallery').upsert(
           state.gallery.map((g) => ({
@@ -603,6 +633,8 @@ export async function saveAllToSupabase(
 
     // 11. Save Testimonials
     try {
+      const testiIds = (state.testimonials || []).map((t) => t.id);
+      await syncTableRecords('testimonials', testiIds);
       if (state.testimonials && state.testimonials.length > 0) {
         await supabase.from('testimonials').upsert(
           state.testimonials.map((t) => ({
@@ -620,6 +652,8 @@ export async function saveAllToSupabase(
 
     // 12. Save FAQs
     try {
+      const faqIds = (state.faqs || []).map((q) => q.id);
+      await syncTableRecords('faqs', faqIds);
       if (state.faqs && state.faqs.length > 0) {
         await supabase.from('faqs').upsert(
           state.faqs.map((q) => ({
@@ -634,6 +668,8 @@ export async function saveAllToSupabase(
 
     // 13. Save Stats
     try {
+      const statIds = (state.statsList || []).map((s) => s.id);
+      await syncTableRecords('stats', statIds);
       if (state.statsList && state.statsList.length > 0) {
         await supabase.from('stats').upsert(
           state.statsList.map((s, idx) => ({
@@ -838,7 +874,7 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
         headmasterName: p.headmaster_name || state.schoolProfile?.headmasterName || "MUIN, S.Pd.I.",
         headmasterNip: p.headmaster_nip || state.schoolProfile?.headmasterNip || "-",
         headmasterTitle: p.headmaster_title || state.schoolProfile?.headmasterTitle || "Kepala Madrasah",
-        headmasterPhotoUrl: p.headmaster_photo || state.schoolProfile?.headmasterPhotoUrl || "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80",
+        headmasterPhotoUrl: p.headmaster_photo || state.schoolProfile?.headmasterPhotoUrl || "",
         headmasterWelcome: p.headmaster_welcome?.length ? p.headmaster_welcome : state.schoolProfile?.headmasterWelcome || [],
         vision: p.vision || state.schoolProfile?.vision || "",
         missions: p.missions?.length ? p.missions : state.schoolProfile?.missions || [],
@@ -858,7 +894,7 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
         nipOrNuptk: s.nip_or_nuptk || '-',
         education: s.education || '',
         subjects: s.subjects || '',
-        photoUrl: s.photo_url || 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80',
+        photoUrl: s.photo_url || '',
         phone: s.phone || '',
         order: s.order_num ?? (idx + 1),
         status: 'Aktif' as const,
@@ -867,17 +903,29 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
 
     // Merge News Articles
     if (newsRes.status === 'fulfilled' && newsRes.value.data && newsRes.value.data.length > 0) {
-      state.newsList = newsRes.value.data.map((n: any) => ({
-        id: n.id,
-        title: n.title,
-        category: n.category as any,
-        summary: n.summary || '',
-        content: n.content,
-        imageUrl: n.image_url || '',
-        author: n.author || 'Admin Madrasah',
-        date: n.date || n.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
-        readTime: n.read_time || '3 menit',
-      }));
+      state.newsList = newsRes.value.data.map((n: any) => {
+        let contentArr: string[] = [];
+        if (Array.isArray(n.content)) {
+          contentArr = n.content.map(String).filter(Boolean);
+        } else if (typeof n.content === 'string' && n.content.trim()) {
+          contentArr = n.content.split(/\n\n+/).map((p: string) => p.trim()).filter(Boolean);
+        }
+        const summary = n.summary || n.excerpt || (contentArr[0] ? contentArr[0].slice(0, 160) : '') || '';
+        if (contentArr.length === 0 && summary) {
+          contentArr = [summary];
+        }
+        return {
+          id: n.id,
+          title: n.title,
+          category: n.category as any,
+          summary,
+          content: contentArr,
+          imageUrl: n.image_url || '',
+          author: n.author || 'Admin Madrasah',
+          date: n.date || n.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+          readTime: n.read_time || '3 menit',
+        };
+      });
     }
 
     // Merge PPDB
@@ -972,7 +1020,7 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
     }
 
     // Merge Testimonials
-    if (testiRes.status === 'fulfilled' && testiRes.value.data && testiRes.value.data.length > 0) {
+    if (testiRes.status === 'fulfilled' && Array.isArray(testiRes.value.data)) {
       state.testimonials = testiRes.value.data.map((t: any) => ({
         id: t.id,
         name: t.name,
