@@ -18,6 +18,7 @@ export const SCHOOL_PROFILE: SchoolProfile = {
   shortName: "MI Al Ihsan Soborejo",
   tagline: "Mencetak Peserta Didik yang Religius, Berakhlaqul Karimah, Cerdas, dan Berprestasi",
   logoUrl: "/assets/logo-maarif.svg",
+  faviconUrl: "/assets/logo-maarif.svg",
   npsn: "60713037",
   nsm: "111233230053",
   accreditation: "Terakreditasi Baik",

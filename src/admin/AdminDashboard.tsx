@@ -728,6 +728,33 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  // Favicon Upload with SVG, ICO, and Image Support
+  const handleFaviconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        if (
+          file.type.includes('svg') ||
+          file.name.endsWith('.svg') ||
+          file.name.endsWith('.ico') ||
+          file.type.includes('x-icon')
+        ) {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            setProfileForm((prev) => ({ ...prev, faviconUrl: ev.target?.result as string }));
+          };
+          reader.readAsDataURL(file);
+        } else {
+          // Compress to optimal icon resolution
+          const compressed = await compressImage(file, 160, 160, 0.95);
+          setProfileForm((prev) => ({ ...prev, faviconUrl: compressed }));
+        }
+      } catch (err) {
+        console.error('Gagal memproses unggah favicon:', err);
+      }
+    }
+  };
+
   // Staff (GTK) Photo Upload with Compression
   const handleStaffPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -2086,6 +2113,146 @@ export const AdminDashboard: React.FC = () => {
                         >
                           Reset ke Emblem Bawaan
                         </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Favicon Website Management */}
+                  <div className="mb-5 p-4 bg-white rounded-xl border border-gray-200 shadow-sm space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                      <div className="flex items-center gap-2">
+                        <Globe className="w-4 h-4 text-[#0b3c26]" />
+                        <label className="block text-xs font-bold text-gray-800">
+                          Favicon Website (Ikon Tab Browser & Pintasan Layar Ponsel)
+                        </label>
+                      </div>
+                      <span
+                        className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 ${
+                          profileForm.faviconUrl
+                            ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                            : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                        }`}
+                      >
+                        {profileForm.faviconUrl ? '★ Favicon Kustom Aktif' : '✓ Otomatis Mengikuti Logo Madrasah'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+                      {/* Live Browser Tab & Mobile Mockups */}
+                      <div className="lg:col-span-5 bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2.5">
+                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                          <span>Pratinjau Nyata (Live Preview):</span>
+                          <span className="text-[9px] bg-slate-200 px-1.5 py-0.5 rounded text-gray-600 font-mono">16×16px & 32×32px</span>
+                        </div>
+
+                        {/* Chrome/Edge style tab mockup */}
+                        <div className="bg-slate-200/90 pt-1 px-1.5 rounded-t-lg border-t border-x border-slate-300">
+                          <div className="bg-white rounded-t-md px-3 py-1.5 flex items-center gap-2 shadow-xs max-w-full">
+                            <div className="w-4 h-4 shrink-0 flex items-center justify-center">
+                              <img
+                                src={profileForm.faviconUrl || profileForm.logoUrl || '/assets/logo-maarif.svg'}
+                                alt="Favicon Preview"
+                                className="w-4 h-4 object-contain"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = '/assets/logo-maarif.svg';
+                                }}
+                              />
+                            </div>
+                            <span className="text-[11px] text-gray-800 font-medium truncate flex-1">
+                              {profileForm.shortName || profileForm.name || "MI Ma'arif Al Ihsan"}
+                            </span>
+                            <span className="text-[11px] text-gray-400 font-bold hover:text-gray-600 cursor-default leading-none">
+                              ×
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Mobile bookmark icon preview */}
+                        <div className="flex items-center gap-3 pt-1 text-[11px] text-gray-600">
+                          <div className="w-9 h-9 rounded-xl bg-white border border-gray-200 shadow-sm flex items-center justify-center p-1.5 shrink-0">
+                            <img
+                              src={profileForm.faviconUrl || profileForm.logoUrl || '/assets/logo-maarif.svg'}
+                              alt="Mobile Icon Preview"
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = '/assets/logo-maarif.svg';
+                              }}
+                            />
+                          </div>
+                          <div className="text-[10px] leading-snug text-gray-500">
+                            <div className="font-semibold text-gray-700">Ikon Layar Ponsel (Apple Touch & PWA)</div>
+                            <div>Otomatis terpasang saat website disimpan ke Bookmark atau Beranda HP.</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Controls and Input */}
+                      <div className="lg:col-span-7 space-y-2.5">
+                        <p className="text-[11px] text-gray-600 leading-relaxed">
+                          Favicon adalah lambang identitas yang muncul di tab peramban Google Chrome, Safari, Firefox, bilah favorit, serta ikon pintasan pengunjung.
+                        </p>
+
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <input
+                            type="text"
+                            placeholder="https://... URL favicon (.png, .ico, .svg, .webp)"
+                            value={profileForm.faviconUrl || ''}
+                            onChange={(e) => setProfileForm({ ...profileForm, faviconUrl: e.target.value })}
+                            className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#0b3c26] font-mono text-[11px]"
+                          />
+
+                          {/* Upload Favicon Button */}
+                          <label className="cursor-pointer shrink-0 inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-[#0b3c26] text-[#f3e5ab] text-xs font-semibold rounded-lg hover:bg-[#072217] transition-all shadow-sm">
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>Unggah Favicon</span>
+                            <input
+                              type="file"
+                              accept="image/*,.ico,.svg"
+                              onChange={handleFaviconUpload}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setProfileForm({
+                                ...profileForm,
+                                faviconUrl: profileForm.logoUrl || '/assets/logo-maarif.svg',
+                              })
+                            }
+                            className="text-emerald-800 hover:text-emerald-950 font-semibold underline inline-flex items-center gap-1"
+                          >
+                            ✓ Samakan dengan Logo Madrasah
+                          </button>
+                          <span className="text-gray-300">•</span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setProfileForm({
+                                ...profileForm,
+                                faviconUrl: '/assets/logo-maarif.svg',
+                              })
+                            }
+                            className="text-emerald-800 hover:text-emerald-950 font-semibold underline inline-flex items-center gap-1"
+                          >
+                            Gunakan Logo LP Ma'arif (SVG)
+                          </button>
+                          {profileForm.faviconUrl && (
+                            <>
+                              <span className="text-gray-300">•</span>
+                              <button
+                                type="button"
+                                onClick={() => setProfileForm({ ...profileForm, faviconUrl: '' })}
+                                className="text-red-600 hover:text-red-800 font-medium underline"
+                              >
+                                Reset (Otomatis Ikuti Logo)
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

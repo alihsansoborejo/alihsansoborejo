@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS public.school_profile (
   short_name TEXT,
   tagline TEXT,
   logo_url TEXT,
+  favicon_url TEXT,
   email TEXT,
   phone TEXT,
   whatsapp TEXT,
@@ -52,6 +53,7 @@ CREATE TABLE IF NOT EXISTS public.school_profile (
   core_values JSONB DEFAULT '[]'::jsonb,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+ALTER TABLE public.school_profile ADD COLUMN IF NOT EXISTS favicon_url TEXT;
 
 -- ----------------------------------------------------------------------------------
 -- 3. TABEL PENDAFTARAN PPDB ONLINE

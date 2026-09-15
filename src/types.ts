@@ -3,6 +3,7 @@ export interface SchoolProfile {
   shortName: string;
   tagline: string;
   logoUrl?: string;
+  faviconUrl?: string;
   npsn: string;
   nsm: string;
   accreditation: string;

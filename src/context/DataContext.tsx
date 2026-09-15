@@ -247,6 +247,7 @@ export const sanitizeAppState = (raw: any): AppStorageState => {
     headmasterPhotoPosition: rawProfile.headmasterPhotoPosition || 'top',
     headmasterPhotoScale: rawProfile.headmasterPhotoScale ?? 100,
     headmasterPhotoFit: rawProfile.headmasterPhotoFit || 'cover',
+    faviconUrl: rawProfile.faviconUrl !== undefined ? rawProfile.faviconUrl : (rawProfile.logoUrl || DEFAULT_DATA.schoolProfile.faviconUrl || '/assets/logo-maarif.svg'),
   };
 
   const sanitizedNewsList = (raw.newsList && Array.isArray(raw.newsList) ? raw.newsList : (DEFAULT_DATA.newsList || [])).map((n: any) => {
@@ -647,6 +648,47 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       clearTimeout(reconnectTimeout);
     };
   }, [refreshFromCloud]);
+
+  // Synchronize browser favicon and apple-touch-icon dynamically with schoolProfile
+  useEffect(() => {
+    const favicon = (
+      data.schoolProfile?.faviconUrl?.trim() ||
+      data.schoolProfile?.logoUrl?.trim() ||
+      '/assets/logo-maarif.svg'
+    );
+    if (!favicon || typeof document === 'undefined') return;
+
+    try {
+      // 1. Update/Inject link[rel~='icon']
+      let iconLink = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
+      if (!iconLink) {
+        iconLink = document.createElement('link');
+        iconLink.rel = 'icon';
+        document.head.appendChild(iconLink);
+      }
+      if (favicon.endsWith('.svg') || favicon.startsWith('data:image/svg+xml')) {
+        iconLink.type = 'image/svg+xml';
+      } else if (favicon.endsWith('.ico') || favicon.startsWith('data:image/x-icon')) {
+        iconLink.type = 'image/x-icon';
+      } else if (favicon.endsWith('.png') || favicon.startsWith('data:image/png')) {
+        iconLink.type = 'image/png';
+      } else {
+        iconLink.removeAttribute('type');
+      }
+      iconLink.href = favicon;
+
+      // 2. Update/Inject link[rel='apple-touch-icon']
+      let appleLink = document.querySelector<HTMLLinkElement>("link[rel='apple-touch-icon']");
+      if (!appleLink) {
+        appleLink = document.createElement('link');
+        appleLink.rel = 'apple-touch-icon';
+        document.head.appendChild(appleLink);
+      }
+      appleLink.href = favicon;
+    } catch (e) {
+      console.warn('Favicon synchronization error:', e);
+    }
+  }, [data.schoolProfile?.faviconUrl, data.schoolProfile?.logoUrl]);
 
   // 2. BroadcastChannel for instant zero-latency cross-tab sync in the same browser
   useEffect(() => {
