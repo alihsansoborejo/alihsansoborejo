@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { AppStorageState } from '../context/DataContext';
+import { parseDateTimestamp } from './dateUtils';
 
 export const SUPABASE_PROJECT_REF = 'pfaduokywtymqjajfmoh';
 export const SUPABASE_SQL_EDITOR_URL = `https://supabase.com/dashboard/project/${SUPABASE_PROJECT_REF}/sql/new`;
@@ -765,6 +766,30 @@ export async function deleteStaffFromSupabase(id: string) {
 }
 
 /**
+ * Direct Delete Single News Article from Supabase
+ */
+export async function deleteNewsFromSupabase(id: string) {
+  try {
+    await supabase.from('news_articles').delete().eq('id', id);
+    broadcastSupabaseChange('news_articles', { deletedId: id });
+  } catch (err) {
+    console.warn('Failed to delete news from Supabase:', err);
+  }
+}
+
+/**
+ * Generic Delete Single Item from any Supabase Table
+ */
+export async function deleteItemFromSupabase(table: string, id: string) {
+  try {
+    await supabase.from(table).delete().eq('id', id);
+    broadcastSupabaseChange(table, { deletedId: id });
+  } catch (err) {
+    console.warn(`Failed to delete from Supabase table ${table}:`, err);
+  }
+}
+
+/**
  * Direct Upsert School Profile to Supabase
  */
 export async function upsertSchoolProfileToSupabase(sp: any) {
@@ -902,7 +927,7 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
     }
 
     // Merge News Articles
-    if (newsRes.status === 'fulfilled' && newsRes.value.data && newsRes.value.data.length > 0) {
+    if (newsRes.status === 'fulfilled' && Array.isArray(newsRes.value.data)) {
       state.newsList = newsRes.value.data.map((n: any) => {
         let contentArr: string[] = [];
         if (Array.isArray(n.content)) {
@@ -925,11 +950,11 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
           date: n.date || n.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
           readTime: n.read_time || '3 menit',
         };
-      });
+      }).sort((a: any, b: any) => parseDateTimestamp(b.date) - parseDateTimestamp(a.date));
     }
 
     // Merge PPDB
-    if (ppdbRes.status === 'fulfilled' && ppdbRes.value.data && ppdbRes.value.data.length > 0) {
+    if (ppdbRes.status === 'fulfilled' && Array.isArray(ppdbRes.value.data)) {
       state.ppdbRegistrations = ppdbRes.value.data.map((p: any) => ({
         id: p.id,
         registrationNumber: p.registration_number,
@@ -951,7 +976,7 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
     }
 
     // Merge Achievements
-    if (achieveRes.status === 'fulfilled' && achieveRes.value.data && achieveRes.value.data.length > 0) {
+    if (achieveRes.status === 'fulfilled' && Array.isArray(achieveRes.value.data)) {
       state.achievements = achieveRes.value.data.map((a: any) => ({
         id: a.id,
         title: a.title,
@@ -966,7 +991,7 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
     }
 
     // Merge Programs
-    if (progRes.status === 'fulfilled' && progRes.value.data && progRes.value.data.length > 0) {
+    if (progRes.status === 'fulfilled' && Array.isArray(progRes.value.data)) {
       state.programs = progRes.value.data.map((p: any) => ({
         id: p.id,
         title: p.title,
@@ -981,7 +1006,7 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
     }
 
     // Merge Extracurriculars
-    if (ekskulRes.status === 'fulfilled' && ekskulRes.value.data && ekskulRes.value.data.length > 0) {
+    if (ekskulRes.status === 'fulfilled' && Array.isArray(ekskulRes.value.data)) {
       state.extracurriculars = ekskulRes.value.data.map((e: any) => ({
         id: e.id,
         name: e.name,
@@ -996,7 +1021,7 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
     }
 
     // Merge Facilities
-    if (facRes.status === 'fulfilled' && facRes.value.data && facRes.value.data.length > 0) {
+    if (facRes.status === 'fulfilled' && Array.isArray(facRes.value.data)) {
       state.facilities = facRes.value.data.map((f: any) => ({
         id: f.id,
         name: f.name,
@@ -1008,7 +1033,7 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
     }
 
     // Merge Gallery
-    if (galRes.status === 'fulfilled' && galRes.value.data && galRes.value.data.length > 0) {
+    if (galRes.status === 'fulfilled' && Array.isArray(galRes.value.data)) {
       state.gallery = galRes.value.data.map((g: any) => ({
         id: g.id,
         title: g.title,
@@ -1033,7 +1058,7 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
     }
 
     // Merge FAQs
-    if (faqRes.status === 'fulfilled' && faqRes.value.data && faqRes.value.data.length > 0) {
+    if (faqRes.status === 'fulfilled' && Array.isArray(faqRes.value.data)) {
       state.faqs = faqRes.value.data.map((q: any) => ({
         id: q.id,
         question: q.question,
@@ -1043,7 +1068,7 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
     }
 
     // Merge Stats
-    if (statRes.status === 'fulfilled' && statRes.value.data && statRes.value.data.length > 0) {
+    if (statRes.status === 'fulfilled' && Array.isArray(statRes.value.data)) {
       state.statsList = statRes.value.data.map((s: any, idx: number) => ({
         id: s.id,
         label: s.label,

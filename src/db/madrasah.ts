@@ -21,6 +21,7 @@ import {
   INITIAL_PPDB_REGISTRATIONS,
   INITIAL_STUDENTS
 } from '../data/schoolData.ts';
+import { parseDateTimestamp } from '../lib/dateUtils.ts';
 
 // PPDB Operations
 export async function getPPDBList() {
@@ -180,7 +181,15 @@ export async function deleteStaff(id: string) {
 // News Operations
 export async function getNewsList() {
   try {
-    return await db.select().from(newsArticles).orderBy(desc(newsArticles.createdAt));
+    const list = await db.select().from(newsArticles);
+    return list.sort((a, b) => {
+      const timeA = parseDateTimestamp(a.date);
+      const timeB = parseDateTimestamp(b.date);
+      if (timeB !== timeA) return timeB - timeA;
+      const createdA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const createdB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return createdB - createdA;
+    });
   } catch (error) {
     console.error('Failed to fetch news list:', error);
     throw new Error('Gagal mengambil daftar berita.', { cause: error });
@@ -351,6 +360,10 @@ export async function getAllMadrasahOnlineData() {
         date: n.date || new Date().toISOString().split('T')[0],
         readTime: n.readTime || '3 menit',
       };
+    }).sort((a, b) => {
+      const timeA = parseDateTimestamp(a.date);
+      const timeB = parseDateTimestamp(b.date);
+      return timeB - timeA;
     }) : [];
 
     return {

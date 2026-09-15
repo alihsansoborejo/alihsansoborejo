@@ -7,8 +7,11 @@ import {
   broadcastSupabaseChange,
   upsertStaffToSupabase,
   deleteStaffFromSupabase,
+  deleteNewsFromSupabase,
+  deleteItemFromSupabase,
   upsertSchoolProfileToSupabase
 } from '../lib/supabase';
+import { parseDateTimestamp } from '../lib/dateUtils';
 import {
   SchoolProfile,
   ProgramItem,
@@ -200,12 +203,24 @@ export const generateUniqueId = (prefix: string): string => {
   return `${prefix}-${Date.now()}-${uniqueCounter}-${Math.random().toString(36).substring(2, 7)}`;
 };
 
+export const sortNewsByDateDesc = (list: NewsArticle[]): NewsArticle[] => {
+  if (!Array.isArray(list)) return [];
+  return [...list].sort((a, b) => {
+    const timeA = parseDateTimestamp(a.date);
+    const timeB = parseDateTimestamp(b.date);
+    if (timeB !== timeA) {
+      return timeB - timeA;
+    }
+    return (b.id || '').localeCompare(a.id || '');
+  });
+};
+
 export const ensureUniqueIds = <T extends { id?: string }>(items: T[] | undefined, prefix: string): T[] => {
   if (!Array.isArray(items)) return [];
   const seen = new Set<string>();
   return items.map((item, index) => {
     let id = item.id ? String(item.id).trim() : '';
-    if (!id || seen.has(id) || /^[a-z]+-\d{10,}$/.test(id)) {
+    if (!id || seen.has(id)) {
       uniqueCounter = (uniqueCounter + 1) % 1000000;
       id = `${prefix}-${Date.now()}-${uniqueCounter}-${index}-${Math.random().toString(36).substring(2, 7)}`;
     }
@@ -262,7 +277,7 @@ export const sanitizeAppState = (raw: any): AppStorageState => {
     programs: ensureUniqueIds(Array.isArray(raw.programs) ? raw.programs : DEFAULT_DATA.programs, 'prog'),
     extracurriculars: ensureUniqueIds(Array.isArray(raw.extracurriculars) ? raw.extracurriculars : DEFAULT_DATA.extracurriculars, 'ekskul'),
     achievements: ensureUniqueIds(Array.isArray(raw.achievements) ? raw.achievements : DEFAULT_DATA.achievements, 'ach'),
-    newsList: ensureUniqueIds(sanitizedNewsList, 'news'),
+    newsList: sortNewsByDateDesc(ensureUniqueIds(sanitizedNewsList, 'news')),
     facilities: ensureUniqueIds(Array.isArray(raw.facilities) ? raw.facilities : DEFAULT_DATA.facilities, 'fac'),
     gallery: ensureUniqueIds(Array.isArray(raw.gallery) ? raw.gallery : DEFAULT_DATA.gallery, 'gal'),
     testimonials: ensureUniqueIds(Array.isArray(raw.testimonials) ? raw.testimonials : DEFAULT_DATA.testimonials, 'testi'),
@@ -704,6 +719,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (sender === CLIENT_INSTANCE_ID) {
             return;
           }
+          if (isSelfPushingRef.current || Date.now() - lastLocalEditTimeRef.current < 5000) {
+            return;
+          }
           console.log('[Supabase Realtime] Multi-device update detected:', eventPayload);
           const remoteState = await loadFromSupabase();
           if (remoteState && remoteState.schoolProfile) {
@@ -721,7 +739,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           'postgres_changes',
           { event: '*', schema: 'public', table: 'madrasah_store' },
           (payload) => {
-            if (isSelfPushingRef.current || Date.now() - lastLocalEditTimeRef.current < 2500) {
+            if (isSelfPushingRef.current || Date.now() - lastLocalEditTimeRef.current < 5000) {
               return;
             }
             if (payload?.new && (payload.new as any).data) {
@@ -738,7 +756,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           'postgres_changes',
           { event: '*', schema: 'public', table: 'school_profile' },
           () => {
-            if (isSelfPushingRef.current || Date.now() - lastLocalEditTimeRef.current < 2500) {
+            if (isSelfPushingRef.current || Date.now() - lastLocalEditTimeRef.current < 5000) {
               return;
             }
             pullFromSupabase(true);
@@ -748,7 +766,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           'postgres_changes',
           { event: '*', schema: 'public', table: 'staff_members' },
           () => {
-            if (isSelfPushingRef.current || Date.now() - lastLocalEditTimeRef.current < 2500) {
+            if (isSelfPushingRef.current || Date.now() - lastLocalEditTimeRef.current < 5000) {
+              return;
+            }
+            pullFromSupabase(true);
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'news_articles' },
+          () => {
+            if (isSelfPushingRef.current || Date.now() - lastLocalEditTimeRef.current < 5000) {
               return;
             }
             pullFromSupabase(true);
@@ -922,6 +950,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       statsList: (prev.statsList || []).filter((s) => s.id !== id),
     }));
+    deleteItemFromSupabase('stats', id);
   };
 
   // Programs
@@ -948,6 +977,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       programs: prev.programs.filter((p) => p.id !== id),
     }));
+    deleteItemFromSupabase('programs', id);
   };
 
   // Extracurriculars
@@ -974,6 +1004,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       extracurriculars: prev.extracurriculars.filter((e) => e.id !== id),
     }));
+    deleteItemFromSupabase('extracurriculars', id);
   };
 
   // Achievements
@@ -1000,6 +1031,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       achievements: prev.achievements.filter((a) => a.id !== id),
     }));
+    deleteItemFromSupabase('achievements', id);
   };
 
   // News
@@ -1053,7 +1085,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return {
         ...prev,
-        newsList: [newItem, ...prev.newsList],
+        newsList: sortNewsByDateDesc([newItem, ...prev.newsList]),
         gallery: updatedGallery,
         achievements: updatedAchievements,
       };
@@ -1113,7 +1145,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return {
         ...prev,
-        newsList: prev.newsList.map((n) => (n.id === id ? { ...n, ...updated } : n)),
+        newsList: sortNewsByDateDesc(prev.newsList.map((n) => (n.id === id ? { ...n, ...updated } : n))),
         gallery: updatedGallery,
         achievements: updatedAchievements,
       };
@@ -1126,6 +1158,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       newsList: prev.newsList.filter((n) => n.id !== id),
     }));
+    deleteNewsFromSupabase(id);
     apiRequest(`/api/news/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
@@ -1153,6 +1186,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       facilities: prev.facilities.filter((f) => f.id !== id),
     }));
+    deleteItemFromSupabase('facilities', id);
   };
 
   // Gallery
@@ -1179,6 +1213,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       gallery: prev.gallery.filter((g) => g.id !== id),
     }));
+    deleteItemFromSupabase('gallery', id);
   };
 
   // Testimonials
@@ -1205,6 +1240,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       testimonials: prev.testimonials.filter((t) => t.id !== id),
     }));
+    deleteItemFromSupabase('testimonials', id);
   };
 
   // FAQ
@@ -1231,6 +1267,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       faqs: prev.faqs.filter((f) => f.id !== id),
     }));
+    deleteItemFromSupabase('faqs', id);
   };
 
   // PPDB Registrations (Real-time Cloud SQL + Supabase Sync)

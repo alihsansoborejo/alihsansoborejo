@@ -338,6 +338,18 @@ app.post('/api/sync-all', requireAuth, async (req: AuthRequest, res) => {
     }
 
     if (newsList && Array.isArray(newsList)) {
+      try {
+        const incomingNewsIds = new Set(newsList.map((n: any) => n.id).filter(Boolean));
+        const existingNews = await getNewsList();
+        for (const ex of existingNews) {
+          if (!incomingNewsIds.has(ex.id)) {
+            tasks.push(deleteNews(ex.id).catch(() => {}));
+          }
+        }
+      } catch (err) {
+        console.warn('Could not check existing news for deletion:', err);
+      }
+
       for (const n of newsList) {
         if (n.title) {
           tasks.push(upsertNews(n).catch((err) => console.warn('Sync news item note:', err.message)));
