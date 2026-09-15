@@ -48,7 +48,13 @@ import {
   ZoomIn,
   MoveVertical,
   UserCheck,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Clock,
+  Play,
+  Pause,
+  ChevronUp,
+  ChevronDown,
+  Layers
 } from 'lucide-react';
 import { compressImage } from '../lib/imageCompressor';
 import {
@@ -78,7 +84,8 @@ import {
   PPDBRegistration,
   StaffMember,
   StatItem,
-  StudentItem
+  StudentItem,
+  HeroSlide
 } from '../types';
 import { StudentManagement } from './StudentManagement';
 import { StaffCsvImportModal } from './StaffCsvImportModal';
@@ -383,7 +390,7 @@ export const AdminDashboard: React.FC = () => {
   // Backup file ref
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
-  // Hero Section Form state
+  // Hero Section Form state with Slider & Duration
   const [heroForm, setHeroForm] = useState({
     heroTitle: schoolProfile.heroTitle || schoolProfile.tagline || 'Mencetak Peserta Didik yang Religius, Berakhlaqul Karimah, Cerdas, dan Berprestasi',
     heroSubtitle: schoolProfile.heroSubtitle || `Selamat datang di website resmi ${schoolProfile.name}, Kecamatan Pringsurat, Kabupaten Temanggung. Berkomitmen menyelenggarakan pendidikan dasar Islam yang bermakna dan berkarakter, menumbuhkan penghayatan ajaran agama, keluhuran budi pekerti, serta membina kecerdasan dan prestasi setiap peserta didik secara optimal.`,
@@ -396,20 +403,130 @@ export const AdminDashboard: React.FC = () => {
           'Kurikulum Merdeka + Kemenag',
           'Karakter Aswaja An-Nahdliyyah',
           'Lingkungan Asri & Ramah Anak'
+        ],
+    sliderDuration: schoolProfile.heroSliderDuration || 5,
+    sliderAutoPlay: schoolProfile.heroSliderAutoPlay ?? true,
+    slides: (schoolProfile.heroSlides && schoolProfile.heroSlides.length > 0)
+      ? schoolProfile.heroSlides.map((s) => ({ ...s }))
+      : [
+          {
+            id: 'slide-1',
+            badge: schoolProfile.heroBadge || "LP Ma'arif NU Temanggung • Soborejo, Pringsurat",
+            title: schoolProfile.heroTitle || schoolProfile.tagline || 'Mencetak Peserta Didik yang Religius, Berakhlaqul Karimah, Cerdas, dan Berprestasi',
+            subtitle: schoolProfile.heroSubtitle || `Selamat datang di website resmi ${schoolProfile.name}, Kecamatan Pringsurat, Kabupaten Temanggung. Berkomitmen menyelenggarakan pendidikan dasar Islam yang bermakna dan berkarakter.`,
+            bannerUrl: schoolProfile.heroBannerUrl || 'https://images.unsplash.com/photo-1584697964190-7bb8c5a2cbb5?q=80&w=1920&auto=format&fit=crop'
+          }
         ]
   });
 
+  const [previewSlideIdx, setPreviewSlideIdx] = useState(0);
+
+  // Sync state if schoolProfile updates from cloud
+  useEffect(() => {
+    if (schoolProfile) {
+      setHeroForm((prev) => ({
+        ...prev,
+        heroTitle: schoolProfile.heroTitle || prev.heroTitle,
+        heroSubtitle: schoolProfile.heroSubtitle || prev.heroSubtitle,
+        heroBadge: schoolProfile.heroBadge || prev.heroBadge,
+        heroBannerUrl: schoolProfile.heroBannerUrl || prev.heroBannerUrl,
+        highlights: schoolProfile.heroHighlights && schoolProfile.heroHighlights.length > 0
+          ? [...schoolProfile.heroHighlights]
+          : prev.highlights,
+        sliderDuration: schoolProfile.heroSliderDuration || prev.sliderDuration || 5,
+        sliderAutoPlay: schoolProfile.heroSliderAutoPlay ?? prev.sliderAutoPlay ?? true,
+        slides: (schoolProfile.heroSlides && schoolProfile.heroSlides.length > 0)
+          ? schoolProfile.heroSlides.map((s) => ({ ...s }))
+          : prev.slides
+      }));
+    }
+  }, [schoolProfile]);
+
+  const handleAddSlide = () => {
+    const newId = `slide-${Date.now()}`;
+    const newSlide: HeroSlide = {
+      id: newId,
+      badge: "Program & Prestasi Madrasah",
+      title: "Judul Slide Teks Baru Beranda",
+      subtitle: "Tuliskan informasi penting, keunggulan pendidikan, atau warta sambutan madrasah di sini.",
+      photoUrl: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?q=80&w=1200&auto=format&fit=crop",
+      photoCaption: "Dokumentasi Pembelajaran & Prestasi Siswa",
+      bannerUrl: heroForm.heroBannerUrl
+    };
+    setHeroForm((prev) => ({
+      ...prev,
+      slides: [...prev.slides, newSlide]
+    }));
+    setPreviewSlideIdx(heroForm.slides.length);
+    notify('Slide teks & foto baru berhasil ditambahkan! Silakan atur judul, foto, dan penjelasnya.');
+  };
+
+  const handleRemoveSlide = (slideId: string) => {
+    if (heroForm.slides.length <= 1) {
+      notify('Minimal harus ada 1 slide teks di beranda!');
+      return;
+    }
+    setHeroForm((prev) => {
+      const nextSlides = prev.slides.filter((s) => s.id !== slideId);
+      return { ...prev, slides: nextSlides };
+    });
+    setPreviewSlideIdx((prev) => Math.max(0, prev - 1));
+    notify('Slide teks berhasil dihapus.');
+  };
+
+  const handleMoveSlide = (idx: number, dir: 'up' | 'down') => {
+    const targetIdx = dir === 'up' ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= heroForm.slides.length) return;
+    setHeroForm((prev) => {
+      const updated = [...prev.slides];
+      const temp = updated[idx];
+      updated[idx] = updated[targetIdx];
+      updated[targetIdx] = temp;
+      return { ...prev, slides: updated };
+    });
+    setPreviewSlideIdx(targetIdx);
+  };
+
+  const handleUpdateSlideField = (slideId: string, field: keyof HeroSlide, val: string) => {
+    setHeroForm((prev) => ({
+      ...prev,
+      slides: prev.slides.map((s) => (s.id === slideId ? { ...s, [field]: val } : s))
+    }));
+  };
+
+  const handleSlidePhotoUpload = async (slideId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        const compressed = await compressImage(file, 1200, 900, 0.85);
+        handleUpdateSlideField(slideId, 'photoUrl', compressed);
+        notify('Foto slide berhasil diunggah!');
+      } catch (err) {
+        console.error('Gagal mengompres foto slide:', err);
+        notify('Gagal memproses unggah foto slide');
+      }
+    }
+  };
+
   const handleSaveHero = (e: React.FormEvent) => {
     e.preventDefault();
+    if (heroForm.slides.length === 0) {
+      notify('Minimal harus ada 1 slide teks beranda!');
+      return;
+    }
+    const firstSlide = heroForm.slides[0];
     updateSchoolProfile({
-      heroTitle: heroForm.heroTitle,
-      heroSubtitle: heroForm.heroSubtitle,
-      heroBadge: heroForm.heroBadge,
+      heroTitle: firstSlide?.title || heroForm.heroTitle,
+      heroSubtitle: firstSlide?.subtitle || heroForm.heroSubtitle,
+      heroBadge: firstSlide?.badge || heroForm.heroBadge,
       heroBannerUrl: heroForm.heroBannerUrl,
       heroHighlights: heroForm.highlights,
-      tagline: heroForm.heroTitle
+      tagline: firstSlide?.title || heroForm.heroTitle,
+      heroSlides: heroForm.slides,
+      heroSliderDuration: Math.max(2, Math.min(30, Number(heroForm.sliderDuration) || 5)),
+      heroSliderAutoPlay: heroForm.sliderAutoPlay
     });
-    notify('Teks & tampilan Beranda (Hero) berhasil diperbarui!');
+    notify('Slider teks Beranda dan pengaturan durasi berhasil disimpan!');
   };
 
   // Stats Form state
@@ -1599,128 +1716,507 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* SECTION 1: HERO SECTION CMS */}
+              {/* SECTION 1: HERO SLIDER & CMS */}
               <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 shadow-sm space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-gray-100">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-lg bg-[#0b3c26]/10 flex items-center justify-center text-[#0b3c26]">
                       <Sparkles className="w-4 h-4 text-[#d4af37]" />
                     </div>
                     <div>
                       <h3 className="font-heading text-base font-bold text-[#072217]">
-                        1. Pengaturan Teks & Visual Beranda (Hero Banner)
+                        1. Pengaturan Slider Teks & Visual Beranda
                       </h3>
                       <p className="text-[11px] text-gray-500">
-                        Ditampilkan paling atas saat pengunjung pertama kali membuka website madrasah.
+                        Atur slide teks bergulir di bagian atas beranda, ganti isi teks, dan tentukan durasi perpindahan otomatis slide.
                       </p>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleAddSlide}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#0b3c26] text-[#f3e5ab] text-xs font-semibold hover:bg-[#072217] transition-colors shadow-sm"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Tambah Slide Baru</span>
+                    </button>
+                  </div>
                 </div>
 
-                {/* Live Preview Box */}
-                <div className="relative rounded-xl overflow-hidden bg-gradient-to-br from-[#063b25] via-[#042819] to-[#02180f] p-5 sm:p-7 text-white text-center border border-[#d4af37]/30 shadow-inner">
-                  <div
-                    className="absolute inset-0 bg-cover bg-center opacity-20 mix-blend-overlay pointer-events-none"
-                    style={{ backgroundImage: `url('${heroForm.heroBannerUrl}')` }}
-                  />
-                  <div className="relative z-10 max-w-xl mx-auto space-y-3">
-                    <span className="inline-block px-3 py-1 rounded-full text-[10px] font-semibold tracking-wider uppercase bg-[#d4af37]/20 border border-[#d4af37]/50 text-[#f3e5ab]">
-                      {heroForm.heroBadge || "LP Ma'arif NU Temanggung • Soborejo"}
-                    </span>
-                    <h4 className="font-heading text-lg sm:text-xl font-bold leading-snug bg-gradient-to-b from-white to-[#f3e5ab] bg-clip-text text-transparent">
-                      {heroForm.heroTitle}
-                    </h4>
-                    <p className="text-[11px] sm:text-xs text-white/80 line-clamp-3 leading-relaxed">
-                      {heroForm.heroSubtitle}
-                    </p>
-                    <div className="pt-2 flex flex-wrap items-center justify-center gap-2 text-[10px] text-white/70">
-                      {heroForm.highlights.map((hl, i) => (
-                        <span key={i} className="px-2 py-0.5 bg-white/10 rounded-full border border-white/10">
-                          ✦ {hl}
+                {/* Duration & Auto-play Configuration Card */}
+                <div className="bg-gradient-to-r from-[#0b3c26]/5 via-amber-500/5 to-emerald-500/5 rounded-xl p-4 sm:p-5 border border-[#0b3c26]/15">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-center">
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-bold text-[#072217] flex items-center gap-1.5">
+                          <Clock className="w-4 h-4 text-[#d4af37]" />
+                          <span>Durasi Tayang per Slide Teks</span>
+                        </label>
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#0b3c26] text-[#f3e5ab]">
+                          {heroForm.sliderDuration} Detik
                         </span>
-                      ))}
+                      </div>
+                      <p className="text-[11px] text-gray-500 mb-3">
+                        Lama waktu teks slide tampil di beranda sebelum berganti ke slide berikutnya secara otomatis.
+                      </p>
+                      
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="range"
+                          min={2}
+                          max={20}
+                          step={1}
+                          value={heroForm.sliderDuration}
+                          onChange={(e) => setHeroForm({ ...heroForm, sliderDuration: Number(e.target.value) })}
+                          className="w-full accent-[#0b3c26] cursor-pointer"
+                        />
+                        <input
+                          type="number"
+                          min={2}
+                          max={30}
+                          value={heroForm.sliderDuration}
+                          onChange={(e) => setHeroForm({ ...heroForm, sliderDuration: Math.max(2, Math.min(30, Number(e.target.value) || 5)) })}
+                          className="w-16 px-2 py-1 text-xs text-center font-bold border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#0b3c26]"
+                        />
+                      </div>
+
+                      {/* Quick Presets */}
+                      <div className="flex flex-wrap items-center gap-1.5 mt-3">
+                        <span className="text-[10px] text-gray-500 font-medium mr-1">Preset Cepat:</span>
+                        {[
+                          { sec: 3, label: '3s (Cepat)' },
+                          { sec: 5, label: '5s (Standar)' },
+                          { sec: 7, label: '7s (Santai)' },
+                          { sec: 10, label: '10s (Lambat)' }
+                        ].map((preset) => (
+                          <button
+                            key={preset.sec}
+                            type="button"
+                            onClick={() => setHeroForm({ ...heroForm, sliderDuration: preset.sec })}
+                            className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
+                              heroForm.sliderDuration === preset.sec
+                                ? 'bg-[#0b3c26] text-white'
+                                : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                            }`}
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="border-t md:border-t-0 md:border-l border-gray-200 md:pl-5 pt-3 md:pt-0 flex flex-col justify-center space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="text-xs font-bold text-gray-800 block">
+                            Putar Otomatis Slider (Auto-play)
+                          </label>
+                          <span className="text-[11px] text-gray-500 block">
+                            Slide akan bergulir sendiri tanpa harus diklik oleh pengunjung.
+                          </span>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={heroForm.sliderAutoPlay}
+                            onChange={(e) => setHeroForm({ ...heroForm, sliderAutoPlay: e.target.checked })}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0b3c26]"></div>
+                        </label>
+                      </div>
+
+                      <div className="p-2.5 rounded-lg bg-white border border-gray-200 flex items-center justify-between text-xs text-gray-600">
+                        <span className="flex items-center gap-1.5 font-medium">
+                          <Layers className="w-4 h-4 text-[#d4af37]" />
+                          <span>Total Slide Aktif:</span>
+                        </span>
+                        <span className="font-bold text-[#0b3c26]">
+                          {heroForm.slides.length} Slide
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className="absolute top-2 right-3 text-[10px] text-[#f3e5ab]/60 uppercase tracking-wider font-mono">
-                    Pratinjau Langsung
-                  </div>
                 </div>
+
+                {/* Live Preview Box with Slide Switcher */}
+                {heroForm.slides.length > 0 && (() => {
+                  const safeIdx = Math.min(previewSlideIdx, heroForm.slides.length - 1);
+                  const activeSlidePreview = heroForm.slides[safeIdx] || heroForm.slides[0];
+                  const previewBg = activeSlidePreview?.bannerUrl || heroForm.heroBannerUrl;
+
+                  return (
+                    <div className="relative rounded-xl overflow-hidden bg-gradient-to-br from-[#063b25] via-[#042819] to-[#02180f] p-5 sm:p-7 text-white text-center border border-[#d4af37]/30 shadow-inner">
+                      <div
+                        className="absolute inset-0 bg-cover bg-center opacity-20 mix-blend-overlay pointer-events-none transition-all duration-500"
+                        style={{ backgroundImage: `url('${previewBg}')` }}
+                      />
+                      <div className="relative z-10 max-w-2xl mx-auto space-y-3">
+                        {activeSlidePreview?.photoUrl ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center text-left">
+                            <div className="sm:col-span-7 space-y-2">
+                              <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase bg-[#d4af37]/20 border border-[#d4af37]/50 text-[#f3e5ab]">
+                                {activeSlidePreview?.badge || "LP Ma'arif NU Temanggung"}
+                              </span>
+                              <h4 className="font-heading text-base sm:text-lg font-bold leading-snug bg-gradient-to-b from-white to-[#f3e5ab] bg-clip-text text-transparent">
+                                {activeSlidePreview?.title || "Judul Slide Teks Beranda"}
+                              </h4>
+                              <p className="text-[11px] text-white/80 line-clamp-3 leading-relaxed">
+                                {activeSlidePreview?.subtitle || "Deskripsi penjelas teks slide beranda."}
+                              </p>
+                            </div>
+                            <div className="sm:col-span-5">
+                              <div className="rounded-xl overflow-hidden border border-[#d4af37]/50 shadow-md relative bg-black/40 aspect-[4/3]">
+                                <img
+                                  src={activeSlidePreview.photoUrl}
+                                  alt="Preview Slide"
+                                  className="w-full h-full object-cover"
+                                />
+                                {activeSlidePreview.photoCaption && (
+                                  <div className="absolute bottom-0 inset-x-0 bg-black/75 p-1.5 text-[9px] text-white/90 line-clamp-1">
+                                    {activeSlidePreview.photoCaption}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <span className="inline-block px-3 py-1 rounded-full text-[10px] font-semibold tracking-wider uppercase bg-[#d4af37]/20 border border-[#d4af37]/50 text-[#f3e5ab]">
+                              {activeSlidePreview?.badge || "LP Ma'arif NU Temanggung • Soborejo"}
+                            </span>
+                            <h4 className="font-heading text-lg sm:text-xl font-bold leading-snug bg-gradient-to-b from-white to-[#f3e5ab] bg-clip-text text-transparent">
+                              {activeSlidePreview?.title || "Judul Slide Teks Beranda"}
+                            </h4>
+                            <p className="text-[11px] sm:text-xs text-white/80 line-clamp-3 leading-relaxed">
+                              {activeSlidePreview?.subtitle || "Deskripsi penjelas teks slide beranda."}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Slider Selector Pills in Preview */}
+                        <div className="pt-2 flex items-center justify-center gap-2">
+                          {heroForm.slides.map((_, sIdx) => (
+                            <button
+                              key={sIdx}
+                              type="button"
+                              onClick={() => setPreviewSlideIdx(sIdx)}
+                              className={`h-2 rounded-full transition-all duration-300 ${
+                                sIdx === safeIdx
+                                  ? 'w-7 bg-[#d4af37]'
+                                  : 'w-2 bg-white/40 hover:bg-white/70'
+                              }`}
+                              title={`Tinjau Slide #${sIdx + 1}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Header tags in preview */}
+                      <div className="absolute top-2.5 left-3 flex items-center gap-2 text-[10px] text-[#f3e5ab] font-mono">
+                        <span className="px-2 py-0.5 rounded bg-black/40 border border-white/10">
+                          Slide {safeIdx + 1} / {heroForm.slides.length}
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-[#d4af37]/20 text-[#f3e5ab] border border-[#d4af37]/40 hidden sm:inline">
+                          Durasi: {heroForm.sliderDuration}d
+                        </span>
+                      </div>
+
+                      <div className="absolute top-2.5 right-3 text-[10px] text-[#f3e5ab]/80 uppercase tracking-wider font-mono">
+                        Pratinjau Langsung
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Hero Form */}
-                <form onSubmit={handleSaveHero} className="space-y-4 pt-2">
+                <form onSubmit={handleSaveHero} className="space-y-6 pt-2">
+                  {/* SLIDES LIST MANAGEMENT */}
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      Judul Utama / Tagline Beranda (Hero Headline) <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={heroForm.heroTitle}
-                      onChange={(e) => setHeroForm({ ...heroForm, heroTitle: e.target.value })}
-                      placeholder="Mencetak Peserta Didik yang Religius, Berakhlaqul Karimah, Cerdas, dan Berprestasi"
-                      className="w-full px-3.5 py-2.5 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0b3c26] focus:border-[#0b3c26]"
-                    />
-                    <span className="text-[10px] text-gray-500 mt-1 block">
-                      Teks headline besar yang merefleksikan visi madrasah di hadapan publik.
-                    </span>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      Teks Penjelas / Sambutan Selamat Datang <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      required
-                      rows={3}
-                      value={heroForm.heroSubtitle}
-                      onChange={(e) => setHeroForm({ ...heroForm, heroSubtitle: e.target.value })}
-                      placeholder="Selamat datang di website resmi MI Ma'arif Al Ihsan Soborejo..."
-                      className="w-full px-3.5 py-2.5 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#0b3c26] focus:border-[#0b3c26] leading-relaxed"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        Teks Badge Afiliasi & Wilayah
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                        <Layers className="w-4 h-4 text-[#0b3c26]" />
+                        <span>Daftar Slide Teks & Foto Beranda (Dapat Diedit & Ditukar Urutannya)</span>
                       </label>
-                      <input
-                        type="text"
-                        value={heroForm.heroBadge}
-                        onChange={(e) => setHeroForm({ ...heroForm, heroBadge: e.target.value })}
-                        placeholder="LP Ma'arif NU Temanggung • Soborejo, Pringsurat"
-                        className="w-full px-3 py-2 text-xs border border-gray-300 rounded-xl focus:ring-1 focus:ring-[#0b3c26]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        URL Gambar Latar Hero (Cover)
-                      </label>
-                      <input
-                        type="url"
-                        value={heroForm.heroBannerUrl}
-                        onChange={(e) => setHeroForm({ ...heroForm, heroBannerUrl: e.target.value })}
-                        placeholder="https://..."
-                        className="w-full px-3 py-2 text-xs border border-gray-300 rounded-xl focus:ring-1 focus:ring-[#0b3c26]"
-                      />
                       <button
                         type="button"
-                        onClick={() =>
-                          setHeroForm({
-                            ...heroForm,
-                            heroBannerUrl:
-                              'https://images.unsplash.com/photo-1584697964190-7bb8c5a2cbb5?q=80&w=1920&auto=format&fit=crop',
-                          })
-                        }
-                        className="text-[11px] text-[#0b3c26] hover:underline font-medium mt-1 inline-block"
+                        onClick={handleAddSlide}
+                        className="text-xs font-semibold text-[#0b3c26] hover:underline flex items-center gap-1"
                       >
-                        Reset ke Cover Nuansa Madrasah Default
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Tambah Slide</span>
                       </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      {heroForm.slides.map((slide, sIndex) => {
+                        const isSelectedForPreview = sIndex === previewSlideIdx;
+                        return (
+                          <div
+                            key={slide.id || sIndex}
+                            className={`rounded-xl border transition-all duration-200 p-4 ${
+                              isSelectedForPreview
+                                ? 'border-[#0b3c26] bg-[#0b3c26]/[0.02] shadow-sm'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            {/* Slide Header Toolbar */}
+                            <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-100">
+                              <div className="flex items-center gap-2">
+                                <span className="w-6 h-6 rounded-full bg-[#0b3c26] text-[#f3e5ab] text-xs font-bold flex items-center justify-center">
+                                  {sIndex + 1}
+                                </span>
+                                <span className="text-xs font-bold text-[#072217]">
+                                  Slide #{sIndex + 1}
+                                </span>
+                                {isSelectedForPreview && (
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#d4af37]/20 text-[#8c7017] border border-[#d4af37]/30">
+                                    Sedang Ditinjau
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewSlideIdx(sIndex)}
+                                  className="p-1.5 text-xs text-gray-600 hover:text-[#0b3c26] hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1"
+                                  title="Tampilkan di kotak pratinjau"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span className="hidden sm:inline text-[11px]">Tinjau</span>
+                                </button>
+                                
+                                <button
+                                  type="button"
+                                  disabled={sIndex === 0}
+                                  onClick={() => handleMoveSlide(sIndex, 'up')}
+                                  className="p-1.5 text-gray-500 hover:text-gray-800 disabled:opacity-30 disabled:hover:text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                                  title="Pindahkan ke atas"
+                                >
+                                  <ChevronUp className="w-4 h-4" />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  disabled={sIndex === heroForm.slides.length - 1}
+                                  onClick={() => handleMoveSlide(sIndex, 'down')}
+                                  className="p-1.5 text-gray-500 hover:text-gray-800 disabled:opacity-30 disabled:hover:text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                                  title="Pindahkan ke bawah"
+                                >
+                                  <ChevronDown className="w-4 h-4" />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  disabled={heroForm.slides.length <= 1}
+                                  onClick={() => handleRemoveSlide(slide.id)}
+                                  className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                                  title="Hapus slide ini"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Slide Fields */}
+                            <div className="space-y-3.5 text-left">
+                              <div>
+                                <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                                  Judul Utama Slide (Headline) <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={slide.title}
+                                  onChange={(e) => handleUpdateSlideField(slide.id, 'title', e.target.value)}
+                                  placeholder="Contoh: Mencetak Generasi Qur'ani dan Unggul Berprestasi"
+                                  className="w-full px-3 py-2 text-xs font-semibold border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#0b3c26]"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                                  Teks Penjelas / Subtitle Slide <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                  required
+                                  rows={2}
+                                  value={slide.subtitle}
+                                  onChange={(e) => handleUpdateSlideField(slide.id, 'subtitle', e.target.value)}
+                                  placeholder="Tuliskan keterangan pendukung atau sambutan hangat..."
+                                  className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#0b3c26]"
+                                />
+                              </div>
+
+                              {/* SECTION: FOTO SLIDE */}
+                              <div className="pt-2 border-t border-gray-100">
+                                <div className="flex items-center justify-between mb-2">
+                                  <label className="text-[11px] font-bold text-gray-800 flex items-center gap-1.5">
+                                    <Camera className="w-3.5 h-3.5 text-[#0b3c26]" />
+                                    <span>Foto Slide (Dapat Dipasang Foto)</span>
+                                  </label>
+                                  {slide.photoUrl ? (
+                                    <span className="text-[10px] text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                      ✓ Foto Terpasang
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] text-gray-400">
+                                      Opsional (Slide Teks Penuh jika kosong)
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start bg-gray-50/80 p-3 rounded-xl border border-gray-200">
+                                  {/* Thumbnail Preview & Quick Actions */}
+                                  <div className="sm:col-span-4 flex flex-col items-center">
+                                    <div className="w-full aspect-[4/3] rounded-lg overflow-hidden border border-gray-300 bg-gray-100 relative flex items-center justify-center shadow-xs">
+                                      {slide.photoUrl ? (
+                                        <img
+                                          src={slide.photoUrl}
+                                          alt="Foto Slide"
+                                          className="w-full h-full object-cover"
+                                        />
+                                      ) : (
+                                        <div className="text-center p-2 text-gray-400">
+                                          <Camera className="w-6 h-6 mx-auto mb-1 opacity-50" />
+                                          <span className="text-[10px] block leading-tight">Belum ada foto</span>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    <div className="flex items-center gap-1.5 mt-2 w-full">
+                                      {/* File Upload button */}
+                                      <label className="flex-1 cursor-pointer inline-flex items-center justify-center gap-1 px-2.5 py-1.5 bg-[#0b3c26] text-[#f3e5ab] text-[11px] font-semibold rounded-lg hover:bg-[#072217] transition-all shadow-xs">
+                                        <Upload className="w-3 h-3" />
+                                        <span>{slide.photoUrl ? 'Ganti Foto' : 'Unggah Foto'}</span>
+                                        <input
+                                          type="file"
+                                          accept="image/*"
+                                          onChange={(e) => handleSlidePhotoUpload(slide.id, e)}
+                                          className="hidden"
+                                        />
+                                      </label>
+
+                                      {slide.photoUrl && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            handleUpdateSlideField(slide.id, 'photoUrl', '');
+                                            handleUpdateSlideField(slide.id, 'photoCaption', '');
+                                          }}
+                                          className="px-2 py-1.5 text-[11px] text-red-600 hover:bg-red-50 rounded-lg border border-red-200 transition-colors"
+                                          title="Hapus foto dari slide ini"
+                                        >
+                                          Hapus
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Input Details */}
+                                  <div className="sm:col-span-8 space-y-2.5">
+                                    <div>
+                                      <label className="block text-[10px] font-semibold text-gray-600 mb-0.5">
+                                        URL Tautan Gambar Foto
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={slide.photoUrl || ''}
+                                        onChange={(e) => handleUpdateSlideField(slide.id, 'photoUrl', e.target.value)}
+                                        placeholder="https://... URL tautan gambar foto slide"
+                                        className="w-full px-3 py-1.5 text-xs font-mono text-[11px] border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#0b3c26]"
+                                      />
+                                    </div>
+
+                                    <div>
+                                      <label className="block text-[10px] font-semibold text-gray-600 mb-0.5">
+                                        Keterangan Singkat Foto (Caption pada Slide)
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={slide.photoCaption || ''}
+                                        onChange={(e) => handleUpdateSlideField(slide.id, 'photoCaption', e.target.value)}
+                                        placeholder="Contoh: Suasana Pembelajaran Aktif & Interaktif di Kelas"
+                                        className="w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#0b3c26]"
+                                      />
+                                    </div>
+
+                                    {/* Quick preset suggestions */}
+                                    <div className="pt-1 flex flex-wrap items-center gap-1.5 text-[10px] text-gray-500">
+                                      <span className="font-semibold text-gray-600">Pilihan Cepat Foto:</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          handleUpdateSlideField(slide.id, 'photoUrl', 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?q=80&w=1200&auto=format&fit=crop');
+                                          handleUpdateSlideField(slide.id, 'photoCaption', 'Suasana Pembelajaran Aktif & Islami di Kelas');
+                                        }}
+                                        className="px-2 py-0.5 rounded bg-white hover:bg-gray-100 border border-gray-200 text-gray-700"
+                                      >
+                                        Belajar di Kelas
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          handleUpdateSlideField(slide.id, 'photoUrl', 'https://images.unsplash.com/photo-1577896851231-70ef18881754?q=80&w=1200&auto=format&fit=crop');
+                                          handleUpdateSlideField(slide.id, 'photoCaption', "Bimbingan Tahfidz Juz 30 & Tartil Al-Qur'an");
+                                        }}
+                                        className="px-2 py-0.5 rounded bg-white hover:bg-gray-100 border border-gray-200 text-gray-700"
+                                      >
+                                        Tahfidz Al-Qur'an
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          handleUpdateSlideField(slide.id, 'photoUrl', 'https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=1200&auto=format&fit=crop');
+                                          handleUpdateSlideField(slide.id, 'photoCaption', 'Penerimaan Peserta Didik Baru (PPDB) TP 2025/2026');
+                                        }}
+                                        className="px-2 py-0.5 rounded bg-white hover:bg-gray-100 border border-gray-200 text-gray-700"
+                                      >
+                                        Dokumentasi PPDB
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                                <div>
+                                  <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                                    Teks Badge / Label Slide
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={slide.badge || ''}
+                                    onChange={(e) => handleUpdateSlideField(slide.id, 'badge', e.target.value)}
+                                    placeholder="Contoh: Program Unggulan • Tahfidz & Aswaja"
+                                    className="w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#0b3c26]"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="block text-[11px] font-semibold text-gray-700 mb-1">
+                                    URL Gambar Cover Khusus Slide (Latar Belakang)
+                                  </label>
+                                  <input
+                                    type="url"
+                                    value={slide.bannerUrl || ''}
+                                    onChange={(e) => handleUpdateSlideField(slide.id, 'bannerUrl', e.target.value)}
+                                    placeholder={heroForm.heroBannerUrl}
+                                    className="w-full px-3 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#0b3c26]"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
                   {/* Highlights Inputs */}
-                  <div className="pt-2">
+                  <div className="pt-2 border-t border-gray-100">
                     <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                       4 Poin Keunggulan Ringkas (Pill Bar Bawah Hero)
                     </label>
@@ -1746,13 +2242,42 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* General Cover URL */}
+                  <div className="pt-2 border-t border-gray-100">
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      URL Gambar Cover Utama / Default Beranda
+                    </label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        type="url"
+                        value={heroForm.heroBannerUrl}
+                        onChange={(e) => setHeroForm({ ...heroForm, heroBannerUrl: e.target.value })}
+                        placeholder="https://..."
+                        className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-xl focus:ring-1 focus:ring-[#0b3c26]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setHeroForm({
+                            ...heroForm,
+                            heroBannerUrl:
+                              'https://images.unsplash.com/photo-1584697964190-7bb8c5a2cbb5?q=80&w=1920&auto=format&fit=crop',
+                          })
+                        }
+                        className="px-3 py-2 text-xs text-[#0b3c26] bg-[#0b3c26]/10 hover:bg-[#0b3c26]/20 font-medium rounded-xl transition-colors shrink-0"
+                      >
+                        Reset Cover Default
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="pt-3 flex justify-end">
                     <button
                       type="submit"
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0b3c26] hover:bg-[#072217] text-[#f3e5ab] text-xs font-bold shadow-md transition-colors"
+                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#0b3c26] hover:bg-[#072217] text-[#f3e5ab] text-xs font-bold shadow-md transition-colors"
                     >
                       <Save className="w-4 h-4 text-[#d4af37]" />
-                      <span>Simpan Perubahan Tampilan Hero</span>
+                      <span>Simpan Slider Teks Beranda & Durasi</span>
                     </button>
                   </div>
                 </form>

@@ -248,6 +248,23 @@ export const sanitizeAppState = (raw: any): AppStorageState => {
     headmasterPhotoScale: rawProfile.headmasterPhotoScale ?? 100,
     headmasterPhotoFit: rawProfile.headmasterPhotoFit || 'cover',
     faviconUrl: rawProfile.faviconUrl !== undefined ? rawProfile.faviconUrl : (rawProfile.logoUrl || DEFAULT_DATA.schoolProfile.faviconUrl || '/assets/logo-maarif.svg'),
+    heroSliderDuration: typeof rawProfile.heroSliderDuration === 'number' && rawProfile.heroSliderDuration >= 2
+      ? rawProfile.heroSliderDuration
+      : (DEFAULT_DATA.schoolProfile.heroSliderDuration || 5),
+    heroSliderAutoPlay: rawProfile.heroSliderAutoPlay !== undefined
+      ? Boolean(rawProfile.heroSliderAutoPlay)
+      : (DEFAULT_DATA.schoolProfile.heroSliderAutoPlay ?? true),
+    heroSlides: Array.isArray(rawProfile.heroSlides) && rawProfile.heroSlides.length > 0
+      ? rawProfile.heroSlides.map((slide: any, idx: number) => {
+          const defaultSlide = DEFAULT_DATA.schoolProfile.heroSlides?.[idx] || DEFAULT_DATA.schoolProfile.heroSlides?.[0];
+          return {
+            ...slide,
+            id: slide.id || `slide-${idx + 1}`,
+            photoUrl: slide.photoUrl !== undefined ? slide.photoUrl : (defaultSlide?.photoUrl || ''),
+            photoCaption: slide.photoCaption !== undefined ? slide.photoCaption : (defaultSlide?.photoCaption || ''),
+          };
+        })
+      : (DEFAULT_DATA.schoolProfile.heroSlides || []),
   };
 
   const sanitizedNewsList = (raw.newsList && Array.isArray(raw.newsList) ? raw.newsList : (DEFAULT_DATA.newsList || [])).map((n: any) => {

@@ -86,6 +86,9 @@ CREATE TABLE IF NOT EXISTS public.school_profile (
   goals JSONB DEFAULT '[]'::jsonb,
   history JSONB DEFAULT '[]'::jsonb,
   core_values JSONB DEFAULT '[]'::jsonb,
+  hero_slides JSONB DEFAULT '[]'::jsonb,
+  hero_slider_duration INT DEFAULT 5,
+  hero_slider_auto_play BOOLEAN DEFAULT true,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -908,6 +911,9 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
         goals: p.goals?.length ? p.goals : state.schoolProfile?.goals || [],
         history: p.history?.length ? p.history : state.schoolProfile?.history || [],
         coreValues: p.core_values?.length ? p.core_values : state.schoolProfile?.coreValues || [],
+        heroSlides: (p as any)?.hero_slides?.length ? (p as any).hero_slides : state.schoolProfile?.heroSlides || [],
+        heroSliderDuration: (p as any)?.hero_slider_duration ?? state.schoolProfile?.heroSliderDuration ?? 5,
+        heroSliderAutoPlay: (p as any)?.hero_slider_auto_play ?? state.schoolProfile?.heroSliderAutoPlay ?? true,
       };
     }
 

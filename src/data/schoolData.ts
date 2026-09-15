@@ -10,7 +10,8 @@ import {
   StaffMember,
   PPDBRegistration,
   StatItem,
-  StudentItem
+  StudentItem,
+  HeroSlide
 } from '../types';
 
 export const SCHOOL_PROFILE: SchoolProfile = {
@@ -108,6 +109,37 @@ export const SCHOOL_PROFILE: SchoolProfile = {
     "Kurikulum Merdeka + Kemenag",
     "Karakter Aswaja An-Nahdliyyah",
     "Lingkungan Asri & Ramah Anak"
+  ],
+  heroSliderDuration: 5,
+  heroSliderAutoPlay: true,
+  heroSlides: [
+    {
+      id: "slide-1",
+      badge: "LP Ma'arif NU Temanggung • Soborejo, Pringsurat",
+      title: "Mencetak Peserta Didik yang Religius, Berakhlaqul Karimah, Cerdas, dan Berprestasi",
+      subtitle: "Selamat datang di website resmi MI Ma'arif Al Ihsan Soborejo, Kecamatan Pringsurat, Kabupaten Temanggung. Berkomitmen menyelenggarakan pendidikan dasar Islam yang bermakna dan berkarakter, menumbuhkan penghayatan ajaran agama, keluhuran budi pekerti, serta membina kecerdasan dan prestasi setiap peserta didik secara optimal.",
+      photoUrl: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?q=80&w=1200&auto=format&fit=crop",
+      photoCaption: "Suasana Pembelajaran Aktif & Islami di Kelas",
+      bannerUrl: "https://images.unsplash.com/photo-1584697964190-7bb8c5a2cbb5?q=80&w=1920&auto=format&fit=crop"
+    },
+    {
+      id: "slide-2",
+      badge: "Program Unggulan Madrasah • Tahfidz & Karakter Aswaja",
+      title: "Membentuk Generasi Qur'ani, Berakhlak Mulia & Unggul Berprestasi",
+      subtitle: "Didukung pembiasaan sholat dhuha dan dhuhur berjamaah, hafalan Juz 'Amma dan tartil Al-Qur'an, kajian Aswaja An-Nahdliyyah, serta pembelajaran Kurikulum Merdeka yang inspiratif dan berwawasan masa depan.",
+      photoUrl: "https://images.unsplash.com/photo-1577896851231-70ef18881754?q=80&w=1200&auto=format&fit=crop",
+      photoCaption: "Pembiasaan Tahfidz & Karakter Aswaja Santri",
+      bannerUrl: "https://images.unsplash.com/photo-1577896851231-70ef18881754?q=80&w=1920&auto=format&fit=crop"
+    },
+    {
+      id: "slide-3",
+      badge: "Penerimaan Peserta Didik Baru (PPDB) • Buka Pendaftaran",
+      title: "Raih Masa Depan Gemilang Bersama MI Ma'arif Al Ihsan Soborejo",
+      subtitle: "Pendaftaran santri baru kini semakin praktis dan transparan secara online. Fasilitas pembelajaran nyaman, lingkungan asri ramah anak, dan dewan guru berdedikasi tinggi siap membimbing putra-putri tercinta.",
+      photoUrl: "https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=1200&auto=format&fit=crop",
+      photoCaption: "Penerimaan Peserta Didik Baru (PPDB) TP 2025/2026",
+      bannerUrl: "https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=1920&auto=format&fit=crop"
+    }
   ]
 };
 

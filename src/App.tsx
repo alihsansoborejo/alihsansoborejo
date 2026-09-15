@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { DataProvider, useDataContext } from './context/DataContext';
 import { AdminBar } from './components/AdminBar';
@@ -24,11 +24,32 @@ import { FloatingWA } from './components/FloatingWA';
 import { CheckCircle2 } from 'lucide-react';
 
 function AppContent() {
-  const { viewMode } = useDataContext();
+  const { viewMode, schoolProfile } = useDataContext();
   const [isPPDBOpen, setIsPPDBOpen] = useState(false);
   const [ppdbInitialTab, setPpdbInitialTab] = useState<'form' | 'status' | 'alur'>('form');
   const [preselectedProgram, setPreselectedProgram] = useState<string | undefined>(undefined);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Sync favicon with schoolProfile.faviconUrl or fallback to logoUrl
+  useEffect(() => {
+    const activeFavicon = schoolProfile?.faviconUrl || schoolProfile?.logoUrl || '/assets/logo-maarif.svg';
+    const favLink = document.getElementById('app-favicon') as HTMLLinkElement | null;
+    if (favLink) {
+      favLink.href = activeFavicon;
+      if (activeFavicon.includes('.svg') || activeFavicon.startsWith('data:image/svg')) {
+        favLink.type = 'image/svg+xml';
+      } else if (activeFavicon.includes('.png') || activeFavicon.startsWith('data:image/png')) {
+        favLink.type = 'image/png';
+      } else if (activeFavicon.includes('.ico') || activeFavicon.includes('x-icon')) {
+        favLink.type = 'image/x-icon';
+      }
+    }
+
+    const appleLink = document.getElementById('app-apple-icon') as HTMLLinkElement | null;
+    if (appleLink) {
+      appleLink.href = activeFavicon;
+    }
+  }, [schoolProfile?.faviconUrl, schoolProfile?.logoUrl]);
 
   const showToast = (message: string) => {
     setToastMessage(message);

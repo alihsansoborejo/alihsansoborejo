@@ -36,6 +36,19 @@ export interface SchoolProfile {
   heroBadge?: string;
   heroBannerUrl?: string;
   heroHighlights?: string[];
+  heroSlides?: HeroSlide[];
+  heroSliderDuration?: number; // Durasi tampil per slide dalam detik (default: 5)
+  heroSliderAutoPlay?: boolean; // Putar otomatis (default: true)
+}
+
+export interface HeroSlide {
+  id: string;
+  title: string;
+  subtitle: string;
+  badge?: string;
+  photoUrl?: string; // Foto yang dipasang pada slide
+  photoCaption?: string; // Keterangan / label foto (opsional)
+  bannerUrl?: string; // Gambar latar belakang cover (opsional)
 }
 
 export interface StatItem {
