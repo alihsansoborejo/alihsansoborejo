@@ -54,8 +54,12 @@ import {
   Pause,
   ChevronUp,
   ChevronDown,
-  Layers
+  Layers,
+  Video,
+  PlayCircle,
+  Film
 } from 'lucide-react';
+import { parseVideoUrl } from '../lib/videoUtils';
 import { compressImage } from '../lib/imageCompressor';
 import {
   toDateInputValue,
@@ -79,6 +83,7 @@ import {
   NewsArticle,
   FacilityItem,
   GalleryItem,
+  VideoGalleryItem,
   TestimonialItem,
   FAQItem,
   PPDBRegistration,
@@ -147,6 +152,10 @@ export const AdminDashboard: React.FC = () => {
     addGalleryItem,
     updateGalleryItem,
     deleteGalleryItem,
+    videoGallery,
+    addVideoItem,
+    updateVideoItem,
+    deleteVideoItem,
     testimonials,
     addTestimonial,
     updateTestimonial,
@@ -329,6 +338,23 @@ export const AdminDashboard: React.FC = () => {
     imageUrl: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=800&q=80',
     description: '',
     date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+  });
+
+  // Video Gallery Form state
+  const [videoGalleryTab, setVideoGalleryTab] = useState<'video' | 'foto' | 'fasilitas'>('video');
+  const [isAddingVideo, setIsAddingVideo] = useState(false);
+  const [editingVideo, setEditingVideo] = useState<VideoGalleryItem | null>(null);
+  const [previewingVideo, setPreviewingVideo] = useState<VideoGalleryItem | null>(null);
+  const [videoForm, setVideoForm] = useState({
+    title: '',
+    category: 'Profil Madrasah',
+    videoUrl: '',
+    thumbnailUrl: '',
+    description: '',
+    duration: '',
+    author: "Tim Media MI Ma'arif Al Ihsan",
+    date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+    featured: false
   });
 
   // Facility Form state
@@ -1061,6 +1087,91 @@ export const AdminDashboard: React.FC = () => {
     });
   };
 
+  // Video Gallery Handlers
+  const handleSaveVideo = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!videoForm.title.trim()) {
+      notify('Judul video wajib diisi!');
+      return;
+    }
+    if (!videoForm.videoUrl.trim()) {
+      notify('Tautan / URL video (YouTube, Facebook, atau file video) wajib diisi!');
+      return;
+    }
+
+    const parsed = parseVideoUrl(videoForm.videoUrl, videoForm.thumbnailUrl);
+    const finalThumbnail = videoForm.thumbnailUrl.trim() || parsed.thumbnailUrl;
+
+    const payload: Omit<VideoGalleryItem, 'id'> = {
+      title: videoForm.title.trim(),
+      category: videoForm.category,
+      videoUrl: videoForm.videoUrl.trim(),
+      thumbnailUrl: finalThumbnail,
+      description: videoForm.description.trim(),
+      duration: videoForm.duration.trim(),
+      author: videoForm.author.trim() || "MI Ma'arif Al Ihsan Soborejo",
+      date: videoForm.date || new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+      featured: videoForm.featured
+    };
+
+    if (editingVideo) {
+      updateVideoItem(editingVideo.id, payload);
+      notify(`Video "${videoForm.title}" berhasil diperbarui!`);
+      setEditingVideo(null);
+    } else {
+      addVideoItem(payload);
+      notify(`Video "${videoForm.title}" berhasil ditambahkan ke galeri!`);
+      setIsAddingVideo(false);
+    }
+
+    setVideoForm({
+      title: '',
+      category: 'Profil Madrasah',
+      videoUrl: '',
+      thumbnailUrl: '',
+      description: '',
+      duration: '',
+      author: "Tim Media MI Ma'arif Al Ihsan",
+      date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+      featured: false
+    });
+  };
+
+  const handleEditVideo = (item: VideoGalleryItem) => {
+    setEditingVideo(item);
+    setVideoForm({
+      title: item.title,
+      category: item.category,
+      videoUrl: item.videoUrl,
+      thumbnailUrl: item.thumbnailUrl || '',
+      description: item.description || '',
+      duration: item.duration || '',
+      author: item.author || "Tim Media MI Ma'arif Al Ihsan",
+      date: item.date || new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+      featured: item.featured || false
+    });
+    setIsAddingVideo(true);
+  };
+
+  const handleDeleteVideo = (id: string, title: string) => {
+    if (window.confirm(`Hapus video "${title}" dari galeri video madrasah?`)) {
+      deleteVideoItem(id);
+      notify('Video berhasil dihapus dari galeri.');
+    }
+  };
+
+  const handleVideoThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const result = ev.target?.result as string;
+        setVideoForm((prev) => ({ ...prev, thumbnailUrl: result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Facility Handlers
   const handleFacilityFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1379,7 +1490,7 @@ export const AdminDashboard: React.FC = () => {
           <nav className="space-y-1">
             {[
               { id: 'overview', label: 'Ringkasan & Status', icon: LayoutDashboard },
-              { id: 'hero_stats', label: 'Teks Beranda & Statistik', icon: Sparkles, badge: statsList.length },
+              { id: 'hero_stats', label: 'Slider Beranda (Teks & Foto)', icon: Sparkles, badge: (heroForm.slides || []).length },
               { id: 'profile', label: 'Profil & Identitas', icon: Building },
               { id: 'staff', label: 'Manajemen GTK (Guru)', icon: GraduationCap, badge: staffList.length },
               { id: 'students', label: 'Data Siswa (Santri)', icon: UserCheck, badge: studentList.length },
@@ -1388,7 +1499,7 @@ export const AdminDashboard: React.FC = () => {
               { id: 'programs', label: 'Program Unggulan', icon: BookOpen },
               { id: 'extracurriculars', label: 'Ekstrakurikuler', icon: Trophy },
               { id: 'achievements', label: 'Prestasi Santri', icon: Trophy },
-              { id: 'facilities', label: 'Galeri & Fasilitas', icon: Camera },
+              { id: 'facilities', label: 'Galeri Video, Foto & Fasilitas', icon: Video, badge: (videoGallery?.length || 0) + gallery.length },
               { id: 'testimonials_faq', label: 'Testimoni & FAQ', icon: MessageSquare },
               { id: 'backup', label: 'Cadangan & Pemulihan', icon: Database },
             ].map((tab) => {
@@ -1517,7 +1628,7 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               {/* Metric Cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
                 <div
                   onClick={() => setActiveTab('students')}
                   className="p-4 rounded-xl bg-[#f8faf9] border border-gray-200 hover:border-[#0b3c26] cursor-pointer transition-colors"
@@ -1571,14 +1682,34 @@ export const AdminDashboard: React.FC = () => {
                 </div>
 
                 <div
-                  onClick={() => setActiveTab('facilities')}
+                  onClick={() => {
+                    setVideoGalleryTab('foto');
+                    setActiveTab('facilities');
+                  }}
                   className="p-4 rounded-xl bg-[#f8faf9] border border-gray-200 hover:border-[#0b3c26] cursor-pointer transition-colors"
                 >
                   <div className="text-xs text-gray-500 font-medium">Foto Galeri</div>
                   <div className="font-heading text-2xl font-bold text-[#072217] mt-1">
                     {gallery.length}
                   </div>
-                  <div className="text-[10px] text-gray-500 mt-1">Dokumentasi Kegiatan</div>
+                  <div className="text-[10px] text-gray-500 mt-1">Dokumentasi Foto</div>
+                </div>
+
+                <div
+                  onClick={() => {
+                    setVideoGalleryTab('video');
+                    setActiveTab('facilities');
+                  }}
+                  className="p-4 rounded-xl bg-[#f8faf9] border border-gray-200 hover:border-[#0b3c26] cursor-pointer transition-colors"
+                >
+                  <div className="text-xs text-gray-500 font-medium flex items-center justify-between">
+                    <span>Galeri Video</span>
+                    <Video className="w-3.5 h-3.5 text-[#0b3c26]" />
+                  </div>
+                  <div className="font-heading text-2xl font-bold text-[#0b3c26] mt-1">
+                    {(videoGallery || []).length}
+                  </div>
+                  <div className="text-[10px] text-emerald-700 font-semibold mt-1">YouTube & FB</div>
                 </div>
               </div>
 
@@ -4893,11 +5024,313 @@ export const AdminDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 7: KELOLA GALERI & FASILITAS */}
+          {/* TAB 7: KELOLA GALERI (VIDEO & FOTO) DAN FASILITAS */}
           {activeTab === 'facilities' && (
-            <div className="space-y-8">
-              {/* SECTION A: GALERI FOTO */}
-              <div className="space-y-4">
+            <div className="space-y-6">
+              {/* Top Sub-Navigation Tabs */}
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2 rounded-2xl border border-gray-200/80 shadow-xs">
+                <div className="inline-flex p-1 bg-gray-100 rounded-xl gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setVideoGalleryTab('video')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                      videoGalleryTab === 'video'
+                        ? 'bg-[#0b3c26] text-[#f3e5ab] shadow-xs'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <Video className="w-3.5 h-3.5 text-[#d4af37]" />
+                    <span>Galeri Video ({(videoGallery || []).length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setVideoGalleryTab('foto')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                      videoGalleryTab === 'foto'
+                        ? 'bg-[#0b3c26] text-[#f3e5ab] shadow-xs'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>Galeri Foto ({gallery.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setVideoGalleryTab('fasilitas')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                      videoGalleryTab === 'fasilitas'
+                        ? 'bg-[#0b3c26] text-[#f3e5ab] shadow-xs'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <Building className="w-3.5 h-3.5" />
+                    <span>Fasilitas & Sarana ({facilities.length})</span>
+                  </button>
+                </div>
+
+                {videoGalleryTab === 'video' && (
+                  <button
+                    onClick={() => {
+                      setEditingVideo(null);
+                      setVideoForm({
+                        title: '',
+                        category: 'Profil Madrasah',
+                        videoUrl: '',
+                        thumbnailUrl: '',
+                        description: '',
+                        duration: '',
+                        author: "Tim Media MI Ma'arif Al Ihsan",
+                        date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+                        featured: false
+                      });
+                      setIsAddingVideo(true);
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-[#0b3c26] hover:bg-[#072217] text-[#f3e5ab] text-xs font-bold rounded-xl transition-all shadow-sm shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Tambah Video Baru</span>
+                  </button>
+                )}
+
+                {videoGalleryTab === 'foto' && (
+                  <button
+                    onClick={() => {
+                      setEditingGallery(null);
+                      setGalleryForm({
+                        title: '',
+                        category: 'Kegiatan Belajar',
+                        imageUrl: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=800&q=80',
+                        description: '',
+                        date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+                      });
+                      setIsAddingGallery(true);
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-[#0b3c26] hover:bg-[#072217] text-[#f3e5ab] text-xs font-bold rounded-xl transition-all shadow-sm shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Tambah Foto Galeri</span>
+                  </button>
+                )}
+
+                {videoGalleryTab === 'fasilitas' && (
+                  <button
+                    onClick={() => {
+                      setEditingFacility(null);
+                      setFacilityForm({
+                        name: '',
+                        category: 'Fasilitas Belajar',
+                        description: '',
+                        imageUrl: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=800&q=80',
+                        specificationsString: 'Ruang Representatif, Pencahayaan Nyaman, Terawat Bersih'
+                      });
+                      setIsAddingFacility(true);
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-[#0b3c26] hover:bg-[#072217] text-[#f3e5ab] text-xs font-bold rounded-xl transition-all shadow-sm shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Tambah Fasilitas</span>
+                  </button>
+                )}
+              </div>
+
+              {/* 1. SUB-TAB: GALERI VIDEO */}
+              {videoGalleryTab === 'video' && (
+                <div className="space-y-6 animate-in fade-in duration-200">
+                  {/* Video Overview Banner */}
+                  <div className="bg-gradient-to-r from-[#072217] to-[#0b3c26] text-white p-5 sm:p-6 rounded-2xl border border-[#d4af37]/30 shadow-md">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#072217] bg-[#d4af37] px-2.5 py-0.5 rounded-full">
+                            Fitur Galeri Video
+                          </span>
+                          <span className="text-xs text-[#f3e5ab]">Mendukung YouTube, Facebook, & File Video</span>
+                        </div>
+                        <h3 className="font-heading text-xl sm:text-2xl font-bold text-white mt-1.5">
+                          Kelola Video Dokumentasi & Kegiatan Santri
+                        </h3>
+                        <p className="text-xs text-white/80 mt-1 max-w-2xl leading-relaxed">
+                          Tambahkan tautan video dari YouTube, Facebook Watch/Reel, Vimeo, atau link file video langsung (.mp4) untuk ditampilkan di beranda madrasah. Platform video otomatis terdeteksi.
+                        </p>
+                      </div>
+
+                      {/* Quick Platform Badges */}
+                      <div className="flex flex-wrap items-center gap-2 shrink-0">
+                        <span className="px-2.5 py-1 bg-red-600/90 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-xs">
+                          YouTube
+                        </span>
+                        <span className="px-2.5 py-1 bg-blue-600/90 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-xs">
+                          Facebook
+                        </span>
+                        <span className="px-2.5 py-1 bg-emerald-700/90 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-xs">
+                          Direct Video / MP4
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Video Grid */}
+                  {(videoGallery || []).length === 0 ? (
+                    <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-12 text-center">
+                      <Film className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                      <h4 className="font-heading text-base font-bold text-gray-700">Belum Ada Video di Galeri</h4>
+                      <p className="text-xs text-gray-500 mt-1 max-w-md mx-auto">
+                        Klik tombol "Tambah Video Baru" di atas untuk memasukkan link YouTube, Facebook, atau file video.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setEditingVideo(null);
+                          setIsAddingVideo(true);
+                        }}
+                        className="mt-4 px-4 py-2 bg-[#0b3c26] text-[#f3e5ab] text-xs font-bold rounded-xl inline-flex items-center gap-1.5"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Tambah Video Pertama</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                      {(videoGallery || []).map((video) => {
+                        const parsed = parseVideoUrl(video.videoUrl, video.thumbnailUrl);
+                        const platformColor =
+                          parsed.platform === 'youtube'
+                            ? 'bg-red-600 text-white'
+                            : parsed.platform === 'facebook'
+                            ? 'bg-blue-600 text-white'
+                            : parsed.platform === 'vimeo'
+                            ? 'bg-sky-500 text-white'
+                            : parsed.platform === 'direct'
+                            ? 'bg-emerald-700 text-white'
+                            : 'bg-teal-700 text-white';
+
+                        return (
+                          <div
+                            key={video.id}
+                            className="bg-white border border-gray-200/90 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
+                          >
+                            <div>
+                              {/* Thumbnail preview */}
+                              <div className="relative aspect-video w-full bg-slate-900 overflow-hidden">
+                                <img
+                                  src={parsed.thumbnailUrl}
+                                  alt={video.title}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                  onError={(e) => {
+                                    (e.currentTarget as HTMLImageElement).src =
+                                      'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=800&q=80';
+                                  }}
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
+
+                                {/* Badges */}
+                                <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded shadow-xs ${platformColor}`}>
+                                    {parsed.platform.toUpperCase()}
+                                  </span>
+                                  {video.featured && (
+                                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[#d4af37] text-[#072217] shadow-xs">
+                                      Unggulan
+                                    </span>
+                                  )}
+                                </div>
+
+                                {video.duration && (
+                                  <div className="absolute bottom-2 right-2 bg-black/80 text-white font-mono text-[10px] px-2 py-0.5 rounded">
+                                    {video.duration}
+                                  </div>
+                                )}
+
+                                {/* Play Trigger for Admin Preview */}
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewingVideo(video)}
+                                  className="absolute inset-0 m-auto w-11 h-11 rounded-full bg-[#0b3c26]/90 text-[#d4af37] border border-[#d4af37] flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg cursor-pointer"
+                                  title="Pratinjau Pemutar Video"
+                                >
+                                  <Play className="w-5 h-5 fill-current ml-0.5" />
+                                </button>
+                              </div>
+
+                              {/* Info Content */}
+                              <div className="p-4">
+                                <div className="flex items-center gap-2 text-[10px] text-gray-500 mb-1.5">
+                                  <span className="font-semibold text-[#0b3c26] bg-[#e8f3ee] px-2 py-0.5 rounded">
+                                    {video.category}
+                                  </span>
+                                  {video.date && <span>• {video.date}</span>}
+                                </div>
+
+                                <h4 className="font-heading text-sm font-bold text-[#072217] line-clamp-2">
+                                  {video.title}
+                                </h4>
+
+                                {video.description && (
+                                  <p className="text-xs text-gray-600 mt-1.5 line-clamp-2 leading-relaxed">
+                                    {video.description}
+                                  </p>
+                                )}
+
+                                <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-400">
+                                  <span className="truncate max-w-[140px] font-mono text-[10px]">
+                                    {video.videoUrl}
+                                  </span>
+                                  <a
+                                    href={video.videoUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-gray-500 hover:text-[#0b3c26] flex items-center gap-1"
+                                    title="Buka URL asli di tab baru"
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                    <span>Buka</span>
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="p-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setPreviewingVideo(video)}
+                                className="px-2.5 py-1 text-xs text-[#0b3c26] bg-[#e8f3ee] hover:bg-[#d8ece2] font-semibold rounded-lg flex items-center gap-1 transition-colors"
+                              >
+                                <PlayCircle className="w-3.5 h-3.5" />
+                                <span>Preview</span>
+                              </button>
+
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditVideo(video)}
+                                  className="px-2.5 py-1 text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 font-medium rounded-lg flex items-center gap-1 transition-colors"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                  <span>Edit</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteVideo(video.id, video.title)}
+                                  className="px-2.5 py-1 text-xs text-red-600 bg-red-50 hover:bg-red-100 font-medium rounded-lg flex items-center gap-1 transition-colors"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <span>Hapus</span>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 2. SUB-TAB: GALERI FOTO */}
+              {videoGalleryTab === 'foto' && (
+              <div className="space-y-4 animate-in fade-in duration-200">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-[#0b3c26] bg-[#e8f3ee] px-2.5 py-0.5 rounded-full">
@@ -4983,9 +5416,11 @@ export const AdminDashboard: React.FC = () => {
                   ))}
                 </div>
               </div>
+              )}
 
-              {/* SECTION B: FASILITAS & SARANA */}
-              <div className="space-y-4 pt-6 border-t border-gray-200">
+              {/* 3. SUB-TAB: FASILITAS & SARANA */}
+              {videoGalleryTab === 'fasilitas' && (
+              <div className="space-y-4 animate-in fade-in duration-200">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-[#0b3c26] bg-[#e8f3ee] px-2.5 py-0.5 rounded-full">
@@ -5073,6 +5508,7 @@ export const AdminDashboard: React.FC = () => {
                   ))}
                 </div>
               </div>
+              )}
 
               {/* Modal Tambah / Edit Foto Galeri */}
               {(isAddingGallery || editingGallery) && (
@@ -5330,6 +5766,386 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                 </div>
               )}
+
+              {/* MODAL 1: TAMBAH / EDIT VIDEO GALERI */}
+              {(isAddingVideo || editingVideo) && (() => {
+                const detected = parseVideoUrl(videoForm.videoUrl, videoForm.thumbnailUrl);
+                return (
+                  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in overflow-y-auto">
+                    <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-[#d4af37]/30 my-6 max-h-[92vh] overflow-y-auto">
+                      <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
+                        <div className="flex items-center gap-2">
+                          <Video className="w-5 h-5 text-[#0b3c26]" />
+                          <h3 className="font-heading text-base font-bold text-[#072217]">
+                            {editingVideo ? 'Edit Video Galeri' : 'Tambah Video Baru ke Galeri'}
+                          </h3>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsAddingVideo(false);
+                            setEditingVideo(null);
+                          }}
+                          className="text-gray-400 hover:text-gray-700 cursor-pointer"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+
+                      <form onSubmit={handleSaveVideo} className="space-y-4 text-xs">
+                        {/* Video URL with detection */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="font-semibold text-gray-700">
+                              Tautan / URL Video (YouTube, Facebook, atau Lainnya) *
+                            </label>
+                            {videoForm.videoUrl.trim() && (
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                                  detected.platform === 'youtube'
+                                    ? 'bg-red-100 text-red-700'
+                                    : detected.platform === 'facebook'
+                                    ? 'bg-blue-100 text-blue-700'
+                                    : detected.platform === 'direct'
+                                    ? 'bg-emerald-100 text-emerald-700'
+                                    : 'bg-teal-100 text-teal-700'
+                                }`}
+                              >
+                                Terdeteksi: {detected.platform.toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+                          <input
+                            type="url"
+                            required
+                            value={videoForm.videoUrl}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setVideoForm((prev) => {
+                                const p = parseVideoUrl(val, prev.thumbnailUrl);
+                                return {
+                                  ...prev,
+                                  videoUrl: val,
+                                  thumbnailUrl: !prev.thumbnailUrl && p.platform === 'youtube' ? p.thumbnailUrl : prev.thumbnailUrl
+                                };
+                              });
+                            }}
+                            placeholder="https://www.youtube.com/watch?v=... atau https://www.facebook.com/.../videos/... atau link file .mp4"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b3c26] focus:border-transparent"
+                          />
+                          <p className="text-[11px] text-gray-500 mt-1">
+                            Mendukung tautan video YouTube standar, Short, embed, Facebook Watch, Reel, video Google Drive, atau link file video langsung (.mp4/.webm).
+                          </p>
+
+                          {/* Quick fill test samples */}
+                          <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                            <span className="text-[10px] text-gray-400">Contoh Cepat:</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const sample = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+                                const p = parseVideoUrl(sample);
+                                setVideoForm((prev) => ({
+                                  ...prev,
+                                  videoUrl: sample,
+                                  thumbnailUrl: p.thumbnailUrl,
+                                  title: prev.title || 'Dokumentasi Profil Pembiasaan Santri MI Al Ihsan'
+                                }));
+                              }}
+                              className="px-2 py-0.5 bg-red-50 hover:bg-red-100 text-red-700 text-[10px] font-semibold rounded border border-red-200 cursor-pointer"
+                            >
+                              + Contoh Link YouTube
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const sample = 'https://www.facebook.com/watch/?v=10153231379946729';
+                                const p = parseVideoUrl(sample);
+                                setVideoForm((prev) => ({
+                                  ...prev,
+                                  videoUrl: sample,
+                                  thumbnailUrl: p.thumbnailUrl,
+                                  title: prev.title || 'Liputan Kegiatan Santri di Facebook'
+                                }));
+                              }}
+                              className="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-semibold rounded border border-blue-200 cursor-pointer"
+                            >
+                              + Contoh Link Facebook
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Title */}
+                        <div>
+                          <label className="block font-semibold text-gray-700 mb-1">Judul Video *</label>
+                          <input
+                            type="text"
+                            required
+                            value={videoForm.title}
+                            onChange={(e) => setVideoForm({ ...videoForm, title: e.target.value })}
+                            placeholder="Contoh: Profil MI Ma'arif Al Ihsan Soborejo - Menuju Generasi Qurani"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0b3c26]"
+                          />
+                        </div>
+
+                        {/* Category and Duration */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block font-semibold text-gray-700 mb-1">Kategori Video</label>
+                            <select
+                              value={videoForm.category}
+                              onChange={(e) => setVideoForm({ ...videoForm, category: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
+                            >
+                              <option value="Profil Madrasah">Profil Madrasah</option>
+                              <option value="Ibadah & Karakter">Ibadah & Karakter</option>
+                              <option value="Kegiatan Belajar">Kegiatan Belajar</option>
+                              <option value="Ekstrakurikuler">Ekstrakurikuler</option>
+                              <option value="Prestasi & Pentas Seni">Prestasi & Pentas Seni</option>
+                              <option value="Dokumentasi PPDB">Dokumentasi PPDB</option>
+                              <option value="Kajian & Keagamaan">Kajian & Keagamaan</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block font-semibold text-gray-700 mb-1">Estimasi Durasi (Opsional)</label>
+                            <input
+                              type="text"
+                              value={videoForm.duration}
+                              onChange={(e) => setVideoForm({ ...videoForm, duration: e.target.value })}
+                              placeholder="Contoh: 04:12 atau 10 Menit"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Author and Date */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block font-semibold text-gray-700 mb-1">Sumber / Pembuat Video</label>
+                            <input
+                              type="text"
+                              value={videoForm.author}
+                              onChange={(e) => setVideoForm({ ...videoForm, author: e.target.value })}
+                              placeholder="Tim Media MI Ma'arif Al Ihsan"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block font-semibold text-gray-700 mb-1">Tanggal Video</label>
+                            <input
+                              type="text"
+                              value={videoForm.date}
+                              onChange={(e) => setVideoForm({ ...videoForm, date: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Custom Thumbnail URL or upload */}
+                        <div>
+                          <label className="block font-semibold text-gray-700 mb-1">
+                            URL Gambar Thumbnail (Sampul Video)
+                          </label>
+                          <input
+                            type="url"
+                            value={videoForm.thumbnailUrl}
+                            onChange={(e) => setVideoForm({ ...videoForm, thumbnailUrl: e.target.value })}
+                            placeholder="Otomatis terisi jika YouTube, atau masukkan URL gambar kustom"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                          />
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <span className="text-[11px] text-gray-500">Atau upload gambar sampul:</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleVideoThumbnailUpload}
+                              className="text-[11px] text-gray-600 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-[#0b3c26] file:text-[#f3e5ab] hover:file:bg-[#072217]"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Description */}
+                        <div>
+                          <label className="block font-semibold text-gray-700 mb-1">Deskripsi Ringkas Video</label>
+                          <textarea
+                            rows={2}
+                            value={videoForm.description}
+                            onChange={(e) => setVideoForm({ ...videoForm, description: e.target.value })}
+                            placeholder="Tuliskan keterangan singkat mengenai isi video dan momen kegiatan..."
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                          />
+                        </div>
+
+                        {/* Featured Toggle */}
+                        <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                          <input
+                            type="checkbox"
+                            id="video-featured-toggle"
+                            checked={videoForm.featured}
+                            onChange={(e) => setVideoForm({ ...videoForm, featured: e.target.checked })}
+                            className="rounded text-[#0b3c26] focus:ring-[#0b3c26]"
+                          />
+                          <label htmlFor="video-featured-toggle" className="font-semibold text-gray-800 cursor-pointer">
+                            Tandai sebagai Video Unggulan (Tampil dengan badge "Unggulan" di galeri)
+                          </label>
+                        </div>
+
+                        {/* Live Preview Card */}
+                        {videoForm.videoUrl && (
+                          <div className="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block mb-1">
+                              Pratinjau Kartu Video:
+                            </span>
+                            <div className="flex items-center gap-3">
+                              <div className="w-20 h-12 rounded-lg bg-black overflow-hidden relative shrink-0">
+                                <img
+                                  src={detected.thumbnailUrl}
+                                  alt="Preview"
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.currentTarget as HTMLImageElement).src =
+                                      'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=800&q=80';
+                                  }}
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                  <Play className="w-3.5 h-3.5 text-[#d4af37] fill-[#d4af37]" />
+                                </div>
+                              </div>
+                              <div className="overflow-hidden">
+                                <h5 className="font-bold text-gray-800 truncate text-xs">
+                                  {videoForm.title || 'Judul Belum Diisi'}
+                                </h5>
+                                <div className="flex items-center gap-1.5 text-[10px] text-gray-500 mt-0.5">
+                                  <span className="text-emerald-700 font-semibold">{detected.platform.toUpperCase()}</span>
+                                  <span>• {videoForm.category}</span>
+                                  {videoForm.duration && <span>• {videoForm.duration}</span>}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="pt-3 border-t border-gray-100 flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsAddingVideo(false);
+                              setEditingVideo(null);
+                            }}
+                            className="px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+                          >
+                            Batal
+                          </button>
+                          <button
+                            type="submit"
+                            className="px-5 py-2 bg-[#0b3c26] hover:bg-[#072217] text-[#f3e5ab] font-bold rounded-xl transition-colors shadow-sm cursor-pointer"
+                          >
+                            {editingVideo ? 'Simpan Perubahan Video' : 'Simpan Video ke Galeri'}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* MODAL 2: PRATINJAU VIDEO PLAYER (ADMIN) */}
+              {previewingVideo && (() => {
+                const parsed = parseVideoUrl(previewingVideo.videoUrl, previewingVideo.thumbnailUrl);
+                return (
+                  <div
+                    className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in"
+                    onClick={() => setPreviewingVideo(null)}
+                  >
+                    <div
+                      className="bg-[#072217] text-white rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl border border-[#d4af37]/40 relative"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setPreviewingVideo(null)}
+                        className="absolute top-3 right-3 z-20 p-2 bg-black/60 text-white hover:bg-black/80 rounded-full transition-colors cursor-pointer"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+
+                      {/* Video Player */}
+                      <div className="relative aspect-video w-full bg-black">
+                        {parsed.isDirectVideo ? (
+                          <video
+                            controls
+                            autoPlay
+                            playsInline
+                            poster={parsed.thumbnailUrl}
+                            src={previewingVideo.videoUrl}
+                            className="w-full h-full object-contain"
+                          >
+                            Browser tidak mendukung tag video HTML5.
+                          </video>
+                        ) : parsed.embedUrl ? (
+                          <iframe
+                            src={parsed.embedUrl}
+                            title={previewingVideo.title}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            className="w-full h-full border-0"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center">
+                            <Film className="w-12 h-12 text-[#d4af37] mb-2" />
+                            <p className="text-sm text-gray-200 mb-3">Tautan video eksternal:</p>
+                            <a
+                              href={previewingVideo.videoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-4 py-2 bg-[#d4af37] text-[#072217] font-bold text-xs rounded-xl flex items-center gap-1.5"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              <span>Buka Video di {parsed.platform.toUpperCase()}</span>
+                            </a>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Video Info in Preview */}
+                      <div className="p-5">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#072217] bg-[#d4af37] px-2.5 py-0.5 rounded-full">
+                            {previewingVideo.category}
+                          </span>
+                          <span className="text-xs text-white/60">• Platform: {parsed.platform.toUpperCase()}</span>
+                          {previewingVideo.duration && (
+                            <span className="text-xs text-[#f3e5ab] font-mono">• {previewingVideo.duration}</span>
+                          )}
+                        </div>
+
+                        <h3 className="font-heading text-lg font-bold text-[#f3e5ab]">
+                          {previewingVideo.title}
+                        </h3>
+
+                        {previewingVideo.description && (
+                          <p className="text-xs text-white/80 mt-1.5 leading-relaxed">
+                            {previewingVideo.description}
+                          </p>
+                        )}
+
+                        <div className="pt-3 mt-3 border-t border-white/10 flex items-center justify-between text-xs text-white/50">
+                          <span>Sumber: {previewingVideo.author || 'MI Al Ihsan Soborejo'}</span>
+                          <button
+                            type="button"
+                            onClick={() => setPreviewingVideo(null)}
+                            className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors cursor-pointer"
+                          >
+                            Tutup Pratinjau
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
 

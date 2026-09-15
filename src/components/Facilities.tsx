@@ -1,29 +1,108 @@
 import React, { useState } from 'react';
 import { useDataContext } from '../context/DataContext';
-import { FacilityItem, GalleryItem } from '../types';
-import { Building2, Camera, Sparkles, CheckCircle, X, ZoomIn, Calendar, Layers } from 'lucide-react';
+import { FacilityItem, GalleryItem, VideoGalleryItem } from '../types';
+import { parseVideoUrl } from '../lib/videoUtils';
+import {
+  Building2,
+  Camera,
+  CheckCircle,
+  X,
+  ZoomIn,
+  Calendar,
+  Play,
+  PlayCircle,
+  Video,
+  ExternalLink,
+  Clock,
+  User,
+  Share2,
+  Check,
+  Film
+} from 'lucide-react';
 
 export const Facilities: React.FC = () => {
-  const { facilities, gallery } = useDataContext();
-  const [activeTab, setActiveTab] = useState<'galeri' | 'fasilitas'>('galeri');
+  const { facilities, gallery, videoGallery } = useDataContext();
+  const [activeTab, setActiveTab] = useState<'galeri' | 'galeri_video' | 'fasilitas'>('galeri');
   const [selectedFacility, setSelectedFacility] = useState<FacilityItem | null>(null);
   const [selectedGallery, setSelectedGallery] = useState<GalleryItem | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<VideoGalleryItem | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('Semua');
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const galleryCategories = ['Semua', 'Prestasi', 'Ibadah & Karakter', 'Kegiatan Belajar', 'Ekstrakurikuler', 'Fasilitas'];
+  const videoCategories = ['Semua', 'Profil Madrasah', 'Ibadah & Karakter', 'Kegiatan Belajar', 'Ekstrakurikuler', 'Prestasi & Pentas Seni', 'Dokumentasi PPDB'];
   const facilityCategories = ['Semua', 'Akademik', 'Spiritual', 'Teknologi', 'Olahraga', 'Kesehatan'];
 
   const filteredGallery = activeCategory === 'Semua'
     ? gallery
     : gallery.filter(g => g.category.toLowerCase() === activeCategory.toLowerCase());
 
+  const filteredVideos = activeCategory === 'Semua'
+    ? (videoGallery || [])
+    : (videoGallery || []).filter(v => (v.category || '').toLowerCase() === activeCategory.toLowerCase());
+
   const filteredFacilities = activeCategory === 'Semua'
     ? facilities
     : facilities.filter(f => f.category.toLowerCase() === activeCategory.toLowerCase());
 
-  const handleTabChange = (tab: 'galeri' | 'fasilitas') => {
+  const handleTabChange = (tab: 'galeri' | 'galeri_video' | 'fasilitas') => {
     setActiveTab(tab);
     setActiveCategory('Semua');
+  };
+
+  const handleCopyVideoLink = (url: string) => {
+    try {
+      navigator.clipboard.writeText(url);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch (_) {}
+  };
+
+  const getPlatformBadge = (platform: string) => {
+    switch (platform) {
+      case 'youtube':
+        return {
+          bg: 'bg-red-600 text-white',
+          label: 'YouTube',
+          border: 'border-red-500/40',
+        };
+      case 'facebook':
+        return {
+          bg: 'bg-blue-600 text-white',
+          label: 'Facebook Watch',
+          border: 'border-blue-500/40',
+        };
+      case 'vimeo':
+        return {
+          bg: 'bg-sky-500 text-white',
+          label: 'Vimeo',
+          border: 'border-sky-400/40',
+        };
+      case 'tiktok':
+        return {
+          bg: 'bg-neutral-900 text-white',
+          label: 'TikTok',
+          border: 'border-neutral-700',
+        };
+      case 'gdrive':
+        return {
+          bg: 'bg-emerald-600 text-white',
+          label: 'Google Drive',
+          border: 'border-emerald-500/40',
+        };
+      case 'direct':
+        return {
+          bg: 'bg-emerald-700 text-white',
+          label: 'Video MP4',
+          border: 'border-emerald-600/40',
+        };
+      default:
+        return {
+          bg: 'bg-teal-700 text-white',
+          label: 'Video Web',
+          border: 'border-teal-600/40',
+        };
+    }
   };
 
   return (
@@ -37,43 +116,62 @@ export const Facilities: React.FC = () => {
           Galeri Kegiatan & Fasilitas Madrasah
         </h3>
         <p className="font-body text-sm sm:text-base text-gray-600 mt-2">
-          Potret kehangatan belajar, pembiasaan ibadah harian, dan sarana representatif di lingkungan MI Ma'arif Al Ihsan Soborejo.
+          Potret kehangatan belajar, dokumentasi video pembiasaan ibadah harian, dan sarana representatif di lingkungan MI Ma'arif Al Ihsan Soborejo.
         </p>
       </div>
 
-      {/* Main Mode Tabs (Galeri vs Fasilitas) */}
+      {/* Main Mode Tabs (Foto vs Video vs Fasilitas) */}
       <div className="flex justify-center mb-8">
-        <div className="inline-flex p-1.5 bg-gray-100 rounded-2xl border border-gray-200">
+        <div className="inline-flex flex-wrap justify-center p-1.5 bg-gray-100 rounded-2xl border border-gray-200 gap-1 sm:gap-0">
           <button
             id="tab-galeri-btn"
             onClick={() => handleTabChange('galeri')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+            className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
               activeTab === 'galeri'
                 ? 'bg-[#0b3c26] text-[#f3e5ab] shadow-md'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             <Camera className="w-4 h-4" />
-            <span>Galeri Foto Kegiatan</span>
+            <span>Galeri Foto ({gallery.length})</span>
           </button>
+
+          <button
+            id="tab-video-btn"
+            onClick={() => handleTabChange('galeri_video')}
+            className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              activeTab === 'galeri_video'
+                ? 'bg-[#0b3c26] text-[#f3e5ab] shadow-md'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Video className="w-4 h-4 text-[#d4af37]" />
+            <span>Galeri Video ({(videoGallery || []).length})</span>
+          </button>
+
           <button
             id="tab-fasilitas-btn"
             onClick={() => handleTabChange('fasilitas')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+            className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
               activeTab === 'fasilitas'
                 ? 'bg-[#0b3c26] text-[#f3e5ab] shadow-md'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             <Building2 className="w-4 h-4" />
-            <span>Fasilitas & Ruang Belajar</span>
+            <span>Fasilitas & Ruang Belajar ({facilities.length})</span>
           </button>
         </div>
       </div>
 
       {/* Filter Pills */}
       <div className="flex flex-wrap justify-center gap-2 mb-10">
-        {(activeTab === 'galeri' ? galleryCategories : facilityCategories).map((cat) => (
+        {(activeTab === 'galeri'
+          ? galleryCategories
+          : activeTab === 'galeri_video'
+          ? videoCategories
+          : facilityCategories
+        ).map((cat) => (
           <button
             key={cat}
             onClick={() => setActiveCategory(cat)}
@@ -88,54 +186,169 @@ export const Facilities: React.FC = () => {
         ))}
       </div>
 
-      {/* Galeri View */}
+      {/* 1. Galeri Foto View */}
       {activeTab === 'galeri' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 animate-in fade-in duration-300">
-          {filteredGallery.map((item) => (
-            <div
-              key={item.id}
-              id={`gallery-card-${item.id}`}
-              onClick={() => setSelectedGallery(item)}
-              className="group bg-white rounded-2xl overflow-hidden border border-gray-200/80 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer"
-            >
-              <div className="relative h-60 overflow-hidden bg-slate-100">
-                <img
-                  src={item.imageUrl}
-                  alt={item.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
-                
-                <div className="absolute top-3 left-3 bg-[#072217]/90 backdrop-blur-md text-[#d4af37] text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full border border-[#d4af37]/30">
-                  {item.category}
-                </div>
-
-                <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                  <ZoomIn className="w-4 h-4" />
-                </div>
-
-                <div className="absolute bottom-3 left-3 right-3 text-white">
-                  <div className="flex items-center gap-1 text-[11px] text-[#f3e5ab] mb-1">
-                    <Calendar className="w-3 h-3" />
-                    <span>{item.date}</span>
-                  </div>
-                  <h4 className="font-heading text-base font-bold leading-snug">
-                    {item.title}
-                  </h4>
-                </div>
-              </div>
-
-              <div className="p-4">
-                <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
-                  {item.description}
-                </p>
-              </div>
+          {filteredGallery.length === 0 ? (
+            <div className="col-span-full py-12 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-300">
+              <Camera className="w-10 h-10 mx-auto text-gray-400 mb-2" />
+              <p className="text-sm text-gray-600 font-medium">Belum ada foto dalam kategori ini.</p>
             </div>
-          ))}
+          ) : (
+            filteredGallery.map((item) => (
+              <div
+                key={item.id}
+                id={`gallery-card-${item.id}`}
+                onClick={() => setSelectedGallery(item)}
+                className="group bg-white rounded-2xl overflow-hidden border border-gray-200/80 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer"
+              >
+                <div className="relative h-60 overflow-hidden bg-slate-100">
+                  <img
+                    src={item.imageUrl}
+                    alt={item.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
+                  
+                  <div className="absolute top-3 left-3 bg-[#072217]/90 backdrop-blur-md text-[#d4af37] text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full border border-[#d4af37]/30">
+                    {item.category}
+                  </div>
+
+                  <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ZoomIn className="w-4 h-4" />
+                  </div>
+
+                  <div className="absolute bottom-3 left-3 right-3 text-white">
+                    <div className="flex items-center gap-1 text-[11px] text-[#f3e5ab] mb-1">
+                      <Calendar className="w-3 h-3" />
+                      <span>{item.date}</span>
+                    </div>
+                    <h4 className="font-heading text-base font-bold leading-snug">
+                      {item.title}
+                    </h4>
+                  </div>
+                </div>
+
+                <div className="p-4">
+                  <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
+                    {item.description}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       )}
 
-      {/* Fasilitas View */}
+      {/* 2. Galeri Video View (New Feature!) */}
+      {activeTab === 'galeri_video' && (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          {filteredVideos.length === 0 ? (
+            <div className="py-16 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-300">
+              <Film className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+              <h4 className="font-heading text-base font-bold text-gray-700">Belum Ada Video dalam Kategori Ini</h4>
+              <p className="text-xs text-gray-500 mt-1 max-w-md mx-auto">
+                Admin madrasah dapat menambahkan video dokumentasi dari YouTube, Facebook, atau link video lainnya melalui menu Admin Dashboard.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+              {filteredVideos.map((video) => {
+                const parsed = parseVideoUrl(video.videoUrl, video.thumbnailUrl);
+                const badge = getPlatformBadge(parsed.platform);
+
+                return (
+                  <div
+                    key={video.id}
+                    id={`video-card-${video.id}`}
+                    onClick={() => setSelectedVideo(video)}
+                    className="group bg-white rounded-2xl overflow-hidden border border-gray-200/90 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col justify-between"
+                  >
+                    {/* Video Thumbnail with Play Button Overlay */}
+                    <div className="relative aspect-video w-full overflow-hidden bg-slate-900">
+                      <img
+                        src={parsed.thumbnailUrl}
+                        alt={video.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=800&q=80';
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+
+                      {/* Platform Badge */}
+                      <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md border ${badge.bg} ${badge.border}`}>
+                          {badge.label}
+                        </span>
+                        {video.featured && (
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#d4af37] text-[#072217] shadow-sm">
+                            Unggulan
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Duration Tag */}
+                      {video.duration && (
+                        <div className="absolute bottom-3 right-3 bg-black/80 backdrop-blur-xs text-white text-[11px] font-mono font-semibold px-2 py-0.5 rounded-md flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-[#d4af37]" />
+                          <span>{video.duration}</span>
+                        </div>
+                      )}
+
+                      {/* Big Center Play Icon Button */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-[#0b3c26]/90 text-[#f3e5ab] border-2 border-[#d4af37] shadow-[0_4px_20px_rgba(0,0,0,0.5)] flex items-center justify-center group-hover:scale-110 group-hover:bg-[#072217] transition-all duration-300">
+                          <Play className="w-6 h-6 fill-[#d4af37] text-[#d4af37] ml-0.5" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Meta info & Description */}
+                    <div className="p-5 flex-1 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 text-[11px] text-gray-500 mb-2">
+                          <span className="font-semibold text-[#0b3c26] bg-[#e8f3ee] px-2 py-0.5 rounded">
+                            {video.category}
+                          </span>
+                          {video.date && (
+                            <span className="flex items-center gap-1 text-gray-400">
+                              <Calendar className="w-3 h-3" />
+                              <span>{video.date}</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <h4 className="font-heading text-base font-bold text-[#072217] group-hover:text-[#0b3c26] transition-colors line-clamp-2 leading-snug">
+                          {video.title}
+                        </h4>
+
+                        {video.description && (
+                          <p className="text-xs text-gray-600 mt-2 line-clamp-2 leading-relaxed">
+                            {video.description}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="pt-3.5 mt-3.5 border-t border-gray-100 flex items-center justify-between text-xs">
+                        <span className="text-[11px] text-gray-400 font-medium truncate max-w-[150px]">
+                          {video.author || 'MI Al Ihsan Soborejo'}
+                        </span>
+                        <span className="text-[#0b3c26] font-bold flex items-center gap-1 group-hover:text-[#d4af37] transition-colors">
+                          <PlayCircle className="w-3.5 h-3.5" />
+                          <span>Tonton Video</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 3. Fasilitas View */}
       {activeTab === 'fasilitas' && (
         <div id="fasilitas" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 animate-in fade-in duration-300">
           {filteredFacilities.map((fac) => (
@@ -176,7 +389,7 @@ export const Facilities: React.FC = () => {
         </div>
       )}
 
-      {/* Lightbox Modal for Gallery */}
+      {/* Lightbox Modal for Photo Gallery */}
       {selectedGallery && (
         <div
           className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-200"
@@ -216,6 +429,151 @@ export const Facilities: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Video Player Lightbox Modal (New Feature!) */}
+      {selectedVideo && (() => {
+        const parsed = parseVideoUrl(selectedVideo.videoUrl, selectedVideo.thumbnailUrl);
+        const badge = getPlatformBadge(parsed.platform);
+
+        return (
+          <div
+            id="video-player-modal"
+            className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200 overflow-y-auto"
+            onClick={() => setSelectedVideo(null)}
+          >
+            <div
+              className="bg-[#072217] text-white rounded-2xl max-w-3xl w-full overflow-hidden shadow-2xl border border-[#d4af37]/40 relative my-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close Button */}
+              <button
+                id="close-video-modal-btn"
+                onClick={() => setSelectedVideo(null)}
+                className="absolute top-3 right-3 z-20 p-2 bg-black/70 hover:bg-black text-white hover:text-[#d4af37] rounded-full transition-colors"
+                title="Tutup pemutar video"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Video Player Container */}
+              <div className="relative aspect-video w-full bg-black">
+                {parsed.isDirectVideo ? (
+                  <video
+                    controls
+                    autoPlay
+                    playsInline
+                    poster={parsed.thumbnailUrl}
+                    src={selectedVideo.videoUrl}
+                    className="w-full h-full object-contain"
+                  >
+                    Browser Anda tidak mendukung tag video HTML5.
+                  </video>
+                ) : parsed.embedUrl ? (
+                  <iframe
+                    src={parsed.embedUrl}
+                    title={selectedVideo.title}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    className="w-full h-full border-0"
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-slate-900">
+                    <Film className="w-12 h-12 text-[#d4af37] mb-2" />
+                    <p className="text-sm text-gray-200 mb-3">
+                      Video ini dapat diputar langsung di platform resminya:
+                    </p>
+                    <a
+                      href={selectedVideo.videoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-5 py-2.5 bg-[#d4af37] text-[#072217] font-bold text-xs rounded-xl flex items-center gap-2 hover:brightness-110 transition-all"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span>Buka Video di {badge.label}</span>
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* Video Details & Meta */}
+              <div className="p-5 sm:p-6 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${badge.bg}`}>
+                      {badge.label}
+                    </span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#072217] bg-[#d4af37] px-2.5 py-0.5 rounded-full">
+                      {selectedVideo.category}
+                    </span>
+                    {selectedVideo.duration && (
+                      <span className="text-xs text-white/70 flex items-center gap-1 font-mono">
+                        <Clock className="w-3.5 h-3.5 text-[#d4af37]" />
+                        <span>{selectedVideo.duration}</span>
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {/* Share / Copy Link */}
+                    <button
+                      onClick={() => handleCopyVideoLink(selectedVideo.videoUrl)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs rounded-lg transition-colors"
+                      title="Salin tautan video"
+                    >
+                      {copiedLink ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span className="text-emerald-400 font-semibold">Tersalin!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Share2 className="w-3.5 h-3.5" />
+                          <span>Salin Link</span>
+                        </>
+                      )}
+                    </button>
+
+                    {/* External Link */}
+                    <a
+                      href={selectedVideo.videoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#d4af37] hover:bg-[#b89228] text-[#072217] text-xs font-bold rounded-lg transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Buka Asli</span>
+                    </a>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="font-heading text-lg sm:text-xl font-bold text-[#f3e5ab] leading-snug">
+                    {selectedVideo.title}
+                  </h3>
+                  {selectedVideo.description && (
+                    <p className="text-xs sm:text-sm text-white/80 mt-2 leading-relaxed">
+                      {selectedVideo.description}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-white/50 pt-2">
+                  <span className="flex items-center gap-1">
+                    <User className="w-3.5 h-3.5 text-[#d4af37]" />
+                    <span>Sumber: {selectedVideo.author || 'Dokumentasi MI Ma\'arif Al Ihsan Soborejo'}</span>
+                  </span>
+                  {selectedVideo.date && (
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>{selectedVideo.date}</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Facility Detail Modal */}
       {selectedFacility && (

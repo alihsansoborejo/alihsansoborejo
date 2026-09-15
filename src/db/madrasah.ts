@@ -15,6 +15,7 @@ import {
   ACHIEVEMENTS,
   FACILITIES,
   GALLERY_DATA,
+  INITIAL_VIDEOS,
   INITIAL_NEWS,
   TESTIMONIALS,
   FAQ_DATA,
@@ -374,6 +375,7 @@ export async function getAllMadrasahOnlineData() {
       achievements: settingsMap['achievements'] || [],
       facilities: settingsMap['facilities'] || FACILITIES,
       gallery: settingsMap['gallery'] || [],
+      videoGallery: settingsMap['video_gallery'] || INITIAL_VIDEOS,
       testimonials: settingsMap['testimonials'] || [],
       faqs: settingsMap['faqs'] || FAQ_DATA,
       staffList: mappedStaff,
@@ -436,6 +438,10 @@ export async function seedInitialDatabaseIfEmpty() {
     const existingGallery = await getAppSetting('gallery');
     if (!existingGallery) {
       await setAppSetting('gallery', GALLERY_DATA);
+    }
+    const existingVideos = await getAppSetting('video_gallery');
+    if (!existingVideos) {
+      await setAppSetting('video_gallery', INITIAL_VIDEOS);
     }
     const existingTestimonials = await getAppSetting('testimonials');
     if (!existingTestimonials) {

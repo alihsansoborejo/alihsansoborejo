@@ -20,6 +20,7 @@ import {
   NewsArticle,
   FacilityItem,
   GalleryItem,
+  VideoGalleryItem,
   TestimonialItem,
   FAQItem,
   PPDBRegistration,
@@ -35,6 +36,7 @@ import {
   INITIAL_NEWS,
   FACILITIES,
   GALLERY_DATA,
+  INITIAL_VIDEOS,
   TESTIMONIALS,
   FAQ_DATA,
   INITIAL_PPDB_REGISTRATIONS,
@@ -81,6 +83,7 @@ export interface AppStorageState {
   newsList: NewsArticle[];
   facilities: FacilityItem[];
   gallery: GalleryItem[];
+  videoGallery: VideoGalleryItem[];
   testimonials: TestimonialItem[];
   faqs: FAQItem[];
   ppdbRegistrations: PPDBRegistration[];
@@ -140,6 +143,11 @@ interface DataContextType {
   updateGalleryItem: (id: string, item: Partial<GalleryItem>) => void;
   deleteGalleryItem: (id: string) => void;
 
+  videoGallery: VideoGalleryItem[];
+  addVideoItem: (item: Omit<VideoGalleryItem, 'id'>) => void;
+  updateVideoItem: (id: string, item: Partial<VideoGalleryItem>) => void;
+  deleteVideoItem: (id: string) => void;
+
   testimonials: TestimonialItem[];
   addTestimonial: (item: Omit<TestimonialItem, 'id'>) => void;
   updateTestimonial: (id: string, item: Partial<TestimonialItem>) => void;
@@ -191,6 +199,7 @@ const DEFAULT_DATA: AppStorageState = {
   newsList: INITIAL_NEWS,
   facilities: FACILITIES,
   gallery: GALLERY_DATA,
+  videoGallery: INITIAL_VIDEOS,
   testimonials: TESTIMONIALS,
   faqs: FAQ_DATA,
   ppdbRegistrations: INITIAL_PPDB_REGISTRATIONS,
@@ -298,6 +307,7 @@ export const sanitizeAppState = (raw: any): AppStorageState => {
     newsList: sortNewsByDateDesc(ensureUniqueIds(sanitizedNewsList, 'news')),
     facilities: ensureUniqueIds(Array.isArray(raw.facilities) ? raw.facilities : DEFAULT_DATA.facilities, 'fac'),
     gallery: ensureUniqueIds(Array.isArray(raw.gallery) ? raw.gallery : DEFAULT_DATA.gallery, 'gal'),
+    videoGallery: ensureUniqueIds(Array.isArray(raw.videoGallery) ? raw.videoGallery : (DEFAULT_DATA.videoGallery || []), 'vid'),
     testimonials: ensureUniqueIds(Array.isArray(raw.testimonials) ? raw.testimonials : DEFAULT_DATA.testimonials, 'testi'),
     faqs: ensureUniqueIds(Array.isArray(raw.faqs) ? raw.faqs : DEFAULT_DATA.faqs, 'faq'),
     ppdbRegistrations: ensureUniqueIds(Array.isArray(raw.ppdbRegistrations) ? raw.ppdbRegistrations : DEFAULT_DATA.ppdbRegistrations, 'reg'),
@@ -1275,6 +1285,32 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     deleteItemFromSupabase('gallery', id);
   };
 
+  // Video Gallery
+  const addVideoItem = (item: Omit<VideoGalleryItem, 'id'>) => {
+    markLocalEdit();
+    const newItem: VideoGalleryItem = { ...item, id: generateUniqueId('vid') };
+    setData((prev) => ({
+      ...prev,
+      videoGallery: [newItem, ...(prev.videoGallery || [])],
+    }));
+  };
+
+  const updateVideoItem = (id: string, updated: Partial<VideoGalleryItem>) => {
+    markLocalEdit();
+    setData((prev) => ({
+      ...prev,
+      videoGallery: (prev.videoGallery || []).map((v) => (v.id === id ? { ...v, ...updated } : v)),
+    }));
+  };
+
+  const deleteVideoItem = (id: string) => {
+    markLocalEdit();
+    setData((prev) => ({
+      ...prev,
+      videoGallery: (prev.videoGallery || []).filter((v) => v.id !== id),
+    }));
+  };
+
   // Testimonials
   const addTestimonial = (item: Omit<TestimonialItem, 'id'>) => {
     markLocalEdit();
@@ -1540,6 +1576,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addGalleryItem,
         updateGalleryItem,
         deleteGalleryItem,
+
+        videoGallery: data.videoGallery || [],
+        addVideoItem,
+        updateVideoItem,
+        deleteVideoItem,
 
         testimonials: data.testimonials,
         addTestimonial,

@@ -297,6 +297,7 @@ app.post('/api/sync-all', requireAuth, async (req: AuthRequest, res) => {
       achievements,
       facilities,
       gallery,
+      videoGallery,
       testimonials,
       faqs,
       staffList,
@@ -313,6 +314,7 @@ app.post('/api/sync-all', requireAuth, async (req: AuthRequest, res) => {
     if (achievements) tasks.push(setAppSetting('achievements', achievements));
     if (facilities) tasks.push(setAppSetting('facilities', facilities));
     if (gallery) tasks.push(setAppSetting('gallery', gallery));
+    if (videoGallery) tasks.push(setAppSetting('video_gallery', videoGallery));
     if (testimonials) tasks.push(setAppSetting('testimonials', testimonials));
     if (faqs) tasks.push(setAppSetting('faqs', faqs));
     if (studentList && Array.isArray(studentList)) tasks.push(setAppSetting('student_list', studentList));

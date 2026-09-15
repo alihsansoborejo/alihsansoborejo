@@ -5,6 +5,7 @@ import {
   AchievementItem, 
   NewsArticle, 
   GalleryItem, 
+  VideoGalleryItem,
   TestimonialItem, 
   FAQItem,
   StaffMember,
@@ -361,6 +362,58 @@ export const FACILITIES_DATA = [
 
 export const GALLERY_ITEMS: GalleryItem[] = [];
 export const GALLERY_DATA = GALLERY_ITEMS;
+
+export const INITIAL_VIDEOS: VideoGalleryItem[] = [
+  {
+    id: 'vid-profil-madrasah',
+    title: "Profil MI Ma'arif Al Ihsan Soborejo - Menumbuhkan Karakter Santri Mandiri & Qur'ani",
+    category: 'Profil Madrasah',
+    videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=1200&q=80',
+    description: "Mengenal lebih dekat suasana belajar islami, pembiasaan sholat berjamaah, dan fasilitas representatif di lingkungan MI Ma'arif Al Ihsan Soborejo, Pringsurat, Temanggung.",
+    date: '10 Februari 2026',
+    duration: '04:12',
+    author: 'Tim Media Madrasah',
+    featured: true,
+  },
+  {
+    id: 'vid-tahfidz-santri',
+    title: "Muroja'ah Pagi Bersama & Ujian Tahfidz Terbuka Santri Al Ihsan",
+    category: 'Ibadah & Karakter',
+    videoUrl: 'https://www.youtube.com/watch?v=ScMzIvxBSi4',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1200&q=80',
+    description: "Kegiatan rutin pembiasaan muroja'ah hafalan surat-surat pendek dan juz 'Amma sebelum KBM dimulai demi mencetak generasi cinta Al-Qur'an sejak dini.",
+    date: '18 Januari 2026',
+    duration: '03:45',
+    author: 'Koordinator Tahfidz',
+    featured: false,
+  },
+  {
+    id: 'vid-hadroh-seni',
+    title: 'Penampilan Seni Hadroh Rebana Santri Al Ihsan pada Peringatan Maulid Nabi',
+    category: 'Prestasi & Pentas Seni',
+    videoUrl: 'https://www.facebook.com/watch/?v=10153231379946729',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=1200&q=80',
+    description: "Dokumentasi kepiawaian santri MI Ma'arif Al Ihsan Soborejo dalam melantunkan sholawat diiringi tabuhan rebana khas Nahdlatul Ulama.",
+    date: '25 Desember 2025',
+    duration: '05:20',
+    author: 'Pembina Seni & Budaya',
+    featured: false,
+  },
+  {
+    id: 'vid-pramuka-kemah',
+    title: 'Keseruan Kemah Bakti & Persami Pramuka Penggalang MI Al Ihsan Soborejo',
+    category: 'Ekstrakurikuler',
+    videoUrl: 'https://www.youtube.com/watch?v=9bZkp7q19f0',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?auto=format&fit=crop&w=1200&q=80',
+    description: 'Menumbuhkan jiwa kemandirian, kedisiplinan, kekompakan, dan kecintaan pada alam melalui latihan kepanduan Hizbul Wathan / Gerakan Pramuka.',
+    date: '14 November 2025',
+    duration: '06:10',
+    author: 'Kwartir Ranting Pringsurat',
+    featured: false,
+  },
+];
+export const VIDEOS_DATA = INITIAL_VIDEOS;
 
 export const NEWS_ARTICLES: NewsArticle[] = [];
 export const NEWS_DATA: NewsArticle[] = [];

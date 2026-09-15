@@ -159,6 +159,21 @@ export interface GalleryItem {
   date: string;
 }
 
+export type VideoPlatform = 'youtube' | 'facebook' | 'vimeo' | 'tiktok' | 'gdrive' | 'direct' | 'other';
+
+export interface VideoGalleryItem {
+  id: string;
+  title: string;
+  category: 'Kegiatan Belajar' | 'Ibadah & Karakter' | 'Ekstrakurikuler' | 'Prestasi & Pentas Seni' | 'Profil Madrasah' | 'Dokumentasi PPDB' | string;
+  videoUrl: string; // link youtube, link facebook, link video lainnya
+  thumbnailUrl?: string;
+  description?: string;
+  date?: string;
+  duration?: string; // e.g. "04:12"
+  author?: string;
+  featured?: boolean;
+}
+
 export interface TestimonialItem {
   id: string;
   name: string;
