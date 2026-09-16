@@ -174,6 +174,7 @@ export interface GalleryItem {
 }
 
 export type VideoPlatform = 'youtube' | 'facebook' | 'vimeo' | 'tiktok' | 'gdrive' | 'direct' | 'other';
+export type VideoAspectRatio = 'landscape' | 'portrait' | 'square' | 'auto';
 
 export interface VideoGalleryItem {
   id: string;
@@ -186,6 +187,7 @@ export interface VideoGalleryItem {
   duration?: string; // e.g. "04:12"
   author?: string;
   featured?: boolean;
+  aspectRatio?: VideoAspectRatio; // orientasi frame: 'landscape' (16:9), 'portrait' (9:16 untuk FB Reels/Shorts), 'square' (1:1), 'auto'
 }
 
 export interface TestimonialItem {

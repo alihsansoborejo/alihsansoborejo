@@ -330,11 +330,12 @@ export const sanitizeAppState = (raw: any): AppStorageState => {
     ...DEFAULT_DATA.programs.filter((p) => !existingProgIds.has(p.id)),
   ];
 
-  // Staff GTK: strictly filter out dummy records ('staff-1', 'staff-2') and do NOT inject defaults if list is provided
+  // Staff GTK: strictly filter out dummy records and do NOT inject defaults if list is provided
+  const DUMMY_STAFF_IDS = ['staff-1', 'staff-2', 'staff-1789528823190-1-64pi7', 'staff-1789529008391-2-hk1tr'];
   const rawStaffArray = Array.isArray(raw.staffList) && raw.staffList.length > 0
     ? raw.staffList
     : DEFAULT_DATA.staffList;
-  const cleanStaffList = rawStaffArray.filter((s: any) => s && s.id !== 'staff-1' && s.id !== 'staff-2');
+  const cleanStaffList = rawStaffArray.filter((s: any) => s && !DUMMY_STAFF_IDS.includes(s.id));
 
   const existingFaqIds = new Set((Array.isArray(raw.faqs) ? raw.faqs : []).map((f: any) => f.id));
   const mergedFaqs = [

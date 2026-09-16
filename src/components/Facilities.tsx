@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useDataContext } from '../context/DataContext';
-import { FacilityItem, GalleryItem, VideoGalleryItem } from '../types';
-import { parseVideoUrl } from '../lib/videoUtils';
+import { FacilityItem, GalleryItem, VideoGalleryItem, VideoAspectRatio } from '../types';
+import { parseVideoUrl, isPortraitVideoUrl, getVideoAspectConfig } from '../lib/videoUtils';
 import {
   Building2,
   Camera,
@@ -17,15 +17,21 @@ import {
   User,
   Share2,
   Check,
-  Film
+  Film,
+  Tv,
+  Smartphone,
+  Square,
+  Sparkles
 } from 'lucide-react';
 
 export const Facilities: React.FC = () => {
-  const { facilities, gallery, videoGallery } = useDataContext();
+  const { facilities, gallery, videoGallery, updateVideoItem } = useDataContext();
   const [activeTab, setActiveTab] = useState<'galeri' | 'galeri_video' | 'fasilitas'>('galeri');
   const [selectedFacility, setSelectedFacility] = useState<FacilityItem | null>(null);
   const [selectedGallery, setSelectedGallery] = useState<GalleryItem | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<VideoGalleryItem | null>(null);
+  const [playerAspect, setPlayerAspect] = useState<VideoAspectRatio>('auto');
+  const [aspectSavedToast, setAspectSavedToast] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>('Semua');
   const [copiedLink, setCopiedLink] = useState(false);
 
@@ -261,7 +267,10 @@ export const Facilities: React.FC = () => {
                   <div
                     key={video.id}
                     id={`video-card-${video.id}`}
-                    onClick={() => setSelectedVideo(video)}
+                    onClick={() => {
+                      setSelectedVideo(video);
+                      setPlayerAspect(video.aspectRatio || (isPortraitVideoUrl(video.videoUrl) ? 'portrait' : 'landscape'));
+                    }}
                     className="group bg-white rounded-2xl overflow-hidden border border-gray-200/90 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col justify-between"
                   >
                     {/* Video Thumbnail with Play Button Overlay */}
@@ -276,11 +285,16 @@ export const Facilities: React.FC = () => {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
 
-                      {/* Platform Badge */}
-                      <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                      {/* Platform and Portrait Badges */}
+                      <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap">
                         <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md border ${badge.bg} ${badge.border}`}>
                           {badge.label}
                         </span>
+                        {(video.aspectRatio === 'portrait' || isPortraitVideoUrl(video.videoUrl)) && (
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-600 text-white shadow-sm flex items-center gap-1">
+                            <Smartphone className="w-2.5 h-2.5" /> Potret (9:16)
+                          </span>
+                        )}
                         {video.featured && (
                           <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#d4af37] text-[#072217] shadow-sm">
                             Unggulan
@@ -430,9 +444,11 @@ export const Facilities: React.FC = () => {
         </div>
       )}
 
-      {/* Video Player Lightbox Modal (New Feature!) */}
+      {/* Video Player Lightbox Modal */}
       {selectedVideo && (() => {
-        const parsed = parseVideoUrl(selectedVideo.videoUrl, selectedVideo.thumbnailUrl);
+        const isUrlPortrait = isPortraitVideoUrl(selectedVideo.videoUrl);
+        const aspectConfig = getVideoAspectConfig(playerAspect, isUrlPortrait);
+        const parsed = parseVideoUrl(selectedVideo.videoUrl, selectedVideo.thumbnailUrl, aspectConfig.effectiveAspect);
         const badge = getPlatformBadge(parsed.platform);
 
         return (
@@ -442,21 +458,121 @@ export const Facilities: React.FC = () => {
             onClick={() => setSelectedVideo(null)}
           >
             <div
-              className="bg-[#072217] text-white rounded-2xl max-w-3xl w-full overflow-hidden shadow-2xl border border-[#d4af37]/40 relative my-auto"
+              className={`bg-[#072217] text-white rounded-2xl ${aspectConfig.modalMaxWidth} w-full overflow-hidden shadow-2xl border border-[#d4af37]/40 relative my-auto transition-all duration-300`}
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Close Button */}
-              <button
-                id="close-video-modal-btn"
-                onClick={() => setSelectedVideo(null)}
-                className="absolute top-3 right-3 z-20 p-2 bg-black/70 hover:bg-black text-white hover:text-[#d4af37] rounded-full transition-colors"
-                title="Tutup pemutar video"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              {/* Header with Title and Close Button */}
+              <div className="px-4 sm:px-5 py-3 bg-[#0b3c26] border-b border-white/10 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full shrink-0 ${badge.bg}`}>
+                    {badge.label}
+                  </span>
+                  <h4 className="font-bold text-sm text-[#f3e5ab] truncate">
+                    {selectedVideo.title}
+                  </h4>
+                </div>
+                <button
+                  id="close-video-modal-btn"
+                  onClick={() => setSelectedVideo(null)}
+                  className="p-1.5 bg-black/40 hover:bg-black/80 text-white hover:text-[#d4af37] rounded-full transition-colors shrink-0 cursor-pointer"
+                  title="Tutup pemutar video"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-              {/* Video Player Container */}
-              <div className="relative aspect-video w-full bg-black">
+              {/* Dynamic Frame Orientation Switcher Bar */}
+              <div className="bg-[#051a11] px-4 py-2 border-b border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[11px] text-[#f3e5ab] font-medium flex items-center gap-1 shrink-0">
+                    <Sparkles className="w-3 h-3 text-[#d4af37]" /> Format Frame:
+                  </span>
+                  <div className="inline-flex bg-black/40 p-0.5 rounded-lg border border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => setPlayerAspect('landscape')}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                        aspectConfig.effectiveAspect === 'landscape'
+                          ? 'bg-[#d4af37] text-[#072217] shadow-sm'
+                          : 'text-white/70 hover:text-white hover:bg-white/10'
+                      }`}
+                      title="16:9 Lanskap - Format standar mendatar (YouTube / Facebook Landscape)"
+                    >
+                      <Tv className="w-3 h-3" />
+                      <span>16:9 Lanskap</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPlayerAspect('portrait')}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                        aspectConfig.effectiveAspect === 'portrait'
+                          ? 'bg-[#d4af37] text-[#072217] shadow-sm'
+                          : 'text-white/70 hover:text-white hover:bg-white/10'
+                      }`}
+                      title="9:16 Potret - Format vertikal (Facebook Reels, Facebook Video HP, Shorts, TikTok)"
+                    >
+                      <Smartphone className="w-3 h-3" />
+                      <span>9:16 Potret / Reel</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPlayerAspect('square')}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                        aspectConfig.effectiveAspect === 'square'
+                          ? 'bg-[#d4af37] text-[#072217] shadow-sm'
+                          : 'text-white/70 hover:text-white hover:bg-white/10'
+                      }`}
+                      title="1:1 Persegi - Format kotak"
+                    >
+                      <Square className="w-3 h-3" />
+                      <span>1:1 Kotak</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Status & Save indicator */}
+                <div className="flex items-center gap-2">
+                  {selectedVideo.aspectRatio !== aspectConfig.effectiveAspect && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateVideoItem(selectedVideo.id, { aspectRatio: aspectConfig.effectiveAspect });
+                        setSelectedVideo({ ...selectedVideo, aspectRatio: aspectConfig.effectiveAspect });
+                        setAspectSavedToast(true);
+                        setTimeout(() => setAspectSavedToast(false), 2500);
+                      }}
+                      className="text-[10px] text-emerald-300 hover:text-emerald-200 bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-500/30 px-2 py-0.5 rounded flex items-center gap-1 transition-colors cursor-pointer"
+                      title="Jadikan format frame ini default untuk video ini"
+                    >
+                      <Check className="w-3 h-3" />
+                      <span>Simpan Format Ini</span>
+                    </button>
+                  )}
+                  {aspectSavedToast && (
+                    <span className="text-[10px] text-emerald-400 font-bold">
+                      Tersimpan!
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Informative Platform Notice for Facebook videos */}
+              {parsed.platform === 'facebook' && (
+                <div className="px-4 py-1.5 bg-blue-950/60 border-b border-blue-500/20 flex items-center justify-between text-[11px] text-blue-200">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                    <span>Pemutar Facebook: Frame saat ini <strong>{aspectConfig.effectiveAspect === 'portrait' ? '9:16 Potret (Vertikal)' : '16:9 Lanskap'}</strong></span>
+                  </span>
+                  <span className="text-[10px] text-blue-300/80 hidden sm:inline">
+                    Gunakan tombol di atas jika rasio belum pas
+                  </span>
+                </div>
+              )}
+
+              {/* Video Player Container with Adaptive Aspect Ratio */}
+              <div className={`relative ${aspectConfig.containerAspectClass} w-full bg-black flex items-center justify-center overflow-hidden transition-all duration-300`}>
                 {parsed.isDirectVideo ? (
                   <video
                     controls
@@ -465,13 +581,22 @@ export const Facilities: React.FC = () => {
                     poster={parsed.thumbnailUrl}
                     src={selectedVideo.videoUrl}
                     className="w-full h-full object-contain"
+                    onLoadedMetadata={(e) => {
+                      const v = e.currentTarget;
+                      if (v.videoHeight > v.videoWidth && playerAspect === 'auto') {
+                        setPlayerAspect('portrait');
+                      }
+                    }}
                   >
                     Browser Anda tidak mendukung tag video HTML5.
                   </video>
                 ) : parsed.embedUrl ? (
                   <iframe
+                    key={`${selectedVideo.id}-${aspectConfig.effectiveAspect}`}
                     src={parsed.embedUrl}
                     title={selectedVideo.title}
+                    scrolling="no"
+                    style={{ border: 'none', overflow: 'hidden' }}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
                     className="w-full h-full border-0"

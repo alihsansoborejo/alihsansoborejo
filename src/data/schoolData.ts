@@ -262,34 +262,6 @@ export const STAFF_DATA: StaffMember[] = [
     status: "Aktif"
   },
   {
-    id: "staff-1789528823190-1-64pi7",
-    name: "NUR HIDAYAH",
-    role: "Guru Kelompok A",
-    category: "Guru Kelas",
-    institution: "RA",
-    nipOrNuptk: "20350409193001",
-    education: "Proses Pendidikan S1",
-    photoUrl: "https://s.sim.siap-online.com/upload/padamu-ptk/203-50409-20350409193001.1599097341",
-    phone: "",
-    subjects: "Pendidikan Anak Usia Dini",
-    order: 9,
-    status: "Aktif"
-  },
-  {
-    id: "staff-1789529008391-2-hk1tr",
-    name: "YUYUN WULANDARI",
-    role: "Guru Kelompok B",
-    category: "Guru Kelas",
-    institution: "RA",
-    nipOrNuptk: "20350409186001",
-    education: "Madrasah Aliyah",
-    photoUrl: "https://i.ibb.co.com/TDh4S8qL/Chat-GPT-Image-16-Sep-2026-10-29-26.png",
-    phone: "",
-    subjects: "Pendidikan Anak Usia Dini",
-    order: 10,
-    status: "Aktif"
-  },
-  {
     id: "staff-batch-7-1789382017558-8-273f7",
     name: "ANIK SEPTIYANI",
     role: "Guru Kelas III",
@@ -300,7 +272,7 @@ export const STAFF_DATA: StaffMember[] = [
     photoUrl: "/assets/staff-anik.jpg",
     phone: "+62 813-2920-9651",
     subjects: "Guru Kelas",
-    order: 80,
+    order: 8,
     status: "Aktif"
   }
 ];
@@ -570,6 +542,20 @@ export const INITIAL_VIDEOS: VideoGalleryItem[] = [
     duration: '03:45',
     author: 'Koordinator Tahfidz',
     featured: false,
+    aspectRatio: 'landscape',
+  },
+  {
+    id: 'vid-fb-reels-santri',
+    title: "Reels Santri: Hafalan Doa Harian & Sholawat Bersama di Kelas",
+    category: 'Ibadah & Karakter',
+    videoUrl: 'https://www.facebook.com/reel/10153231379946729',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=800&q=80',
+    description: "Dokumentasi video vertikal/reels kreasi santri MI Ma'arif Al Ihsan Soborejo dalam pembiasaan doa harian dan hafalan asmaul husna sebelum kegiatan belajar mengajar dimulai.",
+    date: '05 Februari 2026',
+    duration: '01:00',
+    author: 'Tim Media & Humas Madrasah',
+    featured: true,
+    aspectRatio: 'portrait',
   },
   {
     id: 'vid-hadroh-seni',
@@ -582,6 +568,7 @@ export const INITIAL_VIDEOS: VideoGalleryItem[] = [
     duration: '05:20',
     author: 'Pembina Seni & Budaya',
     featured: false,
+    aspectRatio: 'landscape',
   },
   {
     id: 'vid-pramuka-kemah',
@@ -594,6 +581,7 @@ export const INITIAL_VIDEOS: VideoGalleryItem[] = [
     duration: '06:10',
     author: 'Kwartir Ranting Pringsurat',
     featured: false,
+    aspectRatio: 'landscape',
   },
 ];
 export const VIDEOS_DATA = INITIAL_VIDEOS;

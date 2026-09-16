@@ -323,7 +323,8 @@ export async function getAllMadrasahOnlineData() {
       activeProfile.logoUrl = '/assets/logo-maarif.svg';
     }
 
-    const filteredDbStaff = dbStaff.filter((s) => s.id !== 'staff-1' && s.id !== 'staff-2');
+    const DUMMY_STAFF_IDS = ['staff-1', 'staff-2', 'staff-1789528823190-1-64pi7', 'staff-1789529008391-2-hk1tr'];
+    const filteredDbStaff = dbStaff.filter((s) => !DUMMY_STAFF_IDS.includes(s.id));
     const mappedStaff = filteredDbStaff.length > 0 ? filteredDbStaff.map((s, idx) => ({
       id: s.id,
       name: s.name,

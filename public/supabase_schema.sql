@@ -95,6 +95,19 @@ CREATE TABLE IF NOT EXISTS public.staff_members (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Seed Data Resmi Guru & Tenaga Kependidikan (GTK) MI Ma'arif Al Ihsan Soborejo (8 Asatidz Resmi)
+INSERT INTO public.staff_members (id, name, role, category, nip_or_nuptk, education, subjects, photo_url, phone, order_num)
+VALUES
+  ('staff-batch-0-1789382017558-1-3jx6n', 'MUIN, S.Pd.I.', 'Kepala Madrasah', 'Pimpinan', '3454749650200002', 'S1 Tarbiyah', 'Manajerial & Kebijakan Madrasah', 'https://s.sim.siap-online.com/upload/padamu-ptk/910-00071-91000071130094.1741311176', '+62 813-2876-5432', 1),
+  ('staff-batch-1-1789382017558-2-z3ugm', 'FATHURAZAQ, S.Pd.I.', 'Guru Kelas VI', 'Guru Kelas', '6344759660200003', 'S1 PGMI', 'Guru Kelas', 'https://s.sim.siap-online.com/upload/padamu-ptk/910-00081-91000081120629.1753698299', '+62 857-4321-9876', 2),
+  ('staff-batch-2-1789382017558-3-goiy1', 'ATIK LESTIYANI, S.Pd.I.', 'Guru Kelas III', 'Guru Kelas', '2138759662300003', 'S1 Tarbiyah', 'Guru Kelas', 'https://s.sim.siap-online.com/upload/padamu-ptk/910-00081-91000081108784.1508373230', '+62 821-3456-7890', 3),
+  ('staff-batch-3-1789382017558-4-casuh', 'LISTIANAH, S.Pd.I.', 'Guru Kelas I', 'Guru Kelas', '6448760662300003', 'S1 Tarbiyah', 'Guru Kelas', 'https://s.sim.siap-online.com/upload/padamu-ptk/910-00082-91000082141211.1741311004', '+62 858-6543-2109', 4),
+  ('staff-batch-4-1789382017558-5-1i92c', 'ENI SUSMIYATI, S.Pd.I.', 'Guru Kelas IV', 'Guru Kelas', '20321204177001', 'S1 Tarbiyah', 'Guru Kelas', 'https://s.sim.siap-online.com/upload/padamu-ptk/203-21204-20321204177001.1508373414', '+62 812-3456-7890', 5),
+  ('staff-batch-5-1789382017558-6-jszqg', 'MUH MASTUR, S.Pd.I.', 'Guru Mata Pelajaran', 'Guru Bidang Studi', '20321204182001', 'S1 Pendidikan Agama Islam', 'Pendidikan Agama Islam (PAI)', 'https://s.sim.siap-online.com/upload/padamu-ptk/203-21204-20321204182001.1761876489', '+62 813-9876-5432', 6),
+  ('staff-batch-6-1789382017558-7-b3s04', 'HIDAYATU RIF''ATI ALIYAH, S.Pd.', 'Guru Kelas V', 'Guru Kelas', '20321204198001', 'S1 PGSD/PGMI', 'Guru Kelas', 'https://s.sim.siap-online.com/upload/padamu-ptk/203-21204-20321204198001.1722833749', '+62 857-1234-5678', 7),
+  ('staff-batch-7-1789382017558-8-273f7', 'ANIK SEPTIYANI', 'Guru Kelas III', 'Guru Kelas', '20321204105001', 'Proses Pendidikan S1', 'Guru Kelas', '/assets/staff-anik.jpg', '+62 813-2920-9651', 8)
+ON CONFLICT (id) DO NOTHING;
+
 -- ----------------------------------------------------------------------------------
 -- 5. TABEL BERITA & WARTA MADRASAH
 -- ----------------------------------------------------------------------------------
