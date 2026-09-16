@@ -218,6 +218,7 @@ export interface PPDBRegistration {
   targetUnit?: 'MI Ma\'arif Al Ihsan' | 'RA Al Ihsan' | string;
   targetClass?: string; // e.g. 'Kelas 1' or 'Kelompok A' / 'Kelompok B'
   raGradeTarget?: 'Kelompok A (Usia 4-5 Th)' | 'Kelompok B (Usia 5-6 Th)' | string;
+  gradeOrClass?: string;
   originSchool: string; // RA / BA / TK / PAUD / Rumah
   parentName: string;
   parentJob?: string;

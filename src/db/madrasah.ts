@@ -323,11 +323,20 @@ export async function getAllMadrasahOnlineData() {
       activeProfile.logoUrl = '/assets/logo-maarif.svg';
     }
 
-    const mappedStaff = dbStaff.length > 0 ? dbStaff.map((s, idx) => ({
+    const filteredDbStaff = dbStaff.filter((s) => s.id !== 'staff-1' && s.id !== 'staff-2');
+    const mappedStaff = filteredDbStaff.length > 0 ? filteredDbStaff.map((s, idx) => ({
       id: s.id,
       name: s.name,
       role: s.role,
       category: s.category as any,
+      institution: (s as any).institution || (
+        s.role?.toLowerCase().includes('kelompok') ||
+        s.role?.toLowerCase().includes('raudhatul') ||
+        s.role?.toLowerCase().includes('ra ') ||
+        s.category?.toLowerCase().includes('ra')
+          ? 'RA'
+          : 'MI'
+      ),
       nipOrNuptk: s.nip || (s as any).nipOrNuptk || '-',
       education: s.education || '',
       subjects: s.subject || (s as any).subjects || '',

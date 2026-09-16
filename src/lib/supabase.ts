@@ -496,11 +496,14 @@ export async function saveAllToSupabase(
 
     // 4. Save Staff Members (GTK)
     try {
-      const staffIds = (state.staffList || []).map((s) => s.id);
+      const validStaffList = (state.staffList || []).filter((s) => s.id !== 'staff-1' && s.id !== 'staff-2');
+      const staffIds = validStaffList.map((s) => s.id);
       await syncTableRecords('staff_members', staffIds);
-      if (state.staffList && state.staffList.length > 0) {
+      // Clean any accidental dummy records
+      await supabase.from('staff_members').delete().in('id', ['staff-1', 'staff-2']);
+      if (validStaffList.length > 0) {
         await supabase.from('staff_members').upsert(
-          state.staffList.map((s, idx) => ({
+          validStaffList.map((s, idx) => ({
             id: s.id,
             name: s.name,
             role: s.role,
@@ -873,6 +876,9 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
 
     if (storeRes.status === 'fulfilled' && storeRes.value.data?.data) {
       state = storeRes.value.data.data as AppStorageState;
+      if (state && Array.isArray(state.staffList)) {
+        state.staffList = state.staffList.filter((s: any) => s && s.id !== 'staff-1' && s.id !== 'staff-2');
+      }
     }
 
     if (!state) {
@@ -919,19 +925,29 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
 
     // Merge Staff Members (GTK)
     if (staffRes.status === 'fulfilled' && staffRes.value.data && staffRes.value.data.length > 0) {
-      state.staffList = staffRes.value.data.map((s: any, idx: number) => ({
-        id: s.id,
-        name: s.name,
-        role: s.role,
-        category: s.category as any,
-        nipOrNuptk: s.nip_or_nuptk || '-',
-        education: s.education || '',
-        subjects: s.subjects || '',
-        photoUrl: s.photo_url || '',
-        phone: s.phone || '',
-        order: s.order_num ?? (idx + 1),
-        status: 'Aktif' as const,
-      }));
+      state.staffList = staffRes.value.data
+        .filter((s: any) => s.id !== 'staff-1' && s.id !== 'staff-2')
+        .map((s: any, idx: number) => ({
+          id: s.id,
+          name: s.name,
+          role: s.role,
+          category: s.category as any,
+          institution: (s as any).institution || (
+            s.role?.toLowerCase().includes('kelompok') ||
+            s.role?.toLowerCase().includes('raudhatul') ||
+            s.role?.toLowerCase().includes('ra ') ||
+            s.category?.toLowerCase().includes('ra')
+              ? 'RA'
+              : 'MI'
+          ),
+          nipOrNuptk: s.nip_or_nuptk || '-',
+          education: s.education || '',
+          subjects: s.subjects || (s.role?.toLowerCase().includes('kelompok') ? 'Pendidikan Anak Usia Dini' : (s.role === 'Kepala Madrasah' ? 'Manajerial & Kebijakan Madrasah' : s.role)),
+          photoUrl: s.photo_url || '',
+          phone: s.phone || '',
+          order: s.order_num ?? (idx + 1),
+          status: 'Aktif' as const,
+        }));
     }
 
     // Merge News Articles

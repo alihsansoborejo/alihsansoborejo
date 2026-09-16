@@ -330,11 +330,11 @@ export const sanitizeAppState = (raw: any): AppStorageState => {
     ...DEFAULT_DATA.programs.filter((p) => !existingProgIds.has(p.id)),
   ];
 
-  const existingStaffIds = new Set((Array.isArray(raw.staffList) ? raw.staffList : []).map((s: any) => s.id));
-  const mergedStaff = [
-    ...(Array.isArray(raw.staffList) ? raw.staffList : []),
-    ...DEFAULT_DATA.staffList.filter((s) => !existingStaffIds.has(s.id)),
-  ];
+  // Staff GTK: strictly filter out dummy records ('staff-1', 'staff-2') and do NOT inject defaults if list is provided
+  const rawStaffArray = Array.isArray(raw.staffList) && raw.staffList.length > 0
+    ? raw.staffList
+    : DEFAULT_DATA.staffList;
+  const cleanStaffList = rawStaffArray.filter((s: any) => s && s.id !== 'staff-1' && s.id !== 'staff-2');
 
   const existingFaqIds = new Set((Array.isArray(raw.faqs) ? raw.faqs : []).map((f: any) => f.id));
   const mergedFaqs = [
@@ -344,7 +344,7 @@ export const sanitizeAppState = (raw: any): AppStorageState => {
 
   return {
     schoolProfile,
-    staffList: ensureUniqueIds(mergedStaff.length > 0 ? mergedStaff : DEFAULT_DATA.staffList, 'staff'),
+    staffList: ensureUniqueIds(cleanStaffList.length > 0 ? cleanStaffList : DEFAULT_DATA.staffList, 'staff'),
     studentList: ensureUniqueIds(Array.isArray(raw.studentList) ? raw.studentList : DEFAULT_DATA.studentList, 'std'),
     statsList: ensureUniqueIds(Array.isArray(raw.statsList) ? raw.statsList : DEFAULT_DATA.statsList, 'stat'),
     programs: ensureUniqueIds(mergedPrograms.length > 0 ? mergedPrograms : DEFAULT_DATA.programs, 'prog'),
@@ -411,10 +411,39 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCloudSyncStatus('syncing');
   }, []);
 
-  // Fetch online data from Cloud SQL on initial load or on real-time event
+  // Fetch online data (prioritizes Supabase live cloud database)
   const refreshFromCloud = useCallback(async (silent: boolean = false) => {
     try {
       if (!silent) setCloudSyncStatus('syncing');
+
+      // 1. Primary Source: Load directly from Supabase
+      try {
+        const remoteState = await loadFromSupabase();
+        if (remoteState && remoteState.schoolProfile) {
+          if (Date.now() - lastLocalEditTimeRef.current < 2500) {
+            isCloudLoadedRef.current = true;
+            setCloudSyncStatus('synced');
+            return;
+          }
+          isRemoteUpdating.current = true;
+          const sanitized = sanitizeAppState(remoteState);
+          setData(sanitized);
+          isCloudLoadedRef.current = true;
+          setCloudSyncStatus('synced');
+          setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+
+          // Keep Cloud SQL in sync in background
+          apiRequest('/api/sync-all', {
+            method: 'POST',
+            body: JSON.stringify(sanitized),
+          }).catch(() => {});
+          return;
+        }
+      } catch (sbErr) {
+        console.warn('Could not load directly from Supabase, checking local server API:', sbErr);
+      }
+
+      // 2. Secondary Source: Fallback to Cloud SQL /api/data
       const res = await fetch('/api/data');
       if (res.ok) {
         const json = await res.json();
@@ -462,41 +491,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      // Fallback: Supabase
-      const remoteState = await loadFromSupabase();
-      if (remoteState && remoteState.schoolProfile) {
-        if (Date.now() - lastLocalEditTimeRef.current < 2500) {
-          isCloudLoadedRef.current = true;
-          setCloudSyncStatus('synced');
-          return;
-        }
-        isRemoteUpdating.current = true;
-        setData(sanitizeAppState(remoteState));
-        isCloudLoadedRef.current = true;
-        setCloudSyncStatus('synced');
-        setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
-      } else {
-        isCloudLoadedRef.current = true;
-        setCloudSyncStatus('connected');
-      }
+      isCloudLoadedRef.current = true;
+      setCloudSyncStatus('connected');
     } catch (err) {
-      console.warn('Could not refresh from Cloud SQL, trying Supabase fallback:', err);
-      try {
-        const remoteState = await loadFromSupabase();
-        if (remoteState && remoteState.schoolProfile) {
-          if (Date.now() - lastLocalEditTimeRef.current < 2500) {
-            isCloudLoadedRef.current = true;
-            setCloudSyncStatus('synced');
-            return;
-          }
-          isRemoteUpdating.current = true;
-          setData(sanitizeAppState(remoteState));
-          isCloudLoadedRef.current = true;
-          setCloudSyncStatus('synced');
-          setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
-          return;
-        }
-      } catch (e) {}
+      console.warn('Error refreshing from cloud databases:', err);
       isCloudLoadedRef.current = true;
       if (Date.now() - lastLocalEditTimeRef.current > 3000) {
         setCloudSyncStatus('offline');
