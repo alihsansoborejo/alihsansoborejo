@@ -5,28 +5,60 @@ import { Users, GraduationCap, Award, BookOpen, ShieldCheck, Phone, Sparkles, Us
 export const StaffSection: React.FC = () => {
   const { staffList, isAdmin, setViewMode } = useDataContext();
   const [selectedCategory, setSelectedCategory] = useState<string>('Semua');
+  const [selectedInstitution, setSelectedInstitution] = useState<'Semua' | 'RA' | 'MI' | 'Satu Atap'>('Semua');
 
   const categories = ['Semua', 'Pimpinan', 'Guru Kelas', 'Guru Bidang Studi', 'Tenaga Kependidikan'];
 
   const filteredStaff = staffList.filter((item) => {
-    if (selectedCategory === 'Semua') return true;
-    return item.category === selectedCategory;
+    const matchesCat = selectedCategory === 'Semua' || item.category === selectedCategory;
+    const matchesInst =
+      selectedInstitution === 'Semua' ||
+      item.institution === selectedInstitution ||
+      (!item.institution && selectedInstitution === 'MI');
+    return matchesCat && matchesInst;
   }).sort((a, b) => (a.order || 99) - (b.order || 99));
 
   return (
     <section id="gtk" className="py-16 sm:py-20 px-4 sm:px-8 max-w-7xl mx-auto">
       {/* Section Header */}
-      <div className="text-center max-w-3xl mx-auto mb-12">
+      <div className="text-center max-w-3xl mx-auto mb-10">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0b3c26]/10 text-[#0b3c26] text-xs font-bold tracking-widest uppercase mb-3 border border-[#0b3c26]/20">
           <Users className="w-3.5 h-3.5" />
-          <span>GURU & TENAGA KEPENDIDIKAN (GTK)</span>
+          <span>GURU &amp; TENAGA KEPENDIDIKAN (GTK) SATU ATAP</span>
         </div>
         <h3 className="font-heading text-2xl sm:text-4xl font-bold text-[#072217] tracking-tight">
           Pendidik Berdedikasi, Pembimbing Hati
         </h3>
         <p className="font-body text-sm sm:text-base text-gray-600 mt-3 leading-relaxed">
-          Dewan asatidz dan asatidzah MI Ma'arif Al Ihsan Soborejo yang membina, mengajar, dan mendampingi santri dengan ketulusan hati dan keteladanan akhlak.
+          Dewan asatidz dan asatidzah RA Al Ihsan &amp; MI Ma'arif Al Ihsan Soborejo yang membina, mengajar, dan mendampingi santri dengan ketulusan hati dan keteladanan akhlak.
         </p>
+      </div>
+
+      {/* Institution Filter Pills */}
+      <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
+        {(['Semua', 'RA', 'MI', 'Satu Atap'] as const).map((inst) => (
+          <button
+            key={inst}
+            onClick={() => setSelectedInstitution(inst)}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all shadow-sm ${
+              selectedInstitution === inst
+                ? inst === 'RA'
+                  ? 'bg-amber-600 text-white shadow-md'
+                  : inst === 'MI'
+                  ? 'bg-emerald-700 text-white shadow-md'
+                  : 'bg-[#072217] text-[#f3e5ab] shadow-md'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            {inst === 'Semua'
+              ? 'Semua Lembaga'
+              : inst === 'RA'
+              ? 'Unit RA Al Ihsan'
+              : inst === 'MI'
+              ? 'Unit MI Ma\'arif'
+              : 'Lintas Lembaga (Satu Atap)'}
+          </button>
+        ))}
       </div>
 
       {/* Category Filter Pills */}
@@ -35,7 +67,7 @@ export const StaffSection: React.FC = () => {
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-sm ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-sm ${
               selectedCategory === cat
                 ? 'bg-[#0b3c26] text-white shadow-md'
                 : 'bg-white text-gray-700 hover:bg-emerald-50 border border-gray-200'
@@ -52,9 +84,9 @@ export const StaffSection: React.FC = () => {
           {filteredStaff.map((staff) => (
             <div
               key={staff.id}
-              className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col group"
+              className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between group"
             >
-              {/* Image & Category Tag */}
+              {/* Image & Tags */}
               <div className="relative h-60 bg-gradient-to-t from-[#072217]/80 via-transparent to-transparent overflow-hidden flex items-center justify-center">
                 {staff.photoUrl ? (
                   <img
@@ -70,11 +102,27 @@ export const StaffSection: React.FC = () => {
                     <span className="text-xs font-semibold text-emerald-100/90 tracking-wide text-center px-2">{staff.role}</span>
                   </div>
                 )}
+                
+                {/* Institution Badge (Top Left) */}
+                <div className="absolute top-3 left-3">
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md backdrop-blur-sm shadow text-white ${
+                    staff.institution === 'RA'
+                      ? 'bg-amber-600/95'
+                      : staff.institution === 'MI'
+                      ? 'bg-emerald-700/95'
+                      : 'bg-teal-800/95'
+                  }`}>
+                    {staff.institution === 'RA' ? 'RA' : staff.institution === 'MI' ? 'MI' : 'Satu Atap'}
+                  </span>
+                </div>
+
+                {/* Category Tag (Top Right) */}
                 <div className="absolute top-3 right-3">
-                  <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#0b3c26]/90 text-white backdrop-blur-sm shadow">
+                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#0b3c26]/90 text-white backdrop-blur-sm shadow">
                     {staff.category}
                   </span>
                 </div>
+
                 {staff.status && (
                   <div className="absolute bottom-3 left-3">
                     <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-600/90 text-white backdrop-blur-sm flex items-center gap-1">

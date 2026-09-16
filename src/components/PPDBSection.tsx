@@ -28,13 +28,13 @@ export const PPDBSection: React.FC<PPDBSectionProps> = ({
           <div className="text-center max-w-3xl mx-auto mb-12">
             <span className="text-xs uppercase font-bold tracking-widest text-[#d4af37] bg-[#d4af37]/15 border border-[#d4af37]/40 px-3.5 py-1 rounded-full inline-flex items-center gap-1.5 mb-3">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>PENERIMAAN PESERTA DIDIK BARU (PPDB)</span>
+              <span>PENERIMAAN PESERTA DIDIK BARU (PPDB) SATU ATAP</span>
             </span>
             <h3 className="font-heading text-2xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight mb-4">
-              Wujudkan Generasi Qur'ani Sejak Dini
+              Wujudkan Generasi Qur'ani Sejak Usia Dini
             </h3>
             <p className="font-body text-xs sm:text-base text-white/85 max-w-2xl mx-auto leading-relaxed">
-              Bergabunglah bersama keluarga besar MI Ma'arif Al Ihsan Soborejo, Temanggung. Kuota kelas terbatas untuk menjamin kenyamanan belajar dan bimbingan yang optimal.
+              Bergabunglah bersama keluarga besar RA Al Ihsan &amp; MI Ma'arif Al Ihsan Soborejo, Temanggung. Tersedia jenjang Raudhatul Athfal (Kelompok A/B) dan Madrasah Ibtidaiyah (Kelas 1) dalam satu atap yang terpadu dan amanah.
             </p>
 
             {/* Quick Action Buttons */}

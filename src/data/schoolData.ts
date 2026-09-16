@@ -16,15 +16,26 @@ import {
 } from '../types';
 
 export const SCHOOL_PROFILE: SchoolProfile = {
-  name: "MI Ma'arif Al Ihsan Soborejo",
-  shortName: "MI Al Ihsan Soborejo",
-  tagline: "Mencetak Peserta Didik yang Religius, Berakhlaqul Karimah, Cerdas, dan Berprestasi",
+  name: "MI Ma'arif & RA Al Ihsan Soborejo",
+  shortName: "MI & RA Al Ihsan Soborejo",
+  tagline: "Lembaga Pendidikan Satu Atap: Membina Karakter Islami, Mandiri, Cerdas, dan Berprestasi Sejak Usia Dini",
   logoUrl: "/assets/logo-maarif.svg",
   faviconUrl: "/assets/logo-maarif.svg",
+  institutionType: "Lembaga Pendidikan Satu Atap (RA - MI)",
+  miName: "MI Ma'arif Al Ihsan Soborejo",
+  miNpsn: "60713037",
+  miNsm: "111233230053",
+  miAccreditation: "Terakreditasi Baik",
+  raName: "RA Al Ihsan Soborejo",
+  raNpsn: "69991234",
+  raNsm: "101233230045",
+  raAccreditation: "Terakreditasi",
+  raHeadName: "SITI ROHMAH, S.Pd.I.",
+  raHeadTitle: "Kepala RA Al Ihsan Soborejo",
   npsn: "60713037",
   nsm: "111233230053",
-  accreditation: "Terakreditasi Baik",
-  status: "Swasta / Di Bawah LP Ma'arif NU",
+  accreditation: "Terakreditasi Baik (MI) & Terakreditasi (RA)",
+  status: "Lembaga Satu Atap / Di Bawah LP Ma'arif NU",
   fullAddress: "Desa Soborejo, Kecamatan Pringsurat, Kabupaten Temanggung, Jawa Tengah 56272",
   address: "Desa Soborejo, Kecamatan Pringsurat",
   village: "Soborejo",
@@ -37,7 +48,7 @@ export const SCHOOL_PROFILE: SchoolProfile = {
   whatsapp: "+62 858-7654-3210",
   headmasterName: "MUIN, S.Pd.I.",
   headmasterNip: "-",
-  headmasterTitle: "Kepala Madrasah Ibtidaiyah Ma'arif Al Ihsan Soborejo",
+  headmasterTitle: "Kepala MI Ma'arif Al Ihsan Soborejo",
   headmasterPhotoUrl: "",
   headmasterPhotoPosition: "top",
   headmasterPhotoScale: 100,
@@ -45,100 +56,107 @@ export const SCHOOL_PROFILE: SchoolProfile = {
   headmasterWelcome: [
     "Assalamu'alaikum Warahmatullahi Wabarakatuh.",
     "Bismillahirrohmanirrohim. Alhamdulillahi rabbil 'alamin, puji syukur senantiasa kita panjatkan ke hadirat Allah SWT, serta sholawat dan salam semoga tercurah kepada junjungan kita Nabi Muhammad SAW, keluarga, sahabat, dan pengikutnya hingga akhir zaman.",
-    "Selamat datang di portal informasi resmi MI Ma'arif Al Ihsan Soborejo, Desa Soborejo, Kecamatan Pringsurat, Kabupaten Temanggung. Website ini hadir sebagai wujud transparansi, media silaturahmi, serta pusat informasi bagi seluruh orang tua, calon peserta didik, dan masyarakat luas.",
-    "Sebagai lembaga pendidikan dasar Islam di bawah naungan Lembaga Pendidikan Ma'arif NU Kabupaten Temanggung, kami berkomitmen teguh menghadirkan pendidikan yang seimbang antara kematangan spiritual, keluhuran akhlak, kecerdasan intelektual, serta keterampilan hidup.",
-    "Dengan dukungan tenaga pendidik yang berdedikasi tinggi, kurikulum terpadu yang memadukan Kurikulum Merdeka, Kementerian Agama, dan Muatan Ke-NU-an, kami siap mendampingi putra-putri tercinta bertumbuh menjadi tunas bangsa yang saleh, cerdas, dan membanggakan.",
+    "Selamat datang di portal informasi resmi Lembaga Pendidikan Satu Atap MI Ma'arif Al Ihsan Soborejo dan RA Al Ihsan Soborejo, Desa Soborejo, Kecamatan Pringsurat, Kabupaten Temanggung. Website ini hadir sebagai wujud transparansi, media silaturahmi, serta pusat informasi bersama bagi seluruh wali santri, calon peserta didik, dan masyarakat luas.",
+    "Sebagai kesatuan lembaga pendidikan Islam satu atap di bawah naungan Lembaga Pendidikan Ma'arif NU Kabupaten Temanggung, kami menyelenggarakan jenjang pendidikan usia dini (Raudhatul Athfal / RA Al Ihsan) yang berkesinambungan langsung dengan jenjang madrasah ibtidaiyah (MI Ma'arif Al Ihsan). Sinergi satu atap ini menjamin kesinambungan pendidikan karakter islami, pembiasaan ibadah, dan tahfidz sejak usia emas hingga lulus kelas 6.",
+    "Dengan dukungan asatidz dan pendidik yang penuh kasih sayang, kurikulum terpadu yang memadukan Kurikulum Merdeka, Kementerian Agama, dan Muatan Aswaja Ke-NU-an, kami berkomitmen mendampingi putra-putri tercinta bertumbuh menjadi tunas bangsa yang saleh-salehah, mandiri, cerdas, dan membanggakan.",
     "Wassalamu'alaikum Warahmatullahi Wabarakatuh."
   ],
   history: [
-    "MI Ma'arif Al Ihsan Soborejo didirikan atas prakarsa para tokoh agama, alim ulama, dan sesepuh masyarakat Desa Soborejo, Kecamatan Pringsurat, Kabupaten Temanggung, yang mendambakan hadirnya sarana pendidikan dasar Islam yang kokoh di tengah masyarakat pedesaan.",
-    "Berakar dari cita-cita luhur mencetak generasi yang tidak hanya mahir membaca dan berhitung, tetapi juga tekun dalam sholat, berbakti kepada orang tua, serta memiliki pemahaman aqidah Ahlussunnah wal Jama'ah An-Nahdliyyah.",
-    "Seiring berjalannya waktu, madrasah terus berbenah secara fisik maupun mutu akademik: menambah sarana kelas yang representatif, memperkuat program Tahfidzul Qur'an, membina seni hadroh rebana, dan mengintegrasikan pembelajaran interaktif ramah anak."
+    "Lembaga Pendidikan Satu Atap MI Ma'arif Al Ihsan Soborejo dan RA Al Ihsan Soborejo didirikan atas prakarsa para tokoh agama, alim ulama, dan sesepuh masyarakat Desa Soborejo, Kecamatan Pringsurat, Kabupaten Temanggung, yang mendambakan hadirnya sarana pendidikan Islam terpadu yang kokoh di tengah masyarakat.",
+    "Bermula dari komitmen membina anak-anak sejak usia dini di Raudhatul Athfal (RA Al Ihsan) dengan stimulasi adab dan kegembiraan belajar, kemudian dilanjutkan secara berkesinambungan di Madrasah Ibtidaiyah (MI Ma'arif Al Ihsan) tanpa perlu cemas menghadapi adaptasi lingkungan sekolah yang baru.",
+    "Berakar dari cita-cita luhur mencetak generasi yang tidak hanya mahir membaca dan berhitung, tetapi juga tekun dalam sholat, gemar menghafal Al-Qur'an, berbakti kepada orang tua, serta berpegang teguh pada aqidah Ahlussunnah wal Jama'ah An-Nahdliyyah.",
+    "Kini, lembaga satu atap ini terus bertumbuh dengan sarana belajar representatif yang ramah anak, program tahfidz terpadu, pembinaan seni rebana hadroh, serta pelayanan PPDB terpadu satu pintu untuk jenjang RA dan MI."
   ],
-  vision: "Terbentuknya Peserta Didik yang Religius, Berakhlaqul Karimah, Cerdas, dan Berprestasi",
+  vision: "Terbentuknya Peserta Didik yang Religius, Berakhlaqul Karimah, Cerdas, Mandiri, dan Berprestasi dari Usia Dini hingga Jenjang Ibtidaiyah",
   missions: [
-    "Menumbuhkan penghayatan siswa terhadap ajaran Agama Islam",
-    "Melaksanakan pembelajaran profesional dan bermakna yang menumbuhkan dan mengembangkan siswa bernilai UN di atas rata-rata",
-    "Melaksanakan program bimbingan secara efektif sehingga setiap siswa berkembang secara optimal sesuai dengan potensi yang dimiliki",
-    "Menumbuhkan dan mengembangkan pembiasaan religius, jujur, disiplin, cerdas, dan peduli lingkungan dan sosial di lingkungan madrasah.",
-    "Melaksanakan pengelolaan madrasah dengan manajemen partisipatif dengan melibatkan seluruh warga madrasah dan kelompok kepentingan.",
-    "Melaksanakan pembelajaran ekstrakurikuler secara efektif sesuai bakat dan minat"
+    "Menumbuhkan penghayatan dan kecintaan peserta didik terhadap ajaran Islam Ahlussunnah wal Jama'ah An-Nahdliyyah sejak usia dini.",
+    "Melaksanakan pembelajaran aktif, inovatif, dan bermakna yang memadukan pengasuhan ramah anak di RA serta keunggulan akademik di MI.",
+    "Membiasakan amaliyah ibadah harian: sholat berjamaah, hafalan doa harian, dan Tahfidzul Qur'an secara berkelanjutan.",
+    "Mengembangkan potensi motorik, seni, kognitif, dan kepemimpinan santri melalui program ekstrakurikuler yang beragam.",
+    "Menyelenggarakan tata kelola lembaga satu atap yang profesional, akuntabel, dan transparan dengan sinergi aktif bersama wali santri dan masyarakat."
   ],
   goals: [
-    "Dalam Ujian, siswa memperoleh nilai rata-rata US minimal 80 yang diperoleh dengan cara jujur dan disiplin.",
-    "Lulusan Madrasah 100 % melanjutkan ke Sekolah/madrasah yang lebih tinggi.",
-    "Siswa memiliki kebiasaan salat dhuha dan salat wajib dengan berjamaah.",
-    "Tingkat kedisplinan siswa dalam kehadiran ke sekolah mencapai 99%.",
-    "Pada tahun pelajaran mendatang kegiatan pembelajaran 99% tepat waktu.",
-    "Lulusan Madrasah dapat diterima di SMPN/MTsN Favorit",
-    "Meningkatkan hasil ujian 0.5 dari tahun sebelumnya",
-    "Menjadi juara kepramukaan tingkat kabupaten"
+    "Santri RA lulus dengan kesiapan motorik, adab santun, kemandirian, dan dasar membaca hijaiyah serta alfabet yang matang.",
+    "Lulusan RA Al Ihsan secara mulus melanjutkan pendidikan ke jenjang MI Ma'arif Al Ihsan dalam satu lingkungan asri yang akrab.",
+    "Siswa MI memperoleh rata-rata nilai US minimal 80 dengan integritas, kejujuran, dan disiplin tinggi.",
+    "Lulusan MI Ma'arif 100% melanjutkan ke pondok pesantren atau MTs/SMP favorit.",
+    "Santri memiliki pembiasaan sholat fardhu berjamaah dan sholat dhuha serta hafal juz 30 sesuai jenjangnya.",
+    "Tingkat kehadiran peserta didik dan asatidz mencapai lebih dari 98% secara konsisten."
   ],
   coreValues: [
     {
-      title: "Religius",
-      desc: "Ketaatan dalam beribadah, pembiasaan sholat dhuha & dhuhur berjamaah, serta pengamalan ajaran Islam berhaluan Aswaja.",
+      title: "Satu Atap Bersinergi",
+      desc: "Kesinambungan pendidikan tanpa putus dari jenjang prasekolah (RA) ke jenjang ibtidaiyah (MI) dalam satu visi dan lingkungan pembinaan.",
+      icon: "Sparkles"
+    },
+    {
+      title: "Religius & Aswaja",
+      desc: "Ketaatan beribadah, pembiasaan sholat berjamaah, pembacaan sholawat, dan tradisi Islam berhaluan Ahlussunnah wal Jama'ah.",
       icon: "BookOpen"
     },
     {
       title: "Berakhlaqul Karimah",
-      desc: "Menjunjung tinggi adab kesantunan, ta'dzim kepada orang tua dan guru, serta kepedulian sosial di lingkungan madrasah.",
+      desc: "Menjunjung tinggi adab kesantunan, ta'dzim kepada guru dan orang tua, serta budi pekerti luhur dalam keseharian.",
       icon: "Heart"
     },
     {
-      title: "Cerdas",
-      desc: "Menguasai literasi, numerasi, dan wawasan ilmu pengetahuan umum serta sains dengan pola pikir kritis dan kreatif.",
+      title: "Cerdas & Mandiri",
+      desc: "Mengasah logika, literasi, numerasi, dan kecakapan motorik anak dengan metode belajar menyenangkan dan ramah anak.",
       icon: "Award"
     },
     {
-      title: "Berprestasi",
-      desc: "Semangat tinggi meraih keunggulan akademik maupun non-akademik di tingkat kecamatan, kabupaten, hingga provinsi.",
-      icon: "Sparkles"
-    },
-    {
-      title: "Disiplin & Jujur",
-      desc: "Integritas tinggi dalam kehadiran, kepatuhan tata tertib, serta kejujuran dalam menuntut ilmu dan ujian.",
+      title: "Disiplin & Berprestasi",
+      desc: "Membina kejujuran, ketertiban, dan daya juang untuk meraih prestasi terbaik di bidang keagamaan, sains, dan kesenian.",
       icon: "Shield"
     }
   ],
-  heroTitle: "Mencetak Peserta Didik yang Religius, Berakhlaqul Karimah, Cerdas, dan Berprestasi",
-  heroSubtitle: "Selamat datang di website resmi MI Ma'arif Al Ihsan Soborejo, Kecamatan Pringsurat, Kabupaten Temanggung. Berkomitmen menyelenggarakan pendidikan dasar Islam yang bermakna dan berkarakter, menumbuhkan penghayatan ajaran agama, keluhuran budi pekerti, serta membina kecerdasan dan prestasi setiap peserta didik secara optimal.",
-  heroBadge: "LP Ma'arif NU Temanggung • Soborejo, Pringsurat",
+  heroTitle: "Lembaga Pendidikan Satu Atap RA & MI Ma'arif Al Ihsan Soborejo",
+  heroSubtitle: "Selamat datang di website resmi Lembaga Pendidikan Satu Atap MI Ma'arif Al Ihsan Soborejo dan RA Al Ihsan Soborejo, Kecamatan Pringsurat, Kabupaten Temanggung. Membimbing putra-putri tercinta dengan kasih sayang, memadukan stimulasi usia dini yang menyenangkan dengan pendidikan dasar berkarakter Qur'ani dan berprestasi.",
+  heroBadge: "Lembaga Satu Atap • RA & MI Ma'arif NU Soborejo",
   heroBannerUrl: "https://images.unsplash.com/photo-1584697964190-7bb8c5a2cbb5?q=80&w=1920&auto=format&fit=crop",
   heroHighlights: [
-    "Tahfidz Juz 30 & Tartil",
-    "Kurikulum Merdeka + Kemenag",
-    "Karakter Aswaja An-Nahdliyyah",
-    "Lingkungan Asri & Ramah Anak"
+    "Jenjang Terpadu RA (PAUD/TK) & MI (SD Islam)",
+    "Tahfidz Cilik hingga Juz 30 & Tartil",
+    "Kurikulum Merdeka + Kemenag + Muatan Ke-NU-an",
+    "Lingkungan Asri, Bersih & Ramah Anak"
   ],
   heroSliderDuration: 5,
   heroSliderAutoPlay: true,
   heroSlides: [
     {
       id: "slide-1",
-      badge: "LP Ma'arif NU Temanggung • Soborejo, Pringsurat",
-      title: "Mencetak Peserta Didik yang Religius, Berakhlaqul Karimah, Cerdas, dan Berprestasi",
-      subtitle: "Selamat datang di website resmi MI Ma'arif Al Ihsan Soborejo, Kecamatan Pringsurat, Kabupaten Temanggung. Berkomitmen menyelenggarakan pendidikan dasar Islam yang bermakna dan berkarakter, menumbuhkan penghayatan ajaran agama, keluhuran budi pekerti, serta membina kecerdasan dan prestasi setiap peserta didik secara optimal.",
+      badge: "Lembaga Pendidikan Satu Atap • RA & MI Al Ihsan",
+      title: "Membina Generasi Qur'ani, Berakhlak Mulia & Cerdas Sejak Usia Dini",
+      subtitle: "Sinergi pendidikan berkesinambungan dari Raudhatul Athfal (RA Al Ihsan) hingga Madrasah Ibtidaiyah (MI Ma'arif Al Ihsan). Menjamin tumbuh kembang ananda berlangsung optimal dalam naungan nilai-nilai Ahlussunnah wal Jama'ah.",
       photoUrl: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?q=80&w=1200&auto=format&fit=crop",
-      photoCaption: "Suasana Pembelajaran Aktif & Islami di Kelas",
+      photoCaption: "Suasana Belajar Ceria, Nyaman & Islami di Kelas",
       bannerUrl: "https://images.unsplash.com/photo-1584697964190-7bb8c5a2cbb5?q=80&w=1920&auto=format&fit=crop"
     },
     {
       id: "slide-2",
-      badge: "Program Unggulan Madrasah • Tahfidz & Karakter Aswaja",
-      title: "Membentuk Generasi Qur'ani, Berakhlak Mulia & Unggul Berprestasi",
-      subtitle: "Didukung pembiasaan sholat dhuha dan dhuhur berjamaah, hafalan Juz 'Amma dan tartil Al-Qur'an, kajian Aswaja An-Nahdliyyah, serta pembelajaran Kurikulum Merdeka yang inspiratif dan berwawasan masa depan.",
+      badge: "Jenjang Raudhatul Athfal (RA) • Usia 4 - 6 Tahun",
+      title: "RA Al Ihsan Soborejo: Tumbuh Ceria, Mandiri, dan Cinta Al-Qur'an",
+      subtitle: "Sentra bermain ramah anak, pengenalan huruf hijaiyah & doa harian metode ceria, stimulasi motorik halus dan kasar, serta penanaman adab islami sejak usia keemasan.",
       photoUrl: "https://images.unsplash.com/photo-1577896851231-70ef18881754?q=80&w=1200&auto=format&fit=crop",
-      photoCaption: "Pembiasaan Tahfidz & Karakter Aswaja Santri",
+      photoCaption: "Aktivitas Kreatif & Pembiasaan Doa di RA Al Ihsan",
       bannerUrl: "https://images.unsplash.com/photo-1577896851231-70ef18881754?q=80&w=1920&auto=format&fit=crop"
     },
     {
       id: "slide-3",
-      badge: "Penerimaan Peserta Didik Baru (PPDB) • Buka Pendaftaran",
-      title: "Raih Masa Depan Gemilang Bersama MI Ma'arif Al Ihsan Soborejo",
-      subtitle: "Pendaftaran santri baru kini semakin praktis dan transparan secara online. Fasilitas pembelajaran nyaman, lingkungan asri ramah anak, dan dewan guru berdedikasi tinggi siap membimbing putra-putri tercinta.",
+      badge: "Jenjang Madrasah Ibtidaiyah (MI) • Kelas 1 - 6",
+      title: "MI Ma'arif Al Ihsan Soborejo: Unggul Akademik & Karakter Aswaja",
+      subtitle: "Integrasi Kurikulum Merdeka dan Kurikulum Kemenag, pembiasaan sholat dhuha & dhuhur berjamaah, Tahfidz Juz 30, pramuka sako Ma'arif, dan ekstrakurikuler seni hadroh.",
       photoUrl: "https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=1200&auto=format&fit=crop",
-      photoCaption: "Penerimaan Peserta Didik Baru (PPDB) TP 2025/2026",
+      photoCaption: "Pembelajaran Bermakna & Prestasi Santri MI Ma'arif",
+      bannerUrl: "https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=1920&auto=format&fit=crop"
+    },
+    {
+      id: "slide-4",
+      badge: "PPDB Online Satu Pintu • RA & MI Al Ihsan",
+      title: "Penerimaan Peserta Didik Baru (PPDB) Telah Dibuka",
+      subtitle: "Daftarkan putra-putri tercinta untuk Jenjang RA (Kelompok A & B) maupun Jenjang MI (Kelas 1). Layanan pendaftaran praktis, transparan, dan proses verifikasi yang ramah anak.",
+      photoUrl: "https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=1200&auto=format&fit=crop",
+      photoCaption: "PPDB Terpadu RA & MI Al Ihsan Soborejo",
       bannerUrl: "https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=1920&auto=format&fit=crop"
     }
   ]
@@ -148,14 +166,29 @@ export const STAFF_DATA: StaffMember[] = [
   {
     id: "staff-1",
     name: "MUIN, S.Pd.I.",
-    role: "Kepala Madrasah",
+    role: "Kepala Madrasah Ibtidaiyah",
     category: "Pimpinan",
+    institution: "MI",
     nipOrNuptk: "-",
     education: "S.Pd.I",
     photoUrl: "",
     phone: "",
-    subjects: "Manajerial & Supervisi Pendidikan",
+    subjects: "Manajerial & Kebijakan Pendidikan MI",
     order: 1,
+    status: "Aktif"
+  },
+  {
+    id: "staff-2",
+    name: "SITI ROHMAH, S.Pd.I.",
+    role: "Kepala Raudhatul Athfal",
+    category: "Pimpinan",
+    institution: "RA",
+    nipOrNuptk: "-",
+    education: "S.Pd.I",
+    photoUrl: "",
+    phone: "",
+    subjects: "Manajerial & Pendidikan Anak Usia Dini (PAUD/RA)",
+    order: 2,
     status: "Aktif"
   }
 ];
@@ -171,25 +204,61 @@ export const SCHOOL_STATS = [
 
 export const PROGRAMS: ProgramItem[] = [
   {
-    id: "tahfidz",
-    title: "Tahfidz & Tahsin Al-Qur'an",
-    category: "Keislaman",
-    iconName: "BookOpenCheck",
-    shortDesc: "Program bimbingan membaca Al-Qur'an dengan metode tartil Tilawati/Iqro serta hafalan Juz 30 (Juz 'Amma) bertarget.",
-    fullDesc: "Program unggulan yang dirancang untuk membimbing siswa-siswi sejak dini agar mampu membaca Al-Qur'an secara fasih, benar sesuai kaidah tajwid, dan menuntaskan hafalan surat-surat pendek pada Juz 30. Dilengkapi wisuda tahfidz tahunan sebagai apresiasi.",
+    id: "ra-tahfidz-cilik",
+    title: "Tahfidz Cilik & Doa Harian RA",
+    category: "PAUD & Motorik",
+    institutionLevel: "RA",
+    iconName: "Sparkles",
+    shortDesc: "Bimbingan hafalan surat pendek Juz 'Amma, doa yaumiyah, dan hadits adab cilik dengan metode bernyanyi dan visual ceria.",
+    fullDesc: "Program khusus bagi peserta didik Raudhatul Athfal (usia 4-6 tahun) untuk menanamkan kecintaan pada kalam ilahi sejak dini. Anak diajak menghafal surat Al-Fatihah hingga An-Nas, doa makan, doa tidur, doa orang tua, serta hadits kasih sayang lewat irama lagu dan gerakan motorik gembira.",
     highlights: [
-      "Bimbingan halaqoh kecil 1 guru : 10-12 siswa",
-      "Metode membaca tartil terstandarisasi",
-      "Setoran mutaba'ah hafalan harian dan pekanan",
+      "Metode menghafal ceria (Talaqqi & Gerak Lagu)",
+      "Pengenalan huruf hijaiyah berharakat secara visual",
+      "Hafalan 15+ surat pendek dan doa harian anak",
+      "Pentas hafalan cilik dan apresiasi bintang santri"
+    ],
+    target: "Lulusan RA hafal surat pendek pilihan, doa harian, dan siap membaca Al-Qur'an",
+    schedule: "Setiap hari pagi saat lingkaran pembukaan RA (07.30 - 08.15 WIB)"
+  },
+  {
+    id: "ra-sentra-kreatif",
+    title: "Sentra Bermain Kreatif & Motorik Ramah Anak",
+    category: "PAUD & Motorik",
+    institutionLevel: "RA",
+    iconName: "Palette",
+    shortDesc: "Stimulasi motorik halus, motorik kasar, sentra bahan alam, balok kreatif, dan pengasuhan kemandirian.",
+    fullDesc: "Menyediakan lingkungan bermain yang kaya stimulasi sensorik dan motorik. Anak-anak belajar bersosialisasi, melipat, menggunting, meronce, mewarnai, serta bermain peran yang mengasah kecerdasan emosional dan kemandirian sebelum melangkah ke jenjang sekolah dasar / MI.",
+    highlights: [
+      "Sentra bahan alam & eksperimen warna sederhana",
+      "Sentra balok logika & rancang bangun ramah anak",
+      "Stimulasi motorik kasar (senam ceria, titian seimbang)",
+      "Pembiasaan adab makan mandiri dan merapikan mainan"
+    ],
+    target: "Kematangan motorik, kemandirian anak, dan kesiapan sosial belajar",
+    schedule: "Senin s.d. Kamis (08.15 - 10.00 WIB)"
+  },
+  {
+    id: "tahfidz",
+    title: "Tahfidz & Tahsin Al-Qur'an Juz 30",
+    category: "Keislaman",
+    institutionLevel: "MI",
+    iconName: "BookOpenCheck",
+    shortDesc: "Program lanjutan membaca Al-Qur'an tartil metode Tilawati serta hafalan Juz 30 (Juz 'Amma) tuntas bertarget.",
+    fullDesc: "Program unggulan jenjang Madrasah Ibtidaiyah yang melanjutkan fondasi dari RA, membimbing siswa membaca fasih bertajwid, setoran hafalan harian, dan menuntaskan Juz 30 dilengkapi munaqosyah dan wisuda tahfidz terbuka.",
+    highlights: [
+      "Halaqoh bimbingan intensif 1 guru : 10-12 siswa",
+      "Metode membaca tartil tilawati terstandarisasi",
+      "Buku mutaba'ah setoran hafalan terpantau harian",
       "Wisuda Tahfidz Juz 30 & Uji Publik berkala"
     ],
-    target: "Lulusan hafal minimal Juz 30 secara mutqin dan tartil",
+    target: "Lulusan MI hafal tuntas Juz 30 mutqin dan tartil",
     schedule: "Setiap hari sebelum jam pelajaran utama (07.00 - 07.45 WIB)"
   },
   {
     id: "kurikulum-merdeka",
     title: "Kurikulum Terpadu & Literasi Sains",
     category: "Kurikulum",
+    institutionLevel: "MI",
     iconName: "GraduationCap",
     shortDesc: "Perpaduan Kurikulum Merdeka Kemendikbudristek, Kemenag, dan Muatan Lokal LP Ma'arif NU yang interaktif.",
     fullDesc: "Pendekatan pembelajaran berpusat pada anak (student-centered) yang mengasah literasi, numerasi, dan kepekaan saintifik sederhana melalui eksperimen lapangan dan pembelajaran berbasis proyek (P5RA - Profil Pelajar Pancasila Rahmatan lil 'Alamin).",
@@ -206,6 +275,7 @@ export const PROGRAMS: ProgramItem[] = [
     id: "pembiasaan-ibadah",
     title: "Pembiasaan Ibadah Yaumiyah & Sholat Berjamaah",
     category: "Karakter",
+    institutionLevel: "Satu Atap",
     iconName: "Sparkles",
     shortDesc: "Praktek langsung sholat dhuha berjamaah, sholat dhuhur berjamaah, hafalan doa harian, dan asmaul husna.",
     fullDesc: "Menanamkan kecintaan pada ibadah bukan hanya sebagai kewajiban teori, melainkan kebiasaan yang melekat sejak dini. Siswa dipandu berwudhu yang sempurna, melafalkan adzan, membaca wirid sesudah sholat, dan membiasakan sholat sunnah dhuha.",
@@ -222,6 +292,7 @@ export const PROGRAMS: ProgramItem[] = [
     id: "bilingual-dasar",
     title: "Pengenalan Bahasa Arab & Inggris Cilik",
     category: "Teknologi",
+    institutionLevel: "Satu Atap",
     iconName: "Languages",
     shortDesc: "Pembelajaran kosakata dasar bahasa Arab dan Inggris melalui lagu, cerita bergambar, dan percakapan ringan.",
     fullDesc: "Mengenalkan bahasa internasional sejak usia emas sekolah dasar dengan cara menyenangkan (fun learning). Siswa belajar kosakata seputar benda di kelas, anggota tubuh, sapaan Islami, angka, dan kalimat sederhana yang mudah diingat.",
@@ -426,15 +497,33 @@ export const TESTIMONIALS_DATA = TESTIMONIALS;
 
 export const FAQ_LIST: FAQItem[] = [
   {
+    id: "faq-satu-atap",
+    question: "Apakah RA Al Ihsan dan MI Ma'arif Al Ihsan berada dalam satu atap?",
+    answer: "Ya, betul. RA Al Ihsan Soborejo dan MI Ma'arif Al Ihsan Soborejo adalah lembaga pendidikan satu atap di bawah naungan LP Ma'arif NU di Desa Soborejo, Kec. Pringsurat. Sinergi ini memudahkan orang tua karena putra-putrinya dapat melanjutkan pendidikan dari jenjang prasekolah (RA) ke madrasah ibtidaiyah (MI) dalam lingkungan yang terpadu dan berkesinambungan.",
+    category: "Kurikulum & Belajar"
+  },
+  {
+    id: "faq-ra-age",
+    question: "Berapa ketentuan usia masuk santri di RA Al Ihsan Soborejo?",
+    answer: "Untuk Kelompok A diperuntukkan bagi anak usia 4 sampai 5 tahun. Sedangkan untuk Kelompok B diperuntukkan bagi anak usia 5 sampai 6 tahun. Pendekatan pembelajaran di RA kami menitikberatkan pada bermain sambil belajar, pengenalan adab islami, doa harian, dan stimulasi motorik ramah anak.",
+    category: "PPDB"
+  },
+  {
     id: "faq-1",
-    question: "Berapa batas usia minimal calon peserta didik baru kelas 1?",
-    answer: "Usia minimal calon peserta didik kelas 1 adalah 6 tahun pada tanggal 1 Juli tahun berjalan. Untuk anak berusia 5 tahun 6 bulan s.d. 6 tahun dapat dipertimbangkan apabila memiliki kematangan psikologis dan kesiapan belajar (disertai rekomendasi tertulis dari RA/TK asal atau psikolog).",
+    question: "Berapa batas usia minimal calon peserta didik baru kelas 1 MI?",
+    answer: "Usia minimal calon peserta didik kelas 1 MI adalah 6 tahun pada tanggal 1 Juli tahun berjalan. Untuk anak berusia 5 tahun 6 bulan s.d. 6 tahun dapat dipertimbangkan apabila memiliki kematangan psikologis dan kesiapan belajar (lulusan RA Al Ihsan atau TK mitra).",
+    category: "PPDB"
+  },
+  {
+    id: "faq-transisi",
+    question: "Apakah lulusan RA Al Ihsan mendapat prioritas saat masuk MI Ma'arif Al Ihsan?",
+    answer: "Tentu saja. Sebagai lembaga satu atap, lulusan RA Al Ihsan Soborejo mendapatkan prioritas penerimaan langsung di MI Ma'arif Al Ihsan Soborejo tanpa biaya pendaftaran ulang ganda serta kemudahan adaptasi lingkungan belajar.",
     category: "PPDB"
   },
   {
     id: "faq-2",
     question: "Apakah siswa yang belum lancar membaca dan mengaji tetap bisa mendaftar?",
-    answer: "Tentu saja sangat bisa. Di MI Ma'arif Al Ihsan Soborejo, kami menyediakan program bimbingan membaca intensif dan bimbingan mengaji iqro/tilawati sejak hari pertama sekolah dalam kelompok kecil dengan pendekatan yang sabar dan menyenangkan.",
+    answer: "Tentu saja sangat bisa. Di RA maupun MI Al Ihsan Soborejo, kami menyediakan program bimbingan membaca intensif dan mengaji iqro/tilawati dalam kelompok kecil dengan pendekatan asatidz yang sabar dan menyenangkan.",
     category: "PPDB"
   },
   {
@@ -446,19 +535,19 @@ export const FAQ_LIST: FAQItem[] = [
   {
     id: "faq-4",
     question: "Berapa jam belajar peserta didik setiap harinya?",
-    answer: "Kegiatan dimulai pukul 07.00 WIB diawali sholat dhuha dan tadarus Al-Qur'an. Pembelajaran kelas 1-2 berlangsung hingga pukul 11.30 WIB. Untuk kelas 3-6 berlangsung hingga pukul 13.30 WIB setelah sholat dhuhur berjamaah. Khusus hari Jumat pulang pukul 11.00 WIB.",
+    answer: "Untuk RA Al Ihsan: 07.30 - 10.30 WIB. Untuk MI Ma'arif Al Ihsan: Dimulai pukul 07.00 WIB (diawali sholat dhuha dan tadarus), kelas 1-2 hingga 11.30 WIB, kelas 3-6 hingga 13.30 WIB setelah sholat dhuhur berjamaah. Khusus hari Jumat pulang pukul 11.00 WIB.",
     category: "Kurikulum & Belajar"
   },
   {
     id: "faq-5",
     question: "Apakah tersedia beasiswa atau keringanan biaya?",
-    answer: "Ya, kami berkomitmen agar seluruh anak bangsa dapat mengenyam pendidikan layak. Tersedia Program Indonesia Pintar (PIP) Kemenag, Beasiswa Santri Yatim/Piatu, Beasiswa Prestasi Tahfidz, dan subsidi infaq dari donatur madrasah bagi yang berhak.",
+    answer: "Ya, kami berkomitmen agar seluruh anak bangsa dapat mengenyam pendidikan layak. Tersedia Program Indonesia Pintar (PIP) Kemenag, Beasiswa Santri Yatim/Piatu, Beasiswa Prestasi Tahfidz, dan subsidi infaq bagi keluarga yang membutuhkan.",
     category: "Biaya"
   },
   {
     id: "faq-6",
-    question: "Bagaimana cara mendaftar secara online melalui website ini?",
-    answer: "Cukup klik tombol 'Daftar PPDB Online' di menu atas, isi data diri calon siswa dan nomor kontak orang tua pada formulir online, lalu simpan kode registrasi Anda. Tim panitia kami akan segera menghubungi via WhatsApp untuk proses verifikasi sederhana.",
+    question: "Bagaimana cara mendaftar PPDB secara online melalui website ini?",
+    answer: "Cukup klik tombol 'Daftar PPDB Online' di menu atas, pilih jenjang (RA Al Ihsan atau MI Ma'arif Al Ihsan), lengkapi data calon santri dan kontak orang tua, lalu simpan kode registrasi Anda. Panitia PPDB kami akan segera menghubungi via WhatsApp untuk proses verifikasi berkas.",
     category: "PPDB"
   }
 ];
@@ -475,40 +564,43 @@ export const PRAYER_SCHEDULE = [
 ];
 
 export const SCHOOL_INFO = {
-  name: "MI Ma'arif Al Ihsan Soborejo",
-  shortName: "MI Al Ihsan Soborejo",
-  slogan: "Membentuk Generasi yang Religius, Berakhlaqul Karimah, Cerdas, dan Berprestasi",
-  description: "Lembaga pendidikan dasar Islam di bawah LP Ma'arif NU di Desa Soborejo, Kec. Pringsurat, Kab. Temanggung yang berkomitmen membentuk tunas bangsa yang religius, berakhlak mulia, cerdas, dan berprestasi.",
+  name: "MI Ma'arif & RA Al Ihsan Soborejo",
+  shortName: "MI & RA Al Ihsan Soborejo",
+  institutionType: "Lembaga Pendidikan Satu Atap (RA - MI)",
+  slogan: "Membina Generasi yang Religius, Berakhlaqul Karimah, Cerdas, dan Berprestasi Sejak Usia Dini",
+  description: "Lembaga Pendidikan Satu Atap (Raudhatul Athfal & Madrasah Ibtidaiyah) di bawah LP Ma'arif NU di Desa Soborejo, Kec. Pringsurat, Kab. Temanggung yang berkomitmen membentuk tunas bangsa yang religius, berakhlak mulia, cerdas, dan berprestasi.",
   address: "Desa Soborejo, Kec. Pringsurat, Kab. Temanggung, Jawa Tengah 56272",
   phone: "(0293) 710-1234",
   whatsapp: "+62 858-7654-3210",
   email: "alihsansoborejo@gmail.com",
   npsn: "60713037",
   nsm: "111233230053",
-  accreditation: "Terakreditasi Baik",
+  raNpsn: "69991234",
+  raNsm: "101233230045",
+  accreditation: "Terakreditasi Baik (MI) & Terakreditasi (RA)",
   established: "Madrasah Ma'arif Temanggung",
 };
 
 export const PPDB_FLOW_STEPS = [
   {
     step: "01",
-    title: "Pendaftaran Online / Langsung",
-    desc: "Mengisi formulir registrasi online di website ini atau datang langsung ke ruang sekretariat PPDB MI Al Ihsan Soborejo."
+    title: "Pilih Jenjang & Pendaftaran Online",
+    desc: "Mengisi formulir registrasi online untuk pilihan jenjang RA Al Ihsan (Kelompok A/B) atau MI Ma'arif Al Ihsan (Kelas 1) di website ini atau datang ke madrasah."
   },
   {
     step: "02",
     title: "Verifikasi Dokumen & Silaturahmi",
-    desc: "Menyerahkan fotokopi KK, Akta Kelahiran, dan Ijazah RA/TK. Dilanjutkan silaturahmi ringan pengenalan madrasah bersama calon siswa."
+    desc: "Menyerahkan fotokopi KK, Akta Kelahiran, dan Ijazah RA/TK (untuk pendaftar MI). Dilanjutkan silaturahmi ramah anak pengenalan madrasah."
   },
   {
     step: "03",
-    title: "Pemetaan Kesiapan Belajar",
-    desc: "Bukan tes seleksi gugur, melainkan pemetaan ramah anak mengenai minat, kemampuan dasar motorik, dan pengenalan huruf hijaiyah/alfabet."
+    title: "Observasi Ceria & Pemetaan Kesiapan",
+    desc: "Bukan tes gugur yang menegangkan, melainkan observasi ramah anak mengenai minat, kematangan motorik, dan pengenalan huruf hijaiyah/alfabet."
   },
   {
     step: "04",
-    title: "Pengumuman & Daftar Ulang",
-    desc: "Menerima surat tanda bukti penerimaan, pembagian paket seragam madrasah, dan pengarahan Masa Ta'aruf Siswa Madrasah (MATSAMA)."
+    title: "Pengumuman & Pembagian Perlengkapan",
+    desc: "Menerima surat bukti penerimaan resmi, pembagian perlengkapan seragam, serta pengarahan Masa Ta'aruf Siswa Madrasah (MATSAMA)."
   }
 ];
 

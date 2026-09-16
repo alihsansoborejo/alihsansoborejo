@@ -404,6 +404,7 @@ export const AdminDashboard: React.FC = () => {
     name: '',
     role: '',
     category: 'Guru Kelas' as StaffMember['category'],
+    institution: 'MI' as 'MI' | 'RA' | 'Satu Atap',
     education: 'S.Pd.',
     nipOrNuptk: '-',
     subjects: '',
@@ -666,6 +667,7 @@ export const AdminDashboard: React.FC = () => {
       name: '',
       role: '',
       category: 'Guru Kelas',
+      institution: 'MI',
       education: 'S.Pd.',
       nipOrNuptk: '-',
       subjects: '',
@@ -689,6 +691,7 @@ export const AdminDashboard: React.FC = () => {
       name: staff.name,
       role: staff.role,
       category: staff.category,
+      institution: staff.institution || 'MI',
       education: staff.education || '',
       nipOrNuptk: staff.nipOrNuptk || '-',
       subjects: staff.subjects || '',
@@ -2971,6 +2974,142 @@ export const AdminDashboard: React.FC = () => {
                       />
                     </div>
                   </div>
+
+                  {/* IDENTITAS DUA LEMBAGA (SATU ATAP: RA & MI) */}
+                  <div className="mt-5 pt-5 border-t border-gray-200">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#0b3c26] bg-[#e8f3ee] px-2.5 py-0.5 rounded-full">
+                        Dua Unit Satu Atap
+                      </span>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#072217]">
+                        Detail Identitas Resmi Masing-Masing Unit (RA &amp; MI)
+                      </h4>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {/* RA Unit Settings */}
+                      <div className="p-4 bg-amber-50/60 rounded-xl border border-amber-200 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="font-heading font-bold text-xs text-amber-900 uppercase">
+                            1. Unit RA Al Ihsan Soborejo (PAUD)
+                          </span>
+                          <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded">
+                            Prasekolah
+                          </span>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-gray-700 mb-1">Nama Unit RA</label>
+                          <input
+                            type="text"
+                            value={profileForm.raName || 'RA AL IHSAN SOBOREJO'}
+                            onChange={(e) => setProfileForm({ ...profileForm, raName: e.target.value })}
+                            className="w-full px-3 py-1.5 text-xs border border-amber-300 rounded-lg bg-white"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-gray-700 mb-1">NPSN RA</label>
+                            <input
+                              type="text"
+                              value={profileForm.raNpsn || '69991234'}
+                              onChange={(e) => setProfileForm({ ...profileForm, raNpsn: e.target.value })}
+                              className="w-full px-3 py-1.5 text-xs border border-amber-300 rounded-lg bg-white font-mono"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-semibold text-gray-700 mb-1">NSM RA</label>
+                            <input
+                              type="text"
+                              value={profileForm.raNsm || '101233230045'}
+                              onChange={(e) => setProfileForm({ ...profileForm, raNsm: e.target.value })}
+                              className="w-full px-3 py-1.5 text-xs border border-amber-300 rounded-lg bg-white font-mono"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-gray-700 mb-1">Akreditasi RA</label>
+                            <input
+                              type="text"
+                              value={profileForm.raAccreditation || 'Terakreditasi'}
+                              onChange={(e) => setProfileForm({ ...profileForm, raAccreditation: e.target.value })}
+                              className="w-full px-3 py-1.5 text-xs border border-amber-300 rounded-lg bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-semibold text-gray-700 mb-1">Kepala RA</label>
+                            <input
+                              type="text"
+                              value={profileForm.raHeadName || 'SITI ROHMAH, S.Pd.I.'}
+                              onChange={(e) => setProfileForm({ ...profileForm, raHeadName: e.target.value })}
+                              className="w-full px-3 py-1.5 text-xs border border-amber-300 rounded-lg bg-white"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* MI Unit Settings */}
+                      <div className="p-4 bg-emerald-50/60 rounded-xl border border-emerald-200 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="font-heading font-bold text-xs text-emerald-950 uppercase">
+                            2. Unit MI Ma'arif Al Ihsan (SD/MI)
+                          </span>
+                          <span className="text-[10px] font-bold bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded">
+                            Madrasah Ibtidaiyah
+                          </span>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-gray-700 mb-1">Nama Unit MI</label>
+                          <input
+                            type="text"
+                            value={profileForm.miName || "MI MA'ARIF AL IHSAN SOBOREJO"}
+                            onChange={(e) => setProfileForm({ ...profileForm, miName: e.target.value })}
+                            className="w-full px-3 py-1.5 text-xs border border-emerald-300 rounded-lg bg-white"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-gray-700 mb-1">NPSN MI</label>
+                            <input
+                              type="text"
+                              value={profileForm.miNpsn || profileForm.npsn || '60713037'}
+                              onChange={(e) => setProfileForm({ ...profileForm, miNpsn: e.target.value, npsn: e.target.value })}
+                              className="w-full px-3 py-1.5 text-xs border border-emerald-300 rounded-lg bg-white font-mono"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-semibold text-gray-700 mb-1">NSM MI</label>
+                            <input
+                              type="text"
+                              value={profileForm.miNsm || profileForm.nsm || '111233230053'}
+                              onChange={(e) => setProfileForm({ ...profileForm, miNpsn: e.target.value, nsm: e.target.value })}
+                              className="w-full px-3 py-1.5 text-xs border border-emerald-300 rounded-lg bg-white font-mono"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-gray-700 mb-1">Akreditasi MI</label>
+                            <input
+                              type="text"
+                              value={profileForm.miAccreditation || profileForm.accreditation || 'Terakreditasi Baik'}
+                              onChange={(e) => setProfileForm({ ...profileForm, miAccreditation: e.target.value, accreditation: e.target.value })}
+                              className="w-full px-3 py-1.5 text-xs border border-emerald-300 rounded-lg bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-semibold text-gray-700 mb-1">Kepala MI</label>
+                            <input
+                              type="text"
+                              value={profileForm.headmasterName || 'MUIN, S.Pd.I.'}
+                              onChange={(e) => setProfileForm({ ...profileForm, headmasterName: e.target.value })}
+                              className="w-full px-3 py-1.5 text-xs border border-emerald-300 rounded-lg bg-white"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Kontak & Lokasi */}
@@ -3554,6 +3693,23 @@ export const AdminDashboard: React.FC = () => {
                             onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value })}
                             className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#0b3c26]"
                           />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">
+                            Unit Lembaga (Satu Atap) *
+                          </label>
+                          <select
+                            value={staffForm.institution || 'MI'}
+                            onChange={(e) =>
+                              setStaffForm({ ...staffForm, institution: e.target.value as 'MI' | 'RA' | 'Satu Atap' })
+                            }
+                            className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#0b3c26] bg-white font-medium"
+                          >
+                            <option value="MI">MI Ma'arif Al Ihsan (Unit MI)</option>
+                            <option value="RA">RA Al Ihsan Soborejo (Unit RA)</option>
+                            <option value="Satu Atap">Lintas Lembaga (Satu Atap)</option>
+                          </select>
                         </div>
 
                         <div>

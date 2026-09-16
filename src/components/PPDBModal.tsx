@@ -36,6 +36,8 @@ export const PPDBModal: React.FC<PPDBModalProps> = ({
 
   // Form State
   const [formData, setFormData] = useState({
+    targetUnit: 'MI' as 'MI' | 'RA',
+    gradeOrClass: 'Kelas 1 MI',
     studentName: '',
     nik: '',
     nisn: '',
@@ -64,11 +66,14 @@ export const PPDBModal: React.FC<PPDBModalProps> = ({
   const handleSubmitForm = (e: React.FormEvent) => {
     e.preventDefault();
     const randomNum = Math.floor(1000 + Math.random() * 9000);
-    const generatedCode = `REG-MIAS-2025-${randomNum}`;
+    const prefix = formData.targetUnit === 'RA' ? 'REG-RA-2025' : 'REG-MI-2025';
+    const generatedCode = `${prefix}-${randomNum}`;
 
     const newRegistration: PPDBRegistration = {
       id: `reg-${Date.now()}`,
       registrationNumber: generatedCode,
+      targetUnit: formData.targetUnit,
+      gradeOrClass: formData.gradeOrClass,
       studentName: formData.studentName,
       nik: formData.nik,
       nisn: formData.nisn,
@@ -85,7 +90,7 @@ export const PPDBModal: React.FC<PPDBModalProps> = ({
       quranSkill: formData.quranSkill,
       submissionDate: new Date().toISOString().split('T')[0],
       status: 'Menunggu Verifikasi',
-      notes: 'Pendaftaran mandiri melalui portal website madrasah.'
+      notes: `Pendaftaran mandiri jenjang ${formData.targetUnit === 'RA' ? 'RA Al Ihsan' : 'MI Ma\'arif Al Ihsan'} (${formData.gradeOrClass}) via portal website satu atap.`
     };
 
     addPPDBRegistration(newRegistration);
@@ -295,11 +300,87 @@ export const PPDBModal: React.FC<PPDBModalProps> = ({
                 </div>
               ) : (
                 <form onSubmit={handleSubmitForm} className="space-y-6">
+                  {/* Step 0: Pilihan Jenjang Lembaga Satu Atap */}
+                  <div className="bg-[#f8faf9] p-4 rounded-xl border border-[#0b3c26]/20">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#0b3c26] mb-2">
+                      Pilih Lembaga Tujuan PPDB (Satu Atap) *
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div
+                        onClick={() => setFormData({ ...formData, targetUnit: 'RA', gradeOrClass: 'Kelompok A (Usia 4-5 Th)' })}
+                        className={`cursor-pointer p-3.5 rounded-xl border-2 transition-all ${
+                          formData.targetUnit === 'RA'
+                            ? 'border-amber-600 bg-amber-50/70 shadow-sm'
+                            : 'border-gray-200 bg-white hover:border-amber-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-heading font-bold text-sm text-amber-900">
+                            RA AL IHSAN SOBOREJO
+                          </span>
+                          <span className="text-[10px] font-bold uppercase bg-amber-600 text-white px-2 py-0.5 rounded">
+                            PAUD / RA
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-600 mb-2">
+                          Pendidikan anak usia dini (Kelompok A &amp; B) dengan pembiasaan adab Qur'ani dan motorik ceria.
+                        </p>
+                        {formData.targetUnit === 'RA' && (
+                          <div className="mt-2 pt-2 border-t border-amber-200/80">
+                            <label className="block text-[11px] font-semibold text-amber-900 mb-1">Pilihan Kelompok:</label>
+                            <select
+                              value={formData.gradeOrClass}
+                              onChange={(e) => setFormData({ ...formData, gradeOrClass: e.target.value })}
+                              className="w-full text-xs p-1.5 border border-amber-300 rounded-lg bg-white"
+                            >
+                              <option value="Kelompok A (Usia 4-5 Th)">Kelompok A (Usia 4 - 5 Tahun)</option>
+                              <option value="Kelompok B (Usia 5-6 Th)">Kelompok B (Usia 5 - 6 Tahun)</option>
+                            </select>
+                          </div>
+                        )}
+                      </div>
+
+                      <div
+                        onClick={() => setFormData({ ...formData, targetUnit: 'MI', gradeOrClass: 'Kelas 1 MI' })}
+                        className={`cursor-pointer p-3.5 rounded-xl border-2 transition-all ${
+                          formData.targetUnit === 'MI'
+                            ? 'border-emerald-600 bg-emerald-50/70 shadow-sm'
+                            : 'border-gray-200 bg-white hover:border-emerald-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-heading font-bold text-sm text-emerald-950">
+                            MI MA'ARIF AL IHSAN
+                          </span>
+                          <span className="text-[10px] font-bold uppercase bg-emerald-700 text-white px-2 py-0.5 rounded">
+                            SD / MI
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-600 mb-2">
+                          Madrasah Ibtidaiyah Kelas 1-6 dengan kurikulum terpadu Kemenag, Tahfidz, Sains, dan Akhlakul Karimah.
+                        </p>
+                        {formData.targetUnit === 'MI' && (
+                          <div className="mt-2 pt-2 border-t border-emerald-200/80">
+                            <label className="block text-[11px] font-semibold text-emerald-900 mb-1">Tingkat Masuk:</label>
+                            <select
+                              value={formData.gradeOrClass}
+                              onChange={(e) => setFormData({ ...formData, gradeOrClass: e.target.value })}
+                              className="w-full text-xs p-1.5 border border-emerald-300 rounded-lg bg-white"
+                            >
+                              <option value="Kelas 1 MI">Kelas 1 Baru (Lulusan RA/TK)</option>
+                              <option value="Pindahan Kelas 2-5 MI">Pindahan / Mutasi Masuk (Kelas 2-5)</option>
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Step 1: Data Calon Peserta Didik */}
                   <div>
                     <h4 className="text-xs font-bold uppercase tracking-wider text-[#0b3c26] mb-3 flex items-center gap-2">
                       <span className="w-5 h-5 rounded-full bg-[#0b3c26] text-[#f3e5ab] flex items-center justify-center text-[10px]">1</span>
-                      Data Calon Peserta Didik (Kelas 1)
+                      Data Calon Peserta Didik ({formData.targetUnit === 'RA' ? 'Unit RA' : 'Unit MI'})
                     </h4>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -239,11 +239,13 @@ export const Hero: React.FC<HeroProps> = ({
                     {/* Accreditation & Location Tag / Slide Badge */}
                     <div className="inline-flex flex-wrap items-center justify-center lg:justify-start gap-2 bg-[#d4af37]/15 border border-[#d4af37]/60 text-[#f3e5ab] px-4 py-1.5 rounded-full text-xs tracking-wider uppercase mb-4 sm:mb-5 backdrop-blur-md shadow-[0_0_20px_rgba(212,175,55,0.2)]">
                       <Award className="w-4 h-4 text-[#d4af37]" />
-                      <span className="font-semibold">{activeSlide.badge || schoolProfile.heroBadge || "LP Ma'arif NU Temanggung"}</span>
-                      {schoolProfile.npsn && (
+                      <span className="font-semibold">{activeSlide.badge || schoolProfile.heroBadge || "LP Ma'arif NU • Lembaga Satu Atap"}</span>
+                      <span className="w-1 h-1 rounded-full bg-[#d4af37] hidden sm:inline" />
+                      <span className="hidden sm:inline">MI NPSN: {schoolProfile.miNpsn || schoolProfile.npsn}</span>
+                      {schoolProfile.raNpsn && (
                         <>
-                          <span className="w-1 h-1 rounded-full bg-[#d4af37] hidden sm:inline" />
-                          <span className="hidden sm:inline">NPSN: {schoolProfile.npsn}</span>
+                          <span className="w-1 h-1 rounded-full bg-[#d4af37] hidden md:inline" />
+                          <span className="hidden md:inline">RA NPSN: {schoolProfile.raNpsn}</span>
                         </>
                       )}
                     </div>
@@ -325,11 +327,13 @@ export const Hero: React.FC<HeroProps> = ({
                 <div className="max-w-4xl mx-auto flex flex-col items-center text-center">
                   <div className="inline-flex flex-wrap items-center justify-center gap-2 bg-[#d4af37]/15 border border-[#d4af37]/60 text-[#f3e5ab] px-4 py-1.5 rounded-full text-xs tracking-wider uppercase mb-5 sm:mb-6 backdrop-blur-md shadow-[0_0_20px_rgba(212,175,55,0.2)]">
                     <Award className="w-4 h-4 text-[#d4af37]" />
-                    <span className="font-semibold">{activeSlide.badge || schoolProfile.heroBadge || "LP Ma'arif NU Temanggung"}</span>
-                    {schoolProfile.npsn && (
+                    <span className="font-semibold">{activeSlide.badge || schoolProfile.heroBadge || "LP Ma'arif NU • Lembaga Satu Atap"}</span>
+                    <span className="w-1 h-1 rounded-full bg-[#d4af37] hidden sm:inline" />
+                    <span className="hidden sm:inline">MI NPSN: {schoolProfile.miNpsn || schoolProfile.npsn}</span>
+                    {schoolProfile.raNpsn && (
                       <>
-                        <span className="w-1 h-1 rounded-full bg-[#d4af37] hidden sm:inline" />
-                        <span className="hidden sm:inline">NPSN: {schoolProfile.npsn}</span>
+                        <span className="w-1 h-1 rounded-full bg-[#d4af37] hidden md:inline" />
+                        <span className="hidden md:inline">RA NPSN: {schoolProfile.raNpsn}</span>
                       </>
                     )}
                   </div>

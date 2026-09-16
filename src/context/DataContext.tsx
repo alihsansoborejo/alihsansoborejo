@@ -247,9 +247,36 @@ export const sanitizeAppState = (raw: any): AppStorageState => {
     rawProfile.headmasterPhotoUrl ===
       'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80';
 
+  const needsSatuAtapUpgrade = !rawProfile.raName || rawProfile.name === "MI Ma'arif Al Ihsan Soborejo";
+  const name = needsSatuAtapUpgrade ? DEFAULT_DATA.schoolProfile.name : (rawProfile.name || DEFAULT_DATA.schoolProfile.name);
+  const shortName = needsSatuAtapUpgrade ? DEFAULT_DATA.schoolProfile.shortName : (rawProfile.shortName || DEFAULT_DATA.schoolProfile.shortName);
+  const tagline = needsSatuAtapUpgrade ? DEFAULT_DATA.schoolProfile.tagline : (rawProfile.tagline || DEFAULT_DATA.schoolProfile.tagline);
+  const heroTitle = needsSatuAtapUpgrade ? DEFAULT_DATA.schoolProfile.heroTitle : (rawProfile.heroTitle || DEFAULT_DATA.schoolProfile.heroTitle);
+  const heroSubtitle = needsSatuAtapUpgrade ? DEFAULT_DATA.schoolProfile.heroSubtitle : (rawProfile.heroSubtitle || DEFAULT_DATA.schoolProfile.heroSubtitle);
+  const heroBadge = needsSatuAtapUpgrade ? DEFAULT_DATA.schoolProfile.heroBadge : (rawProfile.heroBadge || DEFAULT_DATA.schoolProfile.heroBadge);
+  const heroHighlights = needsSatuAtapUpgrade ? DEFAULT_DATA.schoolProfile.heroHighlights : (rawProfile.heroHighlights || DEFAULT_DATA.schoolProfile.heroHighlights);
+
   const schoolProfile = {
     ...DEFAULT_DATA.schoolProfile,
     ...rawProfile,
+    name,
+    shortName,
+    tagline,
+    heroTitle,
+    heroSubtitle,
+    heroBadge,
+    heroHighlights,
+    institutionType: rawProfile.institutionType || DEFAULT_DATA.schoolProfile.institutionType,
+    miName: rawProfile.miName || DEFAULT_DATA.schoolProfile.miName,
+    miNpsn: rawProfile.miNpsn || DEFAULT_DATA.schoolProfile.miNpsn,
+    miNsm: rawProfile.miNsm || DEFAULT_DATA.schoolProfile.miNsm,
+    miAccreditation: rawProfile.miAccreditation || DEFAULT_DATA.schoolProfile.miAccreditation,
+    raName: rawProfile.raName || DEFAULT_DATA.schoolProfile.raName,
+    raNpsn: rawProfile.raNpsn || DEFAULT_DATA.schoolProfile.raNpsn,
+    raNsm: rawProfile.raNsm || DEFAULT_DATA.schoolProfile.raNsm,
+    raAccreditation: rawProfile.raAccreditation || DEFAULT_DATA.schoolProfile.raAccreditation,
+    raHeadName: rawProfile.raHeadName || DEFAULT_DATA.schoolProfile.raHeadName,
+    raHeadTitle: rawProfile.raHeadTitle || DEFAULT_DATA.schoolProfile.raHeadTitle,
     headmasterPhotoUrl: isOldDummyPhoto
       ? ''
       : (rawProfile.headmasterPhotoUrl || ''),
@@ -263,8 +290,9 @@ export const sanitizeAppState = (raw: any): AppStorageState => {
     heroSliderAutoPlay: rawProfile.heroSliderAutoPlay !== undefined
       ? Boolean(rawProfile.heroSliderAutoPlay)
       : (DEFAULT_DATA.schoolProfile.heroSliderAutoPlay ?? true),
-    heroSlides: Array.isArray(rawProfile.heroSlides) && rawProfile.heroSlides.length > 0
-      ? rawProfile.heroSlides.map((slide: any, idx: number) => {
+    heroSlides: needsSatuAtapUpgrade || !Array.isArray(rawProfile.heroSlides) || rawProfile.heroSlides.length === 0
+      ? (DEFAULT_DATA.schoolProfile.heroSlides || [])
+      : rawProfile.heroSlides.map((slide: any, idx: number) => {
           const defaultSlide = DEFAULT_DATA.schoolProfile.heroSlides?.[idx] || DEFAULT_DATA.schoolProfile.heroSlides?.[0];
           return {
             ...slide,
@@ -272,8 +300,7 @@ export const sanitizeAppState = (raw: any): AppStorageState => {
             photoUrl: slide.photoUrl !== undefined ? slide.photoUrl : (defaultSlide?.photoUrl || ''),
             photoCaption: slide.photoCaption !== undefined ? slide.photoCaption : (defaultSlide?.photoCaption || ''),
           };
-        })
-      : (DEFAULT_DATA.schoolProfile.heroSlides || []),
+        }),
   };
 
   const sanitizedNewsList = (raw.newsList && Array.isArray(raw.newsList) ? raw.newsList : (DEFAULT_DATA.newsList || [])).map((n: any) => {
@@ -296,12 +323,31 @@ export const sanitizeAppState = (raw: any): AppStorageState => {
     };
   });
 
+  // Ensure default RA programs and FAQs are present
+  const existingProgIds = new Set((Array.isArray(raw.programs) ? raw.programs : []).map((p: any) => p.id));
+  const mergedPrograms = [
+    ...(Array.isArray(raw.programs) ? raw.programs : []),
+    ...DEFAULT_DATA.programs.filter((p) => !existingProgIds.has(p.id)),
+  ];
+
+  const existingStaffIds = new Set((Array.isArray(raw.staffList) ? raw.staffList : []).map((s: any) => s.id));
+  const mergedStaff = [
+    ...(Array.isArray(raw.staffList) ? raw.staffList : []),
+    ...DEFAULT_DATA.staffList.filter((s) => !existingStaffIds.has(s.id)),
+  ];
+
+  const existingFaqIds = new Set((Array.isArray(raw.faqs) ? raw.faqs : []).map((f: any) => f.id));
+  const mergedFaqs = [
+    ...DEFAULT_DATA.faqs.filter((f) => !existingFaqIds.has(f.id)),
+    ...(Array.isArray(raw.faqs) ? raw.faqs : []),
+  ];
+
   return {
     schoolProfile,
-    staffList: ensureUniqueIds(Array.isArray(raw.staffList) ? raw.staffList : DEFAULT_DATA.staffList, 'staff'),
+    staffList: ensureUniqueIds(mergedStaff.length > 0 ? mergedStaff : DEFAULT_DATA.staffList, 'staff'),
     studentList: ensureUniqueIds(Array.isArray(raw.studentList) ? raw.studentList : DEFAULT_DATA.studentList, 'std'),
     statsList: ensureUniqueIds(Array.isArray(raw.statsList) ? raw.statsList : DEFAULT_DATA.statsList, 'stat'),
-    programs: ensureUniqueIds(Array.isArray(raw.programs) ? raw.programs : DEFAULT_DATA.programs, 'prog'),
+    programs: ensureUniqueIds(mergedPrograms.length > 0 ? mergedPrograms : DEFAULT_DATA.programs, 'prog'),
     extracurriculars: ensureUniqueIds(Array.isArray(raw.extracurriculars) ? raw.extracurriculars : DEFAULT_DATA.extracurriculars, 'ekskul'),
     achievements: ensureUniqueIds(Array.isArray(raw.achievements) ? raw.achievements : DEFAULT_DATA.achievements, 'ach'),
     newsList: sortNewsByDateDesc(ensureUniqueIds(sanitizedNewsList, 'news')),
@@ -309,7 +355,7 @@ export const sanitizeAppState = (raw: any): AppStorageState => {
     gallery: ensureUniqueIds(Array.isArray(raw.gallery) ? raw.gallery : DEFAULT_DATA.gallery, 'gal'),
     videoGallery: ensureUniqueIds(Array.isArray(raw.videoGallery) ? raw.videoGallery : (DEFAULT_DATA.videoGallery || []), 'vid'),
     testimonials: ensureUniqueIds(Array.isArray(raw.testimonials) ? raw.testimonials : DEFAULT_DATA.testimonials, 'testi'),
-    faqs: ensureUniqueIds(Array.isArray(raw.faqs) ? raw.faqs : DEFAULT_DATA.faqs, 'faq'),
+    faqs: ensureUniqueIds(mergedFaqs.length > 0 ? mergedFaqs : DEFAULT_DATA.faqs, 'faq'),
     ppdbRegistrations: ensureUniqueIds(Array.isArray(raw.ppdbRegistrations) ? raw.ppdbRegistrations : DEFAULT_DATA.ppdbRegistrations, 'reg'),
   };
 };

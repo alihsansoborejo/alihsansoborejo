@@ -83,19 +83,19 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPPDB, activeSection = 'ber
           </div>
           
           <div className="leading-tight">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[10px] font-bold tracking-widest text-[#0b3c26] uppercase bg-[#e8f3ee] px-1.5 py-0.5 rounded">
                 LP MA'ARIF NU
               </span>
-              <span className="text-[10px] font-medium text-gray-500 hidden sm:inline">
-                • PRINGSURAT
+              <span className="text-[10px] font-bold text-amber-900 bg-amber-100 border border-amber-300/80 px-1.5 py-0.5 rounded-full">
+                SATU ATAP (MI &amp; RA)
               </span>
             </div>
             <h1 className="font-heading text-sm sm:text-base md:text-lg font-bold tracking-tight text-[#072217] group-hover:text-[#0b3c26] transition-colors">
-              MI MA'ARIF AL IHSAN
+              {schoolProfile.shortName || "MI & RA AL IHSAN SOBOREJO"}
             </h1>
             <p className="text-[11px] font-medium text-emerald-800">
-              Soborejo, Temanggung
+              Soborejo, Pringsurat, Temanggung
             </p>
           </div>
         </a>

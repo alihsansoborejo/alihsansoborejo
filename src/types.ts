@@ -4,8 +4,19 @@ export interface SchoolProfile {
   tagline: string;
   logoUrl?: string;
   faviconUrl?: string;
-  npsn: string;
-  nsm: string;
+  institutionType?: string; // "Lembaga Pendidikan Satu Atap (RA - MI)"
+  miName?: string; // "MI Ma'arif Al Ihsan Soborejo"
+  miNpsn?: string;
+  miNsm?: string;
+  miAccreditation?: string;
+  raName?: string; // "RA Al Ihsan Soborejo"
+  raNpsn?: string;
+  raNsm?: string;
+  raAccreditation?: string;
+  raHeadName?: string; // Kepala RA Al Ihsan
+  raHeadTitle?: string;
+  npsn: string; // Default/MI NPSN
+  nsm: string; // Default/MI NSM
   accreditation: string;
   status?: string;
   fullAddress?: string;
@@ -65,6 +76,7 @@ export interface StaffMember {
   name: string;
   role: string; // e.g. 'Kepala Madrasah', 'Guru Kelas 1', 'Guru PAI & Fikih', 'Guru Penjasorkes', 'Tenaga Kependidikan / TU'
   category: 'Pimpinan' | 'Guru Kelas' | 'Guru Bidang Studi' | 'Tenaga Kependidikan';
+  institution?: 'MI' | 'RA' | 'Satu Atap' | string; // Lembaga tempat bertugas
   nipOrNuptk?: string;
   education?: string; // e.g. 'S.Pd.I', 'S.Pd.'
   photoUrl?: string;
@@ -80,8 +92,9 @@ export interface StudentItem {
   nisn?: string;
   name: string;
   gender: 'Laki-laki' | 'Perempuan';
-  grade: 'Kelas 1' | 'Kelas 2' | 'Kelas 3' | 'Kelas 4' | 'Kelas 5' | 'Kelas 6' | string;
-  classRoom?: string; // e.g. '1A', '1B', '2'
+  institution?: 'MI' | 'RA' | string; // Lembaga siswa terdaftar
+  grade: 'Kelompok A' | 'Kelompok B' | 'Kelas 1' | 'Kelas 2' | 'Kelas 3' | 'Kelas 4' | 'Kelas 5' | 'Kelas 6' | string;
+  classRoom?: string; // e.g. '1A', '1B', '2', 'RA-A'
   birthPlace?: string;
   birthDate?: string; // YYYY-MM-DD
   parentName?: string;
@@ -105,7 +118,8 @@ export interface FacilityItem {
 export interface ProgramItem {
   id: string;
   title: string;
-  category: 'Kurikulum' | 'Keislaman' | 'Karakter' | 'Teknologi';
+  category: 'Kurikulum' | 'Keislaman' | 'Karakter' | 'Teknologi' | 'PAUD & Motorik';
+  institutionLevel?: 'Semua' | 'MI' | 'RA' | 'Satu Atap' | string;
   iconName: string;
   shortDesc: string;
   fullDesc: string;
@@ -201,14 +215,16 @@ export interface PPDBRegistration {
   gender: 'Laki-laki' | 'Perempuan';
   birthPlace?: string;
   birthDate: string;
-  targetClass?: string;
-  originSchool: string; // RA / BA / TK
+  targetUnit?: 'MI Ma\'arif Al Ihsan' | 'RA Al Ihsan' | string;
+  targetClass?: string; // e.g. 'Kelas 1' or 'Kelompok A' / 'Kelompok B'
+  raGradeTarget?: 'Kelompok A (Usia 4-5 Th)' | 'Kelompok B (Usia 5-6 Th)' | string;
+  originSchool: string; // RA / BA / TK / PAUD / Rumah
   parentName: string;
   parentJob?: string;
   parentPhone: string;
   email?: string;
   address: string;
-  track?: string;
+  track?: string; // 'Reguler' | 'Alumni RA Al Ihsan (Lanjutan Satu Atap)' | 'Tahfidz' | 'Prestasi' | 'Afirmasi / KIP'
   quranReadingSkill?: string;
   quranSkill?: string;
   status: 'Menunggu Verifikasi' | 'Berkas Diterima' | 'Lulus Seleksi Administrasi' | 'Diterima' | 'Ditolak' | 'Perlu Perbaikan' | string;

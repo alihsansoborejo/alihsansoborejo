@@ -35,13 +35,13 @@ export const PrincipalWelcome: React.FC = () => {
       {/* Section Header */}
       <div className="text-center max-w-2xl mx-auto mb-10">
         <span className="text-xs uppercase font-bold tracking-widest text-[#0b3c26] bg-[#e8f3ee] px-3.5 py-1 rounded-full inline-block mb-3 border border-[#0b3c26]/20">
-          PROFIL & IDENTITAS MADRASAH
+          PROFIL &amp; IDENTITAS LEMBAGA SATU ATAP
         </span>
         <h3 className="font-heading text-2xl sm:text-4xl font-bold text-[#072217] tracking-tight">
-          Membangun Fondasi Generasi Rabbani
+          Membina Generasi Rabbani Sejak Dini
         </h3>
         <p className="font-body text-sm sm:text-base text-gray-600 mt-2">
-          Mengenal lebih dekat visi, kepemimpinan, dan nilai luhur MI Ma'arif Al Ihsan Soborejo, Temanggung.
+          Mengenal lebih dekat visi, kepemimpinan, dan sinergi berkelanjutan RA Al Ihsan &amp; MI Ma'arif Al Ihsan Soborejo, Temanggung.
         </p>
       </div>
 
@@ -286,27 +286,71 @@ export const PrincipalWelcome: React.FC = () => {
               ))}
             </div>
 
-            {/* Identitas Resmi */}
+            {/* Identitas Resmi Kelembagaan Satu Atap */}
             <div className="mt-8 pt-6 border-t border-white/10">
-              <h5 className="text-xs uppercase font-bold tracking-wider text-[#d4af37] mb-3">
-                Identitas Resmi Kelembagaan
+              <h5 className="text-xs uppercase font-bold tracking-wider text-[#d4af37] mb-4 flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                <span>Identitas Resmi Kelembagaan Satu Atap</span>
               </h5>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div className="bg-white/5 p-3 rounded-lg border border-white/10">
-                  <span className="text-gray-400 block text-[10px]">NPSN</span>
-                  <span className="font-semibold text-white">{schoolProfile.npsn}</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* RA Al Ihsan Card */}
+                <div className="bg-white/5 p-4 rounded-xl border border-amber-400/30">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="font-heading font-bold text-sm text-[#f3e5ab]">
+                      {schoolProfile.raName || "RA AL IHSAN SOBOREJO"}
+                    </span>
+                    <span className="text-[10px] uppercase font-bold bg-amber-400/20 text-[#f3e5ab] px-2 py-0.5 rounded">
+                      Jenjang RA / PAUD
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-gray-400 block text-[10px]">NPSN RA</span>
+                      <span className="font-semibold text-white">{schoolProfile.raNpsn || "69991234"}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 block text-[10px]">NSM RA</span>
+                      <span className="font-semibold text-white">{schoolProfile.raNsm || "101233230045"}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 block text-[10px]">Status Akreditasi</span>
+                      <span className="font-semibold text-[#d4af37]">{schoolProfile.raAccreditation || "Terakreditasi"}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 block text-[10px]">Kepala RA</span>
+                      <span className="font-semibold text-white">{schoolProfile.raHeadName || "SITI ROHMAH, S.Pd.I."}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="bg-white/5 p-3 rounded-lg border border-white/10">
-                  <span className="text-gray-400 block text-[10px]">NSM</span>
-                  <span className="font-semibold text-white">{schoolProfile.nsm}</span>
-                </div>
-                <div className="bg-white/5 p-3 rounded-lg border border-white/10">
-                  <span className="text-gray-400 block text-[10px]">Akreditasi</span>
-                  <span className="font-semibold text-[#d4af37]">{schoolProfile.accreditation}</span>
-                </div>
-                <div className="bg-white/5 p-3 rounded-lg border border-white/10">
-                  <span className="text-gray-400 block text-[10px]">Afiliasi</span>
-                  <span className="font-semibold text-white">LP Ma'arif NU</span>
+
+                {/* MI Ma'arif Card */}
+                <div className="bg-white/5 p-4 rounded-xl border border-emerald-400/30">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="font-heading font-bold text-sm text-[#f3e5ab]">
+                      {schoolProfile.miName || "MI MA'ARIF AL IHSAN SOBOREJO"}
+                    </span>
+                    <span className="text-[10px] uppercase font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">
+                      Jenjang MI (SD)
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-gray-400 block text-[10px]">NPSN MI</span>
+                      <span className="font-semibold text-white">{schoolProfile.miNpsn || schoolProfile.npsn || "60713037"}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 block text-[10px]">NSM MI</span>
+                      <span className="font-semibold text-white">{schoolProfile.miNsm || schoolProfile.nsm || "111233230053"}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 block text-[10px]">Status Akreditasi</span>
+                      <span className="font-semibold text-[#d4af37]">{schoolProfile.miAccreditation || schoolProfile.accreditation || "Terakreditasi Baik"}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 block text-[10px]">Kepala MI</span>
+                      <span className="font-semibold text-white">{schoolProfile.headmasterName || "MUIN, S.Pd.I."}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

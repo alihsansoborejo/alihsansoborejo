@@ -31,7 +31,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenPPDB }) => {
               <div className="w-11 h-11 rounded-xl bg-white border border-[#d4af37] flex items-center justify-center overflow-hidden shrink-0 p-1 shadow-sm">
                 <img
                   src={schoolProfile.logoUrl || '/assets/logo-maarif.svg'}
-                  alt="Logo Madrasah"
+                  alt="Logo Lembaga"
                   className="w-full h-full object-contain"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = '/assets/logo-maarif.svg';
@@ -39,23 +39,31 @@ export const Footer: React.FC<FooterProps> = ({ onOpenPPDB }) => {
                 />
               </div>
               <div>
-                <h3 className="font-heading text-lg font-bold text-white tracking-wide">
-                  MI MA'ARIF AL IHSAN
+                <span className="text-[10px] font-bold text-[#d4af37] tracking-widest uppercase block">
+                  LEMBAGA SATU ATAP
+                </span>
+                <h3 className="font-heading text-base font-bold text-white tracking-wide leading-tight">
+                  MI MA'ARIF &amp; RA AL IHSAN
                 </h3>
-                <span className="text-xs text-[#d4af37] font-semibold block">
+                <span className="text-[11px] text-gray-300 font-semibold block">
                   SOBOREJO • PRINGSURAT
                 </span>
               </div>
             </div>
 
             <p className="font-body text-xs sm:text-sm text-white/75 leading-relaxed">
-              Madrasah Ibtidaiyah di bawah naungan LP Ma'arif NU Kabupaten Temanggung. Mendidik generasi cerdas, berakhlak mulia, cinta Al-Qur'an, dan berwawasan Ahlussunnah wal Jama'ah an-Nahdliyyah.
+              Lembaga pendidikan satu atap di bawah naungan LP Ma'arif NU Kabupaten Temanggung. Memadukan pendidikan prasekolah Raudhatul Athfal (RA) dan Madrasah Ibtidaiyah (MI) yang terpadu, berakhlak mulia, dan berkarakter Qur'ani.
             </p>
 
-            <div className="pt-2 text-xs text-[#f3e5ab] font-medium flex flex-col gap-1 border-t border-white/10">
-              <div>NPSN: <span className="text-white font-mono">{schoolProfile.npsn}</span></div>
-              <div>NSM: <span className="text-white font-mono">{schoolProfile.nsm}</span></div>
-              <div>Status: <span className="text-emerald-400 font-bold">{schoolProfile.status}</span> ({schoolProfile.accreditation})</div>
+            <div className="pt-2 text-xs text-[#f3e5ab] font-medium flex flex-col gap-1.5 border-t border-white/10">
+              <div className="bg-white/5 p-2 rounded border border-white/10">
+                <span className="text-[11px] text-amber-300 font-bold block mb-0.5">RA AL IHSAN SOBOREJO (PAUD/RA):</span>
+                <span className="text-white/80 text-[11px]">NPSN: {schoolProfile.raNpsn || '69991234'} • NSM: {schoolProfile.raNsm || '101233230045'}</span>
+              </div>
+              <div className="bg-white/5 p-2 rounded border border-white/10">
+                <span className="text-[11px] text-emerald-300 font-bold block mb-0.5">MI MA'ARIF AL IHSAN (SD/MI):</span>
+                <span className="text-white/80 text-[11px]">NPSN: {schoolProfile.miNpsn || schoolProfile.npsn} • NSM: {schoolProfile.miNsm || schoolProfile.nsm}</span>
+              </div>
             </div>
           </div>
 
@@ -181,7 +189,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenPPDB }) => {
 
         {/* Footer Bottom */}
         <div className="pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/60">
-          <p>© {new Date().getFullYear()} MI Ma'arif Al Ihsan Soborejo, Temanggung. Hak Cipta Dilindungi Undang-Undang.</p>
+          <p>© {new Date().getFullYear()} RA Al Ihsan &amp; MI Ma'arif Al Ihsan Soborejo (Satu Atap), Kec. Pringsurat, Kab. Temanggung. Hak Cipta Dilindungi Undang-Undang.</p>
           <button
             onClick={scrollToTop}
             className="flex items-center gap-1.5 text-xs text-[#d4af37] hover:text-[#f3e5ab] p-1 transition-colors"
