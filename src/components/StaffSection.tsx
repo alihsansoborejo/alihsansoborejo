@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useDataContext } from '../context/DataContext';
 import { useShare } from '../context/ShareContext';
-import { Users, GraduationCap, Award, BookOpen, ShieldCheck, Phone, Sparkles, UserCheck, Share2 } from 'lucide-react';
+import { Users, GraduationCap, Award, BookOpen, ShieldCheck, Phone, Sparkles, UserCheck, Share2, Quote } from 'lucide-react';
+import { StaffMember } from '../types';
+import { StaffDetailModal } from './StaffDetailModal';
 
 export const StaffSection: React.FC = () => {
   const { staffList, isAdmin, setViewMode } = useDataContext();
@@ -9,6 +11,7 @@ export const StaffSection: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('Semua');
   const [selectedInstitution, setSelectedInstitution] = useState<'Semua' | 'RA' | 'MI' | 'Satu Atap'>('Semua');
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [selectedStaffForModal, setSelectedStaffForModal] = useState<StaffMember | null>(null);
 
   // Auto-respond to deep links
   useEffect(() => {
@@ -22,6 +25,7 @@ export const StaffSection: React.FC = () => {
         setSelectedCategory('Semua');
         setSelectedInstitution('Semua');
         setHighlightedId(match.id);
+        setSelectedStaffForModal(match);
         consumeDeepLink();
 
         setTimeout(() => {
@@ -118,51 +122,64 @@ export const StaffSection: React.FC = () => {
                   : 'border-gray-100'
               }`}
             >
-              {/* Image & Tags */}
-              <div className="relative h-60 bg-gradient-to-t from-[#072217]/80 via-transparent to-transparent overflow-hidden flex items-center justify-center">
-                {staff.photoUrl ? (
-                  <img
-                    src={staff.photoUrl}
-                    alt={staff.name}
-                    className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-[#0b3c26] to-[#072217] flex flex-col items-center justify-center text-white/80 p-4">
-                    <div className="w-20 h-20 rounded-full bg-white/10 border-2 border-[#d4af37]/40 flex items-center justify-center mb-2 shadow-inner">
-                      <GraduationCap className="w-10 h-10 text-[#d4af37]" />
+              {/* Pass Foto 3 x 4 Utuh (Uncropped Frame) */}
+              <div className="relative aspect-[3/4] w-full bg-gradient-to-b from-[#072217] via-[#0b3c26] to-[#041a11] p-2.5 overflow-hidden flex items-center justify-center border-b border-gray-100">
+                <div className="w-full h-full rounded-xl overflow-hidden bg-[#072217] flex items-center justify-center relative border border-[#d4af37]/35 shadow-inner">
+                  {staff.photoUrl ? (
+                    <img
+                      src={staff.photoUrl}
+                      alt={staff.name}
+                      className="w-full h-full object-contain filter contrast-105 group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-[#0b3c26] flex flex-col items-center justify-center text-white/80 p-4 text-center">
+                      <div className="w-16 h-16 rounded-full bg-white/10 border-2 border-[#d4af37]/40 flex items-center justify-center mb-2 shadow-inner">
+                        <GraduationCap className="w-8 h-8 text-[#d4af37]" />
+                      </div>
+                      <span className="text-xs font-semibold text-emerald-100/90 tracking-wide text-center px-2">{staff.role}</span>
                     </div>
-                    <span className="text-xs font-semibold text-emerald-100/90 tracking-wide text-center px-2">{staff.role}</span>
-                  </div>
-                )}
-                
-                {/* Institution Badge (Top Left) */}
-                <div className="absolute top-3 left-3">
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md backdrop-blur-sm shadow text-white ${
-                    staff.institution === 'RA'
-                      ? 'bg-amber-600/95'
-                      : staff.institution === 'MI'
-                      ? 'bg-emerald-700/95'
-                      : 'bg-teal-800/95'
-                  }`}>
-                    {staff.institution === 'RA' ? 'RA' : staff.institution === 'MI' ? 'MI' : 'Satu Atap'}
-                  </span>
-                </div>
+                  )}
 
-                {/* Category Tag (Top Right) */}
-                <div className="absolute top-3 right-3">
-                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#0b3c26]/90 text-white backdrop-blur-sm shadow">
-                    {staff.category}
-                  </span>
-                </div>
-
-                {staff.status && (
-                  <div className="absolute bottom-3 left-3">
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-600/90 text-white backdrop-blur-sm flex items-center gap-1">
-                      <UserCheck className="w-3 h-3" />
-                      <span>{staff.status}</span>
+                  {/* Institution Badge (Top Left) */}
+                  <div className="absolute top-2.5 left-2.5 z-10">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md backdrop-blur-sm shadow text-white ${
+                      staff.institution === 'RA'
+                        ? 'bg-amber-600/95'
+                        : staff.institution === 'MI'
+                        ? 'bg-emerald-700/95'
+                        : 'bg-teal-800/95'
+                    }`}>
+                      {staff.institution === 'RA' ? 'RA' : staff.institution === 'MI' ? 'MI' : 'Satu Atap'}
                     </span>
                   </div>
-                )}
+
+                  {/* Category Tag (Top Right) */}
+                  <div className="absolute top-2.5 right-2.5 z-10">
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#0b3c26]/90 text-white backdrop-blur-sm shadow border border-white/10">
+                      {staff.category}
+                    </span>
+                  </div>
+
+                  {/* Status Badge (Bottom Left) */}
+                  {staff.status && (
+                    <div className="absolute bottom-2.5 left-2.5 z-10">
+                      <span className="text-[9px] font-semibold px-2 py-0.5 rounded-md bg-emerald-700/90 text-white backdrop-blur-sm flex items-center gap-1 shadow">
+                        <UserCheck className="w-3 h-3 text-[#d4af37]" />
+                        <span>{staff.status}</span>
+                      </span>
+                    </div>
+                  )}
+
+                  {/* 3x4 Frame Label (Bottom Right) */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStaffForModal(staff)}
+                    className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded bg-black/60 hover:bg-black/80 text-white/90 text-[9px] font-semibold backdrop-blur-sm transition-all border border-white/10 flex items-center gap-1"
+                    title="Buka detail profil & foto utuh"
+                  >
+                    <span>Pas Foto 3x4</span>
+                  </button>
+                </div>
               </div>
 
               {/* Body Details */}
@@ -175,7 +192,7 @@ export const StaffSection: React.FC = () => {
                     {staff.role}
                   </p>
 
-                  <div className="mt-3.5 space-y-1.5 text-xs text-gray-600">
+                  <div className="mt-3 space-y-1.5 text-xs text-gray-600">
                     {staff.education && (
                       <div className="flex items-center gap-2">
                         <GraduationCap className="w-3.5 h-3.5 text-[#0b3c26] shrink-0" />
@@ -195,6 +212,26 @@ export const StaffSection: React.FC = () => {
                       </div>
                     )}
                   </div>
+
+                  {/* Inspirational Quote Preview */}
+                  {staff.quote && (
+                    <div className="mt-3 p-2.5 rounded-xl bg-emerald-50/90 border border-emerald-200/80 text-emerald-950 flex items-start gap-2">
+                      <Quote className="w-3.5 h-3.5 text-[#d4af37] shrink-0 mt-0.5" />
+                      <p className="text-[11px] italic line-clamp-2 leading-relaxed">
+                        "{staff.quote}"
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Action Button: Detail PTK */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStaffForModal(staff)}
+                    className="w-full mt-3.5 py-2 px-3 rounded-xl bg-gradient-to-r from-[#0b3c26] to-[#072217] hover:from-[#d4af37] hover:to-[#c59e2b] text-[#f3e5ab] hover:text-[#072217] text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer group/btn"
+                  >
+                    <UserCheck className="w-3.5 h-3.5 text-[#d4af37] group-hover/btn:text-[#072217]" />
+                    <span>Lihat Profil Lengkap &amp; Bio</span>
+                  </button>
                 </div>
 
                 <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
@@ -218,7 +255,7 @@ export const StaffSection: React.FC = () => {
                       type: 'gtk',
                       id: staff.id,
                       title: `${staff.name} - ${staff.role}`,
-                      description: `Profil Guru/Tenaga Kependidikan MI Ma'arif Al Ihsan Soborejo. ${staff.education ? 'Pendidikan: ' + staff.education + '.' : ''} ${staff.subjects ? 'Mata Pelajaran: ' + staff.subjects + '.' : ''}`,
+                      description: `Profil Guru/Tenaga Kependidikan MI Ma'arif Al Ihsan Soborejo. ${staff.education ? 'Pendidikan: ' + staff.education + '.' : ''} ${staff.quote ? '"' + staff.quote + '"' : ''}`,
                       category: staff.category,
                       imageUrl: staff.photoUrl,
                     })}
@@ -251,6 +288,13 @@ export const StaffSection: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* Detail Modal PTK */}
+      <StaffDetailModal
+        staff={selectedStaffForModal}
+        isOpen={!!selectedStaffForModal}
+        onClose={() => setSelectedStaffForModal(null)}
+      />
     </section>
   );
 };

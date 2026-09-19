@@ -277,81 +277,107 @@ export const PrincipalWelcome: React.FC = () => {
               </p>
             </div>
 
-            <div className="space-y-4 font-body text-xs sm:text-sm text-white/85 leading-relaxed max-w-3xl">
+            <div className="space-y-4 font-body text-xs sm:text-sm text-white leading-relaxed max-w-4xl">
               {schoolProfile.history.map((hist, i) => (
-                <div key={i} className="flex items-start gap-3.5 bg-white/5 p-4 rounded-xl border border-white/10">
-                  <div className="w-2 h-2 rounded-full bg-[#d4af37] shrink-0 mt-2" />
-                  <p>{hist}</p>
+                <div key={i} className="flex items-start gap-3.5 bg-[#052317]/90 p-4 sm:p-5 rounded-2xl border border-emerald-500/30 shadow-md">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#d4af37] shrink-0 mt-1.5 shadow-sm" />
+                  <p className="text-white text-xs sm:text-sm leading-relaxed">{hist}</p>
                 </div>
               ))}
             </div>
 
-            {/* Identitas Resmi Kelembagaan Satu Atap */}
-            <div className="mt-8 pt-6 border-t border-white/10">
-              <h5 className="text-xs uppercase font-bold tracking-wider text-[#d4af37] mb-4 flex items-center gap-2">
-                <Shield className="w-4 h-4" />
-                <span>Identitas Resmi Kelembagaan Satu Atap</span>
-              </h5>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Identitas Resmi Kelembagaan Satu Atap - Didesain Kontras Tinggi dan Jelas */}
+            <div className="mt-8 pt-6 border-t border-white/20">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-7 h-7 rounded-lg bg-[#d4af37]/20 border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37]">
+                  <Shield className="w-4 h-4" />
+                </div>
+                <div>
+                  <h5 className="text-xs uppercase font-bold tracking-wider text-[#d4af37]">
+                    Identitas Resmi Kelembagaan Satu Atap
+                  </h5>
+                  <p className="text-[11px] text-emerald-200">
+                    Data pokok kelembagaan resmi di bawah naungan LP Ma'arif NU Kabupaten Temanggung
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 {/* RA Al Ihsan Card */}
-                <div className="bg-white/5 p-4 rounded-xl border border-amber-400/30">
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="font-heading font-bold text-sm text-[#f3e5ab]">
-                      {schoolProfile.raName || "RA AL IHSAN SOBOREJO"}
-                    </span>
-                    <span className="text-[10px] uppercase font-bold bg-amber-400/20 text-[#f3e5ab] px-2 py-0.5 rounded">
+                <div className="bg-[#062618] p-5 sm:p-6 rounded-2xl border-2 border-amber-400/50 shadow-xl relative overflow-hidden">
+                  <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-amber-400/20">
+                    <div>
+                      <span className="font-heading font-bold text-base sm:text-lg text-[#f3e5ab] block">
+                        {schoolProfile.raName || "RA AL IHSAN SOBOREJO"}
+                      </span>
+                      <span className="text-[11px] text-emerald-200">Unit Pendidikan Anak Usia Dini</span>
+                    </div>
+                    <span className="text-[10px] uppercase font-bold bg-amber-400/25 text-[#f3e5ab] px-2.5 py-1 rounded-full border border-amber-400/40 shrink-0">
                       Jenjang RA / PAUD
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <span className="text-gray-400 block text-[10px]">NPSN RA</span>
-                      <span className="font-semibold text-white">{schoolProfile.raNpsn || "69991234"}</span>
+
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="bg-black/30 p-2.5 rounded-xl border border-amber-400/20">
+                      <span className="text-emerald-200/90 font-medium block text-[11px] mb-0.5">NPSN RA</span>
+                      <span className="font-bold text-white text-xs sm:text-sm tracking-wide">{schoolProfile.raNpsn || "69991234"}</span>
                     </div>
-                    <div>
-                      <span className="text-gray-400 block text-[10px]">NSM RA</span>
-                      <span className="font-semibold text-white">{schoolProfile.raNsm || "101233230045"}</span>
+                    <div className="bg-black/30 p-2.5 rounded-xl border border-amber-400/20">
+                      <span className="text-emerald-200/90 font-medium block text-[11px] mb-0.5">NSM RA</span>
+                      <span className="font-bold text-white text-xs sm:text-sm tracking-wide">{schoolProfile.raNsm || "101233230045"}</span>
                     </div>
-                    <div>
-                      <span className="text-gray-400 block text-[10px]">Status Akreditasi</span>
-                      <span className="font-semibold text-[#d4af37]">{schoolProfile.raAccreditation || "Terakreditasi"}</span>
+                    <div className="bg-black/30 p-2.5 rounded-xl border border-amber-400/20">
+                      <span className="text-emerald-200/90 font-medium block text-[11px] mb-0.5">Status Akreditasi</span>
+                      <span className="font-bold text-[#d4af37] text-xs sm:text-sm">{schoolProfile.raAccreditation || "Terakreditasi"}</span>
                     </div>
-                    <div>
-                      <span className="text-gray-400 block text-[10px]">Kepala RA</span>
-                      <span className="font-semibold text-white">{schoolProfile.raHeadName || "SITI ROHMAH, S.Pd.I."}</span>
+                    <div className="bg-black/30 p-2.5 rounded-xl border border-amber-400/20">
+                      <span className="text-emerald-200/90 font-medium block text-[11px] mb-0.5">Kepala RA</span>
+                      <span className="font-bold text-white text-xs sm:text-sm">{schoolProfile.raHeadName || "SITI ROHMAH, S.Pd.I."}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* MI Ma'arif Card */}
-                <div className="bg-white/5 p-4 rounded-xl border border-emerald-400/30">
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="font-heading font-bold text-sm text-[#f3e5ab]">
-                      {schoolProfile.miName || "MI MA'ARIF AL IHSAN SOBOREJO"}
-                    </span>
-                    <span className="text-[10px] uppercase font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">
+                <div className="bg-[#062618] p-5 sm:p-6 rounded-2xl border-2 border-emerald-400/50 shadow-xl relative overflow-hidden">
+                  <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-emerald-400/20">
+                    <div>
+                      <span className="font-heading font-bold text-base sm:text-lg text-[#f3e5ab] block">
+                        {schoolProfile.miName || "MI MA'ARIF AL IHSAN SOBOREJO"}
+                      </span>
+                      <span className="text-[11px] text-emerald-200">Unit Madrasah Ibtidaiyah Dasar</span>
+                    </div>
+                    <span className="text-[10px] uppercase font-bold bg-emerald-500/25 text-emerald-200 px-2.5 py-1 rounded-full border border-emerald-400/40 shrink-0">
                       Jenjang MI (SD)
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <span className="text-gray-400 block text-[10px]">NPSN MI</span>
-                      <span className="font-semibold text-white">{schoolProfile.miNpsn || schoolProfile.npsn || "60713037"}</span>
+
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="bg-black/30 p-2.5 rounded-xl border border-emerald-400/20">
+                      <span className="text-emerald-200/90 font-medium block text-[11px] mb-0.5">NPSN MI</span>
+                      <span className="font-bold text-white text-xs sm:text-sm tracking-wide">{schoolProfile.miNpsn || schoolProfile.npsn || "60713037"}</span>
                     </div>
-                    <div>
-                      <span className="text-gray-400 block text-[10px]">NSM MI</span>
-                      <span className="font-semibold text-white">{schoolProfile.miNsm || schoolProfile.nsm || "111233230053"}</span>
+                    <div className="bg-black/30 p-2.5 rounded-xl border border-emerald-400/20">
+                      <span className="text-emerald-200/90 font-medium block text-[11px] mb-0.5">NSM MI</span>
+                      <span className="font-bold text-white text-xs sm:text-sm tracking-wide">{schoolProfile.miNsm || schoolProfile.nsm || "111233230053"}</span>
                     </div>
-                    <div>
-                      <span className="text-gray-400 block text-[10px]">Status Akreditasi</span>
-                      <span className="font-semibold text-[#d4af37]">{schoolProfile.miAccreditation || schoolProfile.accreditation || "Terakreditasi Baik"}</span>
+                    <div className="bg-black/30 p-2.5 rounded-xl border border-emerald-400/20">
+                      <span className="text-emerald-200/90 font-medium block text-[11px] mb-0.5">Status Akreditasi</span>
+                      <span className="font-bold text-[#d4af37] text-xs sm:text-sm">{schoolProfile.miAccreditation || schoolProfile.accreditation || "Terakreditasi Baik"}</span>
                     </div>
-                    <div>
-                      <span className="text-gray-400 block text-[10px]">Kepala MI</span>
-                      <span className="font-semibold text-white">{schoolProfile.headmasterName || "MUIN, S.Pd.I."}</span>
+                    <div className="bg-black/30 p-2.5 rounded-xl border border-emerald-400/20">
+                      <span className="text-emerald-200/90 font-medium block text-[11px] mb-0.5">Kepala MI</span>
+                      <span className="font-bold text-white text-xs sm:text-sm">{schoolProfile.headmasterName || "MUIN, S.Pd.I."}</span>
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Catatan Sinergi Satu Atap di Bawah */}
+              <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-[#0b3c26] to-[#082e1e] border border-[#d4af37]/30 text-white flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-[#d4af37] shrink-0" />
+                <p className="text-xs text-white leading-relaxed">
+                  Layanan Satu Atap RA &amp; MI Ma'arif Al Ihsan Soborejo menyatukan kurikulum keagamaan, pembiasaan akhlak karimah, dan fasilitas belajar dalam satu harmoni pembinaan.
+                </p>
               </div>
             </div>
           </div>

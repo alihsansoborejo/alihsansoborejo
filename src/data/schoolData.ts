@@ -173,9 +173,13 @@ export const STAFF_DATA: StaffMember[] = [
     education: "S1 PAI & S1 PGMI",
     photoUrl: "https://s.sim.siap-online.com/upload/padamu-ptk/910-00071-91000071130094.1741311176",
     phone: "+62 882-3287-9364",
-    subjects: "Pimpinan",
+    subjects: "Kepemimpinan & Aswaja Ke-NU-an",
     order: 1,
-    status: "Aktif"
+    status: "Aktif",
+    serviceYears: "Mengabdi sejak 2008 (17 Tahun Pengabdian)",
+    quote: "Pendidikan madrasah adalah amanah ilahi dan ladang amal jariyah. Kami mendidik dengan hati, keteladanan akhlak karimah, dan cinta kasih demi mengantar santri meraih ridho Allah SWT.",
+    bio: "Memimpin MI Ma'arif Al Ihsan Soborejo dengan visi penguatan karakter Aswaja An-Nahdliyyah, integrasi kurikulum terpadu satu atap bersama RA Al Ihsan, serta penguatan hafalan Al-Qur'an Juz 30 dan kesiapan digital santri.",
+    expertise: ["Manajemen Madrasah", "Pendidikan Aswaja Ke-NU-an", "Pengembangan Kurikulum", "Kepemimpinan Pendidikan"]
   },
   {
     id: "staff-batch-1-1789382017558-2-z3ugm",
@@ -187,9 +191,13 @@ export const STAFF_DATA: StaffMember[] = [
     education: "S1 Pendidikan Agama Islam",
     photoUrl: "https://s.sim.siap-online.com/upload/padamu-ptk/910-00081-91000081120629.1753698299",
     phone: "+62 858-0012-5441",
-    subjects: "Guru Kelas",
+    subjects: "Guru Kelas VI & Pembina Ujian",
     order: 2,
-    status: "Aktif"
+    status: "Aktif",
+    serviceYears: "Mengabdi sejak 2012 (13 Tahun Pengabdian)",
+    quote: "Setiap santri lahir dengan fitrah kebaikan dan keistimewaannya masing-masing. Tugas kita adalah menyalakan lentera potensi dan memupuk rasa percaya dirinya.",
+    bio: "Guru Kelas VI dengan pengalaman mendalam dalam pembimbingan intensif persiapan kelulusan, pembentukan kemandirian santri, dan penguatan aqidah akhlak tingkat madrasah ibtidaiyah.",
+    expertise: ["Pendampingan Asesmen Madrasah", "Literasi Sains", "Bimbingan Ibadah Praktis", "Kepramukaan"]
   },
   {
     id: "staff-batch-2-1789382017558-3-goiy1",
@@ -201,9 +209,13 @@ export const STAFF_DATA: StaffMember[] = [
     education: "S1 Pendidikan Guru MI",
     photoUrl: "https://s.sim.siap-online.com/upload/padamu-ptk/910-00081-91000081108784.1508373230",
     phone: "+62 812-7884-1711",
-    subjects: "Guru Kelas",
+    subjects: "Guru Kelas III & Pembina Seni",
     order: 3,
-    status: "Aktif"
+    status: "Aktif",
+    serviceYears: "Mengabdi sejak 2014 (11 Tahun Pengabdian)",
+    quote: "Belajar dengan penuh kegembiraan adalah kunci agar ilmu dan adab meresap indah ke dalam sanubari putra-putri kita.",
+    bio: "Wali Kelas III yang berdedikasi menciptakan suasana kelas yang interaktif, komunikatif, dan sarat nilai-nilai persaudaraan serta pembiasaan sholat berjamaah sejak dini.",
+    expertise: ["Pembelajaran Tematik Terpadu", "Seni Budaya & Prakarya", "Pendidikan Karakter Ramah Anak"]
   },
   {
     id: "staff-batch-3-1789382017558-4-casuh",
@@ -215,9 +227,13 @@ export const STAFF_DATA: StaffMember[] = [
     education: "S1 Pendidikan Guru MI",
     photoUrl: "https://s.sim.siap-online.com/upload/padamu-ptk/910-00082-91000082141211.1741311004",
     phone: "+62 838-6108-9630",
-    subjects: "Guru Kelas",
+    subjects: "Guru Kelas I & Transisi PAUD-MI",
     order: 4,
-    status: "Aktif"
+    status: "Aktif",
+    serviceYears: "Mengabdi sejak 2013 (12 Tahun Pengabdian)",
+    quote: "Kesabaran dan kelembutan adalah bahasa terbaik dalam membimbing langkah pertama santri mengenal huruf, angka, dan adab islami.",
+    bio: "Guru Kelas I dengan kepiawaian mendampingi fase transisi santri dari jenjang PAUD/RA ke jenjang madrasah ibtidaiyah dengan pendekatan ramah anak dan penuh kasih sayang.",
+    expertise: ["Transisi PAUD ke MI", "Literasi & Numerasi Awal", "Tahfidz Surat Pendek", "Metode Belajar Bernyanyi"]
   },
   {
     id: "staff-batch-4-1789382017558-5-1i92c",
@@ -229,23 +245,31 @@ export const STAFF_DATA: StaffMember[] = [
     education: "S1 Pendidikan Guru MI",
     photoUrl: "https://s.sim.siap-online.com/upload/padamu-ptk/203-21204-20321204177001.1508373414",
     phone: "+62 822-2518-8344",
-    subjects: "Guru Kelas",
+    subjects: "Guru Kelas IV & Koordinator P5RA",
     order: 5,
-    status: "Aktif"
+    status: "Aktif",
+    serviceYears: "Mengabdi sejak 2015 (10 Tahun Pengabdian)",
+    quote: "Disiplin bukan tentang kekangan, melainkan cara mulia kita menghargai waktu dan mengasah anugerah akal yang Allah titipkan.",
+    bio: "Guru Kelas IV yang aktif mengembangkan metode pembelajaran kolaboratif, penguatan proyek Profil Pelajar Pancasila & Rahmatan lil Alamin (P5RA), dan kepekaan sosial santri.",
+    expertise: ["Kurikulum Merdeka Madrasah", "P5RA", "Pengembangan Motorik & Bakat", "Pembiasaan Sholat Dhuha"]
   },
   {
     id: "staff-batch-5-1789382017558-6-jszqg",
     name: "MUH MASTUR, S.Pd.I.",
-    role: "Guru Mata Pelajaran",
+    role: "Guru Mata Pelajaran PAI",
     category: "Guru Bidang Studi",
     institution: "MI",
     nipOrNuptk: "20321204182001",
     education: "S1 Pendidikan Guru MI",
     photoUrl: "https://s.sim.siap-online.com/upload/padamu-ptk/203-21204-20321204182001.1761876489",
     phone: "+62 813-2524-9711",
-    subjects: "Guru Bidang Studi",
+    subjects: "Pendidikan Agama Islam & Fikih",
     order: 6,
-    status: "Aktif"
+    status: "Aktif",
+    serviceYears: "Mengabdi sejak 2016 (9 Tahun Pengabdian)",
+    quote: "Menghidupkan sholawat dan seni hadroh adalah salah satu jalan terindah menanamkan mahabbah (cinta) kepada baginda Rasulullah SAW di dada santri.",
+    bio: "Guru bidang studi Pendidikan Agama Islam dan pembina utama ekstrakurikuler seni rebana hadroh madrasah yang aktif melatih ketrampilan seni islami dan ketertiban ibadah santri.",
+    expertise: ["Pendidikan Agama Islam", "Pembinaan Seni Hadroh & Rebana", "Tartil Al-Qur'an", "Kajian Kitab Fikih Dasar"]
   },
   {
     id: "staff-batch-6-1789382017558-7-b3s04",
@@ -257,23 +281,31 @@ export const STAFF_DATA: StaffMember[] = [
     education: "S1 Pendidikan Guru MI",
     photoUrl: "https://s.sim.siap-online.com/upload/padamu-ptk/203-21204-20321204198001.1722833749",
     phone: "+62 858-0126-4725",
-    subjects: "Guru Kelas",
+    subjects: "Guru Kelas V & Literasi Bahasa",
     order: 7,
-    status: "Aktif"
+    status: "Aktif",
+    serviceYears: "Mengabdi sejak 2017 (8 Tahun Pengabdian)",
+    quote: "Ilmu yang membawa keberkahan lahir dari adab yang terjaga, ta'dzim kepada kedua orang tua, dan cinta kepada para asatidz.",
+    bio: "Guru Kelas V yang fokus pada pembinaan daya nalar kritis santri, penguasaan literasi bahasa, dan pembiasaan sholat dhuha serta tartil Al-Qur'an harian.",
+    expertise: ["Pembelajaran Tematik & Sains", "Literasi Bahasa Indonesia", "Pramuka Siaga & Penggalang", "Bimbingan Tahfidz"]
   },
   {
     id: "staff-batch-7-1789382017558-8-273f7",
     name: "ANIK SEPTIYANI",
-    role: "Guru Kelas III",
+    role: "Guru Kelas II",
     category: "Guru Kelas",
     institution: "MI",
     nipOrNuptk: "20321204105001",
     education: "Proses Pendidikan S1",
-    photoUrl: "/assets/staff-anik.jpg",
+    photoUrl: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=600&q=80",
     phone: "+62 813-2920-9651",
-    subjects: "Guru Kelas",
+    subjects: "Guru Kelas II & Kreativitas Santri",
     order: 8,
-    status: "Aktif"
+    status: "Aktif",
+    serviceYears: "Mengabdi sejak 2018 (7 Tahun Pengabdian)",
+    quote: "Senyum dan sapaan hangat di gerbang madrasah adalah pembuka pintu kebahagiaan dan motivasi belajar anak sepanjang hari.",
+    bio: "Pendidik penuh semangat yang berfokus pada pendampingan belajar santri jenjang awal, kebersihan lingkungan madrasah, dan pembiasaan doa harian bersama.",
+    expertise: ["Kreativitas Seni Anak", "Bimbingan Belajar Siswa", "Keputrian & Adab", "Kebersihan & Kesehatan Sekolah"]
   }
 ];
 

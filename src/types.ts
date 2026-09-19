@@ -83,7 +83,12 @@ export interface StaffMember {
   phone?: string;
   subjects?: string;
   order?: number;
-  status?: 'Aktif' | 'Tugas Belajar' | 'Cuti';
+  status?: 'Aktif' | 'Tugas Belajar' | 'Cuti' | string;
+  bio?: string; // Profil lengkap / biografi dedikasi pendidik
+  quote?: string; // Pesan inspiratif / kata mutiara pengabdian
+  serviceYears?: string; // Masa kerja / pengabdian (misal: 'Mengabdi sejak 2012')
+  expertise?: string[]; // Keahlian khusus / bidang binaan
+  email?: string;
 }
 
 export interface StudentItem {
