@@ -60,7 +60,9 @@ import {
   Film,
   Smartphone,
   Tv,
-  Square
+  Square,
+  History,
+  RotateCcw
 } from 'lucide-react';
 import { parseVideoUrl, isPortraitVideoUrl, getVideoAspectConfig, detectVideoAspectRatio } from '../lib/videoUtils';
 import { compressImage } from '../lib/imageCompressor';
@@ -668,8 +670,13 @@ export const AdminDashboard: React.FC = () => {
   // Profile Save
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    updateSchoolProfile(profileForm);
-    notify('Data profil dan identitas madrasah berhasil diperbarui!');
+    const cleanHistory = (profileForm.history || []).map((h) => h.trim()).filter(Boolean);
+    const payload = {
+      ...profileForm,
+      history: cleanHistory.length > 0 ? cleanHistory : profileForm.history,
+    };
+    updateSchoolProfile(payload);
+    notify('Data profil, identitas, dan teks sejarah singkat madrasah berhasil diperbarui!');
   };
 
   // Staff (GTK) Save
@@ -2731,10 +2738,10 @@ export const AdminDashboard: React.FC = () => {
                   Identitas Lembaga
                 </span>
                 <h2 className="font-heading text-xl sm:text-2xl font-bold text-[#072217] mt-1">
-                  Kelola Data Profil & Sambutan Madrasah
+                  Kelola Data Profil, Sambutan &amp; Sejarah Singkat Madrasah
                 </h2>
                 <p className="text-xs text-gray-600 mt-1">
-                  Ubah nama madrasah, alamat resmi Soborejo Pringsurat, kontak, nama Kepala Madrasah, visi, misi, dan teks sambutan.
+                  Ubah nama madrasah, alamat resmi Soborejo Pringsurat, kontak, profil pimpinan, visi, misi, tujuan, teks sambutan, serta narasi sejarah singkat lembaga.
                 </p>
               </div>
 
@@ -3521,6 +3528,154 @@ export const AdminDashboard: React.FC = () => {
                         className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#0b3c26]"
                       />
                     </div>
+                  </div>
+                </div>
+
+                {/* Sejarah Singkat & Jejak Langkah Madrasah */}
+                <div className="bg-gray-50 p-4 sm:p-5 rounded-xl border border-gray-200 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200 pb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <History className="w-4 h-4 text-[#0b3c26]" />
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-[#0b3c26]">
+                          Sejarah Singkat &amp; Jejak Langkah Madrasah
+                        </h3>
+                      </div>
+                      <p className="text-[11px] text-gray-500 mt-0.5">
+                        Kelola uraian narasi berdirinya lembaga satu atap, tokoh pendiri, tonggak perkembangan, dan transformasi RA &amp; MI Ma'arif Al Ihsan Soborejo.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const defaultRef = [
+                            "Lembaga Pendidikan Satu Atap MI Ma'arif Al Ihsan Soborejo dan RA Al Ihsan Soborejo didirikan atas prakarsa para tokoh agama, alim ulama, dan sesepuh masyarakat Desa Soborejo, Kecamatan Pringsurat, Kabupaten Temanggung, yang mendambakan hadirnya sarana pendidikan Islam terpadu yang kokoh di tengah masyarakat.",
+                            "Bermula dari komitmen membina anak-anak sejak usia dini di Raudhatul Athfal (RA Al Ihsan) dengan stimulasi adab dan kegembiraan belajar, kemudian dilanjutkan secara berkesinambungan di Madrasah Ibtidaiyah (MI Ma'arif Al Ihsan) tanpa perlu cemas menghadapi adaptasi lingkungan sekolah yang baru.",
+                            "Berakar dari cita-cita luhur mencetak generasi yang tidak hanya mahir membaca dan berhitung, tetapi juga tekun dalam sholat, gemar menghafal Al-Qur'an, berbakti kepada orang tua, serta berpegang teguh pada aqidah Ahlussunnah wal Jama'ah An-Nahdliyyah.",
+                            "Kini, lembaga satu atap ini terus bertumbuh dengan sarana belajar representatif yang ramah anak, program tahfidz terpadu, pembinaan seni rebana hadroh, serta pelayanan PPDB terpadu satu pintu untuk jenjang RA dan MI."
+                          ];
+                          if (window.confirm('Muat teks sejarah referensi asli pendirian Soborejo? Data yang belum disimpan akan digantikan dengan teks referensi.')) {
+                            setProfileForm({ ...profileForm, history: defaultRef });
+                          }
+                        }}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 text-[11px] font-medium transition-all"
+                        title="Muat teks narasi sejarah default"
+                      >
+                        <RotateCcw className="w-3 h-3 text-gray-500" />
+                        <span>Muat Referensi Asli</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const currentHist = profileForm.history && profileForm.history.length > 0 ? [...profileForm.history] : [];
+                          setProfileForm({ ...profileForm, history: [...currentHist, ''] });
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0b3c26] text-[#f3e5ab] hover:bg-[#072217] text-[11px] font-bold transition-all shadow-sm"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Tambah Paragraf</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* List of Paragraph Cards */}
+                  <div className="space-y-3">
+                    {(profileForm.history && profileForm.history.length > 0 ? profileForm.history : ['']).map((item, idx) => (
+                      <div key={idx} className="p-3.5 bg-white rounded-xl border border-gray-200 shadow-sm space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-[#0b3c26] text-white text-[10px] font-bold flex items-center justify-center">
+                              {idx + 1}
+                            </span>
+                            <span className="text-xs font-semibold text-gray-700">
+                              Paragraf Sejarah #{idx + 1}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              disabled={idx === 0}
+                              onClick={() => {
+                                const arr = [...(profileForm.history || [])];
+                                const temp = arr[idx];
+                                arr[idx] = arr[idx - 1];
+                                arr[idx - 1] = temp;
+                                setProfileForm({ ...profileForm, history: arr });
+                              }}
+                              className="p-1 rounded text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                              title="Pindahkan ke atas"
+                            >
+                              <ChevronUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={idx === (profileForm.history?.length || 1) - 1}
+                              onClick={() => {
+                                const arr = [...(profileForm.history || [])];
+                                const temp = arr[idx];
+                                arr[idx] = arr[idx + 1];
+                                arr[idx + 1] = temp;
+                                setProfileForm({ ...profileForm, history: arr });
+                              }}
+                              className="p-1 rounded text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                              title="Pindahkan ke bawah"
+                            >
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const arr = (profileForm.history || []).filter((_, i) => i !== idx);
+                                setProfileForm({ ...profileForm, history: arr.length > 0 ? arr : [''] });
+                              }}
+                              className="p-1 rounded text-rose-600 hover:bg-rose-50"
+                              title="Hapus paragraf ini"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <textarea
+                          rows={3}
+                          value={item}
+                          onChange={(e) => {
+                            const arr = [...(profileForm.history || [''])];
+                            arr[idx] = e.target.value;
+                            setProfileForm({ ...profileForm, history: arr });
+                          }}
+                          placeholder={`Tuliskan uraian sejarah paragraf #${idx + 1}...`}
+                          className="w-full px-3 py-2 text-xs text-gray-800 border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#0b3c26] leading-relaxed"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Bulk Textarea Option */}
+                  <div className="pt-3 border-t border-gray-200 space-y-1">
+                    <label className="block text-[11px] font-semibold text-gray-700">
+                      Editor Narasi Utuh (Pisahkan antar paragraf dengan Enter 2x):
+                    </label>
+                    <textarea
+                      rows={5}
+                      value={(profileForm.history || []).join('\n\n')}
+                      onChange={(e) => {
+                        const parsed = e.target.value
+                          .split(/\n\s*\n/)
+                          .map((p) => p.trim())
+                          .filter(Boolean);
+                        setProfileForm({ ...profileForm, history: parsed.length > 0 ? parsed : [''] });
+                      }}
+                      placeholder="Tempel atau ketik teks sejarah lengkap madrasah di sini..."
+                      className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#0b3c26] leading-relaxed"
+                    />
+                    <p className="text-[10px] text-gray-400">
+                      Perubahan teks sejarah akan tersimpan bersama data profil madrasah saat tombol Simpan Perubahan Profil di bawah ditekan.
+                    </p>
                   </div>
                 </div>
 

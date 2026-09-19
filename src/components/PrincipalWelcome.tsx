@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useDataContext } from '../context/DataContext';
-import { Quote, Sparkles, Compass, Eye, BookOpen, History, Shield, Heart, Award, Target, CheckCircle2, Sliders, Camera } from 'lucide-react';
+import { Quote, Sparkles, Compass, Eye, BookOpen, History, Shield, Heart, Award, Target, CheckCircle2, Sliders, Camera, Edit3 } from 'lucide-react';
 import { HeadmasterPhotoModal } from './HeadmasterPhotoModal';
+import { HistoryEditModal } from './HistoryEditModal';
 
 export const PrincipalWelcome: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'sambutan' | 'visi-misi' | 'sejarah'>('sambutan');
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
-  const { schoolProfile } = useDataContext();
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const { schoolProfile, isAdmin } = useDataContext();
 
   const alphabet = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
 
@@ -265,16 +267,29 @@ export const PrincipalWelcome: React.FC = () => {
 
         {activeTab === 'sejarah' && (
           <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="border-b border-white/10 pb-4">
-              <span className="text-xs uppercase font-bold tracking-widest text-[#d4af37]">
-                JEJAK LANGKAH & KIPRAH
-              </span>
-              <h4 className="font-heading text-2xl text-white font-bold mt-1">
-                Sejarah Singkat MI Ma'arif Al Ihsan Soborejo
-              </h4>
-              <p className="text-xs text-white/70 mt-1">
-                Berdiri di Desa Soborejo, Kecamatan Pringsurat, Kabupaten Temanggung, Jawa Tengah.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+              <div>
+                <span className="text-xs uppercase font-bold tracking-widest text-[#d4af37]">
+                  JEJAK LANGKAH & KIPRAH
+                </span>
+                <h4 className="font-heading text-2xl text-white font-bold mt-1">
+                  Sejarah Singkat MI Ma'arif Al Ihsan Soborejo
+                </h4>
+                <p className="text-xs text-white/70 mt-1">
+                  Berdiri di Desa Soborejo, Kecamatan Pringsurat, Kabupaten Temanggung, Jawa Tengah.
+                </p>
+              </div>
+
+              <button
+                id="btn-edit-history-text"
+                type="button"
+                onClick={() => setIsHistoryModalOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c59e2b] hover:from-[#f3e5ab] hover:to-[#d4af37] text-[#072217] text-xs font-bold transition-all shadow-md shrink-0 hover:scale-105 active:scale-95 cursor-pointer self-start sm:self-auto"
+                title="Ubah narasi dan butir sejarah singkat madrasah"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Ubah Teks Sejarah</span>
+              </button>
             </div>
 
             <div className="space-y-4 font-body text-xs sm:text-sm text-white leading-relaxed max-w-4xl">
@@ -388,6 +403,12 @@ export const PrincipalWelcome: React.FC = () => {
       <HeadmasterPhotoModal
         isOpen={isPhotoModalOpen}
         onClose={() => setIsPhotoModalOpen(false)}
+      />
+
+      {/* Modal Pengaturan & Pengubahan Sejarah Singkat Madrasah */}
+      <HistoryEditModal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
       />
     </section>
   );
