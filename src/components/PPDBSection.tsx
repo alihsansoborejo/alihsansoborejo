@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { useShare } from '../context/ShareContext';
 import { SCHOOL_PROFILE, PPDB_FLOW_STEPS } from '../data/schoolData';
-import { Sparkles, ArrowRight, CheckCircle2, FileText, Download, Search, HelpCircle, ShieldCheck } from 'lucide-react';
+import { Sparkles, ArrowRight, CheckCircle2, FileText, Download, Search, HelpCircle, ShieldCheck, Share2 } from 'lucide-react';
 
 interface PPDBSectionProps {
   onOpenPPDBForm: () => void;
@@ -13,6 +14,7 @@ export const PPDBSection: React.FC<PPDBSectionProps> = ({
   onOpenStatusCheck,
   onDownloadBrochure
 }) => {
+  const { openShare } = useShare();
   const [activeTab, setActiveTab] = useState<'jalur' | 'alur' | 'syarat'>('jalur');
 
   return (
@@ -60,10 +62,26 @@ export const PPDBSection: React.FC<PPDBSectionProps> = ({
               <button
                 id="ppdb-section-brochure-btn"
                 onClick={onDownloadBrochure}
-                className="px-4 py-3.5 text-xs text-white/80 hover:text-white transition-all flex items-center gap-1.5"
+                className="px-4 py-3.5 text-xs text-white/80 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5 text-[#d4af37]" />
                 <span>Unduh Panduan PDF</span>
+              </button>
+
+              <button
+                type="button"
+                id="ppdb-section-share-btn"
+                onClick={() => openShare({
+                  type: 'ppdb',
+                  title: 'Informasi & Pendaftaran PPDB Satu Atap RA & MI Ma\'arif Al Ihsan Soborejo',
+                  description: 'Penerimaan Peserta Didik Baru (PPDB) RA Al Ihsan & MI Ma\'arif Al Ihsan Soborejo, Temanggung. Pendaftaran online terpadu, program unggulan tahfidz, dan fasilitas lengkap.',
+                  category: 'PPDB'
+                })}
+                className="px-4 py-3.5 border border-emerald-400/30 bg-emerald-950/40 hover:bg-emerald-900/60 text-[#f3e5ab] text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 cursor-pointer"
+                title="Bagikan Informasi PPDB"
+              >
+                <Share2 className="w-3.5 h-3.5 text-[#d4af37]" />
+                <span>Bagikan Info PPDB</span>
               </button>
             </div>
           </div>

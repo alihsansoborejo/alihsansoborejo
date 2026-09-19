@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDataContext } from '../context/DataContext';
+import { useShare } from '../context/ShareContext';
 import { ProgramItem } from '../types';
-import { BookOpen, Cpu, Languages, HeartHandshake, CheckCircle2, ArrowRight, X, Clock, Target, Sparkles, Palette, GraduationCap, BookOpenCheck, School } from 'lucide-react';
+import { BookOpen, Cpu, Languages, HeartHandshake, CheckCircle2, ArrowRight, X, Clock, Target, Sparkles, Palette, GraduationCap, BookOpenCheck, School, Share2 } from 'lucide-react';
 
 interface ProgramsProps {
   onRegisterProgram?: (programTitle: string) => void;
@@ -9,8 +10,32 @@ interface ProgramsProps {
 
 export const Programs: React.FC<ProgramsProps> = ({ onRegisterProgram }) => {
   const { programs } = useDataContext();
+  const { activeDeepLink, consumeDeepLink, openShare } = useShare();
   const [selectedProgram, setSelectedProgram] = useState<ProgramItem | null>(null);
   const [filterLevel, setFilterLevel] = useState<'ALL' | 'RA' | 'MI' | 'Satu Atap'>('ALL');
+
+  // Auto-respond to deep links
+  useEffect(() => {
+    if (activeDeepLink && (activeDeepLink.type === 'program' || activeDeepLink.type === 'program-unggulan') && activeDeepLink.id) {
+      const match = programs.find(
+        (p) =>
+          p.id === activeDeepLink.id ||
+          p.title.toLowerCase().includes(activeDeepLink.id!.toLowerCase())
+      );
+      if (match) {
+        setFilterLevel('ALL');
+        setSelectedProgram(match);
+        consumeDeepLink();
+
+        setTimeout(() => {
+          const el = document.getElementById(`program-card-${match.id}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 300);
+      }
+    }
+  }, [activeDeepLink, programs, consumeDeepLink]);
 
   const getIcon = (iconName: string) => {
     switch (iconName) {
@@ -155,15 +180,34 @@ export const Programs: React.FC<ProgramsProps> = ({ onRegisterProgram }) => {
               </p>
             </div>
 
-            {/* Read More Trigger Button */}
-            <button
-              id={`program-detail-btn-${prog.id}`}
-              onClick={() => setSelectedProgram(prog)}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0b3c26] group-hover:text-[#d4af37] transition-colors mt-2"
-            >
-              <span>Detail Kurikulum &amp; Target</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-            </button>
+            {/* Read More & Share Buttons */}
+            <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
+              <button
+                id={`program-detail-btn-${prog.id}`}
+                onClick={() => setSelectedProgram(prog)}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0b3c26] group-hover:text-[#d4af37] transition-colors cursor-pointer"
+              >
+                <span>Detail Kurikulum &amp; Target</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </button>
+
+              <button
+                type="button"
+                id={`program-share-btn-${prog.id}`}
+                onClick={() => openShare({
+                  type: 'program',
+                  id: prog.id,
+                  title: prog.title,
+                  description: prog.shortDesc || prog.fullDesc,
+                  category: prog.category || 'Program Unggulan'
+                })}
+                className="p-1.5 text-gray-400 hover:text-[#0b3c26] hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1 font-semibold text-[11px]"
+                title="Bagikan Program Ini"
+              >
+                <Share2 className="w-3.5 h-3.5 text-[#d4af37]" />
+                <span className="hidden sm:inline">Bagikan</span>
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -248,14 +292,32 @@ export const Programs: React.FC<ProgramsProps> = ({ onRegisterProgram }) => {
                   setSelectedProgram(null);
                   if (onRegisterProgram) onRegisterProgram(title);
                 }}
-                className="flex-1 py-3 bg-gradient-to-r from-[#d4af37] to-[#b89228] text-[#072217] font-bold text-xs uppercase tracking-wider rounded-xl hover:shadow-lg transition-all"
+                className="flex-1 py-3 bg-gradient-to-r from-[#d4af37] to-[#b89228] text-[#072217] font-bold text-xs uppercase tracking-wider rounded-xl hover:shadow-lg transition-all cursor-pointer"
               >
                 Pilih Program Ini di PPDB
               </button>
+
+              <button
+                type="button"
+                id="program-modal-share-btn"
+                onClick={() => openShare({
+                  type: 'program',
+                  id: selectedProgram.id,
+                  title: selectedProgram.title,
+                  description: selectedProgram.fullDesc || selectedProgram.shortDesc,
+                  category: selectedProgram.category || 'Program Unggulan'
+                })}
+                className="px-4 py-3 border border-emerald-600/30 text-[#0b3c26] hover:bg-emerald-50 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
+                title="Bagikan Program Ini"
+              >
+                <Share2 className="w-4 h-4 text-[#d4af37]" />
+                <span>Bagikan</span>
+              </button>
+
               <button
                 id="program-modal-dismiss-btn"
                 onClick={() => setSelectedProgram(null)}
-                className="px-5 py-3 border border-gray-200 text-gray-700 rounded-xl text-xs font-semibold hover:bg-gray-50"
+                className="px-5 py-3 border border-gray-200 text-gray-700 rounded-xl text-xs font-semibold hover:bg-gray-50 cursor-pointer"
               >
                 Tutup
               </button>

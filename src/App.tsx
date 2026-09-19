@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { DataProvider, useDataContext } from './context/DataContext';
+import { ShareProvider } from './context/ShareContext';
 import { AdminBar } from './components/AdminBar';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { AdminDashboard } from './admin/AdminDashboard';
@@ -174,7 +175,9 @@ export default function App() {
   return (
     <AuthProvider>
       <DataProvider>
-        <AppContent />
+        <ShareProvider>
+          <AppContent />
+        </ShareProvider>
       </DataProvider>
     </AuthProvider>
   );

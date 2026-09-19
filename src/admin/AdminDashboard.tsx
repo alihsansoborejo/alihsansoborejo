@@ -62,7 +62,7 @@ import {
   Tv,
   Square
 } from 'lucide-react';
-import { parseVideoUrl, isPortraitVideoUrl, getVideoAspectConfig } from '../lib/videoUtils';
+import { parseVideoUrl, isPortraitVideoUrl, getVideoAspectConfig, detectVideoAspectRatio } from '../lib/videoUtils';
 import { compressImage } from '../lib/imageCompressor';
 import {
   toDateInputValue,
@@ -1119,10 +1119,10 @@ export const AdminDashboard: React.FC = () => {
       return;
     }
 
-    const parsed = parseVideoUrl(videoForm.videoUrl, videoForm.thumbnailUrl, videoForm.aspectRatio);
+    const parsed = parseVideoUrl(videoForm.videoUrl, videoForm.thumbnailUrl, videoForm.aspectRatio, videoForm.title, videoForm.description);
     const finalThumbnail = videoForm.thumbnailUrl.trim() || parsed.thumbnailUrl;
 
-    const autoAspect = isPortraitVideoUrl(videoForm.videoUrl) ? 'portrait' : 'landscape';
+    const autoAspect = detectVideoAspectRatio(videoForm.videoUrl, videoForm.aspectRatio, videoForm.title, videoForm.description);
     const effectiveAspect: VideoAspectRatio =
       videoForm.aspectRatio === 'auto'
         ? autoAspect
@@ -1177,7 +1177,7 @@ export const AdminDashboard: React.FC = () => {
       author: item.author || "Tim Media MI Ma'arif Al Ihsan",
       date: item.date || new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
       featured: item.featured || false,
-      aspectRatio: item.aspectRatio || (isPortraitVideoUrl(item.videoUrl) ? 'portrait' : 'landscape')
+      aspectRatio: item.aspectRatio || detectVideoAspectRatio(item.videoUrl, item.aspectRatio, item.title, item.description)
     });
     setIsAddingVideo(true);
   };
@@ -5375,7 +5375,8 @@ export const AdminDashboard: React.FC = () => {
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                       {(videoGallery || []).map((video) => {
-                        const parsed = parseVideoUrl(video.videoUrl, video.thumbnailUrl);
+                        const itemAspect = detectVideoAspectRatio(video.videoUrl, video.aspectRatio, video.title, video.description);
+                        const parsed = parseVideoUrl(video.videoUrl, video.thumbnailUrl, itemAspect, video.title, video.description);
                         const platformColor =
                           parsed.platform === 'youtube'
                             ? 'bg-red-600 text-white'
@@ -5411,9 +5412,17 @@ export const AdminDashboard: React.FC = () => {
                                   <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded shadow-xs ${platformColor}`}>
                                     {parsed.platform.toUpperCase()}
                                   </span>
-                                  {(video.aspectRatio === 'portrait' || isPortraitVideoUrl(video.videoUrl)) && (
+                                  {itemAspect === 'portrait' ? (
                                     <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-indigo-600 text-white shadow-xs flex items-center gap-1">
-                                      <Smartphone className="w-2.5 h-2.5" /> Potret
+                                      <Smartphone className="w-2.5 h-2.5" /> 9:16 Potret
+                                    </span>
+                                  ) : itemAspect === 'square' ? (
+                                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-teal-600 text-white shadow-xs flex items-center gap-1">
+                                      <Square className="w-2.5 h-2.5" /> 1:1 Kotak
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-700 text-white shadow-xs flex items-center gap-1">
+                                      <Tv className="w-2.5 h-2.5" /> 16:9
                                     </span>
                                   )}
                                   {video.featured && (
@@ -5434,7 +5443,7 @@ export const AdminDashboard: React.FC = () => {
                                   type="button"
                                   onClick={() => {
                                     setPreviewingVideo(video);
-                                    setAdminPreviewAspect(video.aspectRatio || (isPortraitVideoUrl(video.videoUrl) ? 'portrait' : 'landscape'));
+                                    setAdminPreviewAspect(itemAspect);
                                   }}
                                   className="absolute inset-0 m-auto w-11 h-11 rounded-full bg-[#0b3c26]/90 text-[#d4af37] border border-[#d4af37] flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg cursor-pointer"
                                   title="Pratinjau Pemutar Video"
@@ -5487,7 +5496,7 @@ export const AdminDashboard: React.FC = () => {
                                   type="button"
                                   onClick={() => {
                                     setPreviewingVideo(video);
-                                    setAdminPreviewAspect(video.aspectRatio || (isPortraitVideoUrl(video.videoUrl) ? 'portrait' : 'landscape'));
+                                    setAdminPreviewAspect(itemAspect);
                                   }}
                                   className="px-2.5 py-1 text-xs text-[#0b3c26] bg-[#e8f3ee] hover:bg-[#d8ece2] font-semibold rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
                                 >
@@ -5499,19 +5508,18 @@ export const AdminDashboard: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    const isCurrPortrait = video.aspectRatio === 'portrait' || (video.aspectRatio === undefined && isPortraitVideoUrl(video.videoUrl));
-                                    const nextAspect: VideoAspectRatio = isCurrPortrait ? 'landscape' : 'portrait';
+                                    const nextAspect: VideoAspectRatio = itemAspect === 'portrait' ? 'landscape' : 'portrait';
                                     updateVideoItem(video.id, { aspectRatio: nextAspect });
                                     notify(`Format video diubah ke: ${nextAspect === 'portrait' ? '9:16 Potret (Reel/FB)' : '16:9 Lanskap'}`);
                                   }}
                                   className={`px-2 py-1 text-xs font-semibold rounded-lg flex items-center gap-1 transition-colors cursor-pointer ${
-                                    video.aspectRatio === 'portrait' || (video.aspectRatio === undefined && isPortraitVideoUrl(video.videoUrl))
+                                    itemAspect === 'portrait'
                                       ? 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200'
                                       : 'text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200'
                                   }`}
                                   title="Ubah cepat rasio frame antara Potret (9:16) dan Lanskap (16:9)"
                                 >
-                                  {video.aspectRatio === 'portrait' || (video.aspectRatio === undefined && isPortraitVideoUrl(video.videoUrl)) ? (
+                                  {itemAspect === 'portrait' ? (
                                     <>
                                       <Smartphone className="w-3 h-3 text-indigo-600" />
                                       <span>9:16 Potret</span>
@@ -6185,50 +6193,56 @@ export const AdminDashboard: React.FC = () => {
                         </div>
 
                         {/* Format / Aspect Ratio Selector */}
-                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <label className="font-semibold text-gray-800 flex items-center gap-1.5">
-                              <span>Format Rasio Video (Orientasi Frame)</span>
-                            </label>
-                            <span className="text-[10px] text-gray-500 font-normal">
-                              {isPortraitVideoUrl(videoForm.videoUrl) ? '⚡ Terdeteksi vertikal/portrait' : 'Standar horizontal/landscape'}
-                            </span>
-                          </div>
+                        {(() => {
+                          const autoDetectedRatio = detectVideoAspectRatio(videoForm.videoUrl, undefined, videoForm.title, videoForm.description);
+                          return (
+                            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <label className="font-semibold text-gray-800 flex items-center gap-1.5">
+                                  <span>Format Rasio Video (Orientasi Frame)</span>
+                                </label>
+                                <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
+                                  ⚡ Otomatis: {autoDetectedRatio === 'portrait' ? '9:16 Potret (Vertikal)' : autoDetectedRatio === 'square' ? '1:1 Kotak' : '16:9 Lanskap'}
+                                </span>
+                              </div>
 
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                            {[
-                              { value: 'auto' as VideoAspectRatio, label: 'Otomatis', icon: Sparkles, desc: 'Ikuti link video' },
-                              { value: 'landscape' as VideoAspectRatio, label: 'Lanskap (16:9)', icon: Tv, desc: 'YouTube / Video standar' },
-                              { value: 'portrait' as VideoAspectRatio, label: 'Potret (9:16)', icon: Smartphone, desc: 'Facebook Reel / Short' },
-                              { value: 'square' as VideoAspectRatio, label: 'Kotak (1:1)', icon: Square, desc: 'Video persegi' },
-                            ].map((opt) => (
-                              <button
-                                key={opt.value}
-                                type="button"
-                                onClick={() => setVideoForm({ ...videoForm, aspectRatio: opt.value })}
-                                className={`p-2.5 rounded-xl text-left border transition-all cursor-pointer ${
-                                  videoForm.aspectRatio === opt.value
-                                    ? 'bg-[#0b3c26] text-[#f3e5ab] border-[#0b3c26] shadow-xs'
-                                    : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
-                                }`}
-                              >
-                                <div className="flex items-center gap-1.5 font-bold text-xs">
-                                  <opt.icon className="w-3.5 h-3.5 shrink-0" />
-                                  <span>{opt.label}</span>
-                                </div>
-                                <p className={`text-[10px] mt-0.5 line-clamp-1 ${videoForm.aspectRatio === opt.value ? 'text-gray-200' : 'text-gray-400'}`}>
-                                  {opt.desc}
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                {[
+                                  { value: 'auto' as VideoAspectRatio, label: 'Otomatis', icon: Sparkles, desc: `Ikuti video (${autoDetectedRatio})` },
+                                  { value: 'landscape' as VideoAspectRatio, label: 'Lanskap (16:9)', icon: Tv, desc: 'YouTube / Video standar' },
+                                  { value: 'portrait' as VideoAspectRatio, label: 'Potret (9:16)', icon: Smartphone, desc: 'Facebook Reel / Short' },
+                                  { value: 'square' as VideoAspectRatio, label: 'Kotak (1:1)', icon: Square, desc: 'Video persegi' },
+                                  { value: 'classic' as VideoAspectRatio, label: 'Klasik (4:3)', icon: Tv, desc: 'Format 4:3 (TV/Dokumentasi)' },
+                                ].map((opt) => (
+                                  <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => setVideoForm({ ...videoForm, aspectRatio: opt.value })}
+                                    className={`p-2.5 rounded-xl text-left border transition-all cursor-pointer ${
+                                      videoForm.aspectRatio === opt.value
+                                        ? 'bg-[#0b3c26] text-[#f3e5ab] border-[#0b3c26] shadow-xs'
+                                        : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-1.5 font-bold text-xs">
+                                      <opt.icon className="w-3.5 h-3.5 shrink-0" />
+                                      <span>{opt.label}</span>
+                                    </div>
+                                    <p className={`text-[10px] mt-0.5 line-clamp-1 ${videoForm.aspectRatio === opt.value ? 'text-gray-200' : 'text-gray-400'}`}>
+                                      {opt.desc}
+                                    </p>
+                                  </button>
+                                ))}
+                              </div>
+
+                              {autoDetectedRatio === 'portrait' && videoForm.aspectRatio === 'landscape' && (
+                                <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200">
+                                  ⚠️ Catatan: Video ini terdeteksi sebagai video potret (Facebook Reel / Shorts). Sebaiknya pilih <strong>Otomatis</strong> atau <strong>Potret (9:16)</strong> agar frame pemutar tidak terpotong.
                                 </p>
-                              </button>
-                            ))}
-                          </div>
-
-                          {isPortraitVideoUrl(videoForm.videoUrl) && videoForm.aspectRatio === 'landscape' && (
-                            <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200">
-                              ⚠️ Catatan: Video ini terdeteksi sebagai video potret (Facebook Reel / Shorts). Sebaiknya pilih <strong>Potret (9:16)</strong> atau <strong>Otomatis</strong> agar frame pemutar tidak terpotong.
-                            </p>
-                          )}
-                        </div>
+                              )}
+                            </div>
+                          );
+                        })()}
 
                         {/* Custom Thumbnail URL or upload */}
                         <div>
@@ -6281,7 +6295,8 @@ export const AdminDashboard: React.FC = () => {
 
                         {/* Live Preview Card */}
                         {videoForm.videoUrl && (() => {
-                          const formConfig = getVideoAspectConfig(videoForm.aspectRatio, isPortraitVideoUrl(videoForm.videoUrl));
+                          const formEffectiveAspect = detectVideoAspectRatio(videoForm.videoUrl, videoForm.aspectRatio, videoForm.title, videoForm.description);
+                          const formConfig = getVideoAspectConfig(formEffectiveAspect, formEffectiveAspect === 'portrait');
                           return (
                             <div className="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200">
                               <div className="flex items-center justify-between mb-1.5">
@@ -6289,7 +6304,7 @@ export const AdminDashboard: React.FC = () => {
                                   Pratinjau Kartu Video:
                                 </span>
                                 <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                  Format Frame: {formConfig.effectiveAspect === 'portrait' ? 'Potret 9:16 (Vertikal)' : formConfig.effectiveAspect === 'square' ? 'Kotak 1:1' : 'Lanskap 16:9'}
+                                  Format Frame Otomatis: {formConfig.badgeLabel}
                                 </span>
                               </div>
                               <div className="flex items-center gap-3">
@@ -6315,7 +6330,7 @@ export const AdminDashboard: React.FC = () => {
                                     <span className="text-emerald-700 font-semibold">{detected.platform.toUpperCase()}</span>
                                     <span>• {videoForm.category}</span>
                                     {videoForm.duration && <span>• {videoForm.duration}</span>}
-                                    <span className="text-indigo-600 font-semibold">• Frame: {formConfig.effectiveAspect}</span>
+                                    <span className="text-indigo-600 font-semibold">• Frame: {formConfig.badgeLabel}</span>
                                   </div>
                                 </div>
                               </div>
@@ -6349,10 +6364,10 @@ export const AdminDashboard: React.FC = () => {
 
               {/* MODAL 2: PRATINJAU VIDEO PLAYER (ADMIN) */}
               {previewingVideo && (() => {
-                const detectedPortrait = isPortraitVideoUrl(previewingVideo.videoUrl);
-                const currentSetting = adminPreviewAspect !== 'auto' ? adminPreviewAspect : (previewingVideo.aspectRatio || (detectedPortrait ? 'portrait' : 'landscape'));
-                const aspectConfig = getVideoAspectConfig(currentSetting, detectedPortrait);
-                const parsed = parseVideoUrl(previewingVideo.videoUrl, previewingVideo.thumbnailUrl, currentSetting);
+                const autoAspect = detectVideoAspectRatio(previewingVideo.videoUrl, previewingVideo.aspectRatio, previewingVideo.title, previewingVideo.description);
+                const currentSetting = adminPreviewAspect !== 'auto' ? adminPreviewAspect : autoAspect;
+                const aspectConfig = getVideoAspectConfig(currentSetting, currentSetting === 'portrait');
+                const parsed = parseVideoUrl(previewingVideo.videoUrl, previewingVideo.thumbnailUrl, currentSetting, previewingVideo.title, previewingVideo.description);
 
                 return (
                   <div
@@ -6374,75 +6389,95 @@ export const AdminDashboard: React.FC = () => {
 
                       {/* Top Frame Control Bar */}
                       <div className="p-3 bg-black/50 border-b border-white/10 flex flex-wrap items-center justify-between gap-2 pr-12">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-300 bg-emerald-950/80 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+                            <Sparkles className="w-3 h-3 text-[#d4af37]" />
+                            <span>Frame Otomatis: <strong>{aspectConfig.badgeLabel}</strong></span>
+                          </span>
+                        </div>
+
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[11px] text-gray-300 font-medium">Uji Format Frame:</span>
+                          <span className="text-[10px] text-white/50">Uji Rasio:</span>
                           <div className="inline-flex rounded-lg bg-white/10 p-0.5 border border-white/10">
                             <button
                               type="button"
-                              onClick={() => setAdminPreviewAspect('landscape')}
-                              className={`px-2 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer ${
-                                aspectConfig.effectiveAspect === 'landscape'
-                                  ? 'bg-[#d4af37] text-[#072217] shadow-xs'
-                                  : 'text-white/80 hover:text-white'
-                              }`}
-                            >
-                              <Tv className="w-3 h-3" />
-                              <span>16:9 Lanskap</span>
-                            </button>
-                            <button
-                              type="button"
                               onClick={() => setAdminPreviewAspect('portrait')}
-                              className={`px-2 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-semibold flex items-center gap-1 transition-all cursor-pointer ${
                                 aspectConfig.effectiveAspect === 'portrait'
                                   ? 'bg-[#d4af37] text-[#072217] shadow-xs'
                                   : 'text-white/80 hover:text-white'
                               }`}
                             >
                               <Smartphone className="w-3 h-3" />
-                              <span>9:16 Potret</span>
+                              <span>9:16</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setAdminPreviewAspect('landscape')}
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                                aspectConfig.effectiveAspect === 'landscape'
+                                  ? 'bg-[#d4af37] text-[#072217] shadow-xs'
+                                  : 'text-white/80 hover:text-white'
+                              }`}
+                            >
+                              <Tv className="w-3 h-3" />
+                              <span>16:9</span>
                             </button>
                             <button
                               type="button"
                               onClick={() => setAdminPreviewAspect('square')}
-                              className={`px-2 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-semibold flex items-center gap-1 transition-all cursor-pointer ${
                                 aspectConfig.effectiveAspect === 'square'
                                   ? 'bg-[#d4af37] text-[#072217] shadow-xs'
                                   : 'text-white/80 hover:text-white'
                               }`}
                             >
                               <Square className="w-3 h-3" />
-                              <span>1:1 Kotak</span>
+                              <span>1:1</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setAdminPreviewAspect('classic')}
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                                aspectConfig.effectiveAspect === 'classic'
+                                  ? 'bg-[#d4af37] text-[#072217] shadow-xs'
+                                  : 'text-white/80 hover:text-white'
+                              }`}
+                            >
+                              <Tv className="w-3 h-3" />
+                              <span>4:3</span>
                             </button>
                           </div>
-                        </div>
 
-                        {/* Save aspect ratio to item */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            updateVideoItem(previewingVideo.id, { aspectRatio: aspectConfig.effectiveAspect });
-                            setPreviewingVideo({ ...previewingVideo, aspectRatio: aspectConfig.effectiveAspect });
-                            notify(`Format ${aspectConfig.effectiveAspect === 'portrait' ? '9:16 Potret' : aspectConfig.effectiveAspect === 'square' ? '1:1 Kotak' : '16:9 Lanskap'} disimpan untuk video ini!`);
-                          }}
-                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
-                          title="Simpan pilihan orientasi frame ini secara permanen ke video"
-                        >
-                          <Check className="w-3 h-3" />
-                          <span>Simpan Format Ini</span>
-                        </button>
+                          {previewingVideo.aspectRatio !== aspectConfig.effectiveAspect && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateVideoItem(previewingVideo.id, { aspectRatio: aspectConfig.effectiveAspect });
+                                setPreviewingVideo({ ...previewingVideo, aspectRatio: aspectConfig.effectiveAspect });
+                                notify(`Format ${aspectConfig.badgeLabel} disimpan untuk video ini!`);
+                              }}
+                              className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] rounded-md transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
+                              title="Kunci format frame ini secara permanen untuk video ini"
+                            >
+                              <Check className="w-3 h-3" />
+                              <span>Kunci Format</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       {/* Platform Info Banner */}
                       {parsed.platform === 'facebook' && (
-                        <div className="px-4 py-2 bg-blue-950/60 border-b border-blue-500/20 text-[11px] text-blue-200 flex items-center justify-between">
+                        <div className="px-4 py-1.5 bg-blue-950/60 border-b border-blue-500/20 text-[11px] text-blue-200 flex items-center justify-between">
                           <span>
-                            ℹ️ Video Facebook terdeteksi: Frame disesuaikan otomatis ({aspectConfig.effectiveAspect === 'portrait' ? '9:16 Potret' : '16:9 Lanskap'}) agar tampilan tidak terpotong.
+                            ℹ️ Orientasi video Facebook disesuaikan otomatis ({aspectConfig.badgeLabel})
                           </span>
                           <a
                             href={previewingVideo.videoUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="underline hover:text-white shrink-0 ml-2"
+                            className="underline hover:text-white shrink-0 ml-2 text-[10px]"
                           >
                             Buka di Facebook ↗
                           </a>
@@ -6450,7 +6485,10 @@ export const AdminDashboard: React.FC = () => {
                       )}
 
                       {/* Video Player */}
-                      <div className={`relative ${aspectConfig.containerAspectClass} w-full bg-black max-h-[72vh] flex items-center justify-center overflow-hidden mx-auto`}>
+                      <div
+                        className={`relative ${aspectConfig.containerAspectClass} bg-black flex items-center justify-center overflow-hidden mx-auto shadow-inner transition-all duration-300`}
+                        style={aspectConfig.containerStyle}
+                      >
                         {parsed.isDirectVideo ? (
                           <video
                             controls
@@ -6466,11 +6504,11 @@ export const AdminDashboard: React.FC = () => {
                           <iframe
                             src={parsed.embedUrl}
                             title={previewingVideo.title}
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                             allowFullScreen
                             scrolling="no"
-                            style={{ border: 'none', overflow: 'hidden' }}
-                            className="w-full h-full border-0"
+                            style={{ border: 'none', overflow: 'hidden', width: '100%', height: '100%' }}
+                            className="w-full h-full border-0 block"
                           />
                         ) : (
                           <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center">

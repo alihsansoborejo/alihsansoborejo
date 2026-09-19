@@ -174,7 +174,7 @@ export interface GalleryItem {
 }
 
 export type VideoPlatform = 'youtube' | 'facebook' | 'vimeo' | 'tiktok' | 'gdrive' | 'direct' | 'other';
-export type VideoAspectRatio = 'landscape' | 'portrait' | 'square' | 'auto';
+export type VideoAspectRatio = 'landscape' | 'portrait' | 'square' | 'classic' | 'auto';
 
 export interface VideoGalleryItem {
   id: string;
@@ -233,3 +233,31 @@ export interface PPDBRegistration {
   status: 'Menunggu Verifikasi' | 'Berkas Diterima' | 'Lulus Seleksi Administrasi' | 'Diterima' | 'Ditolak' | 'Perlu Perbaikan' | string;
   notes?: string;
 }
+
+export type ShareContentType =
+  | 'berita'
+  | 'galeri'
+  | 'video'
+  | 'fasilitas'
+  | 'prestasi'
+  | 'ekskul'
+  | 'ekstrakurikuler'
+  | 'program'
+  | 'program-unggulan'
+  | 'guru'
+  | 'gtk'
+  | 'ppdb'
+  | 'profil';
+
+export interface ShareItemData {
+  type: ShareContentType;
+  id?: string;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  category?: string;
+  imageUrl?: string;
+  url?: string;
+  extraParam?: string;
+}
+

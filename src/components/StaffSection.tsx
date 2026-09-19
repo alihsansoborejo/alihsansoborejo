@@ -1,11 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDataContext } from '../context/DataContext';
-import { Users, GraduationCap, Award, BookOpen, ShieldCheck, Phone, Sparkles, UserCheck } from 'lucide-react';
+import { useShare } from '../context/ShareContext';
+import { Users, GraduationCap, Award, BookOpen, ShieldCheck, Phone, Sparkles, UserCheck, Share2 } from 'lucide-react';
 
 export const StaffSection: React.FC = () => {
   const { staffList, isAdmin, setViewMode } = useDataContext();
+  const { activeDeepLink, consumeDeepLink, openShare } = useShare();
   const [selectedCategory, setSelectedCategory] = useState<string>('Semua');
   const [selectedInstitution, setSelectedInstitution] = useState<'Semua' | 'RA' | 'MI' | 'Satu Atap'>('Semua');
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+
+  // Auto-respond to deep links
+  useEffect(() => {
+    if (activeDeepLink && (activeDeepLink.type === 'gtk' || activeDeepLink.type === 'guru') && activeDeepLink.id) {
+      const match = staffList.find(
+        (s) =>
+          s.id === activeDeepLink.id ||
+          s.name.toLowerCase().includes(activeDeepLink.id!.toLowerCase())
+      );
+      if (match) {
+        setSelectedCategory('Semua');
+        setSelectedInstitution('Semua');
+        setHighlightedId(match.id);
+        consumeDeepLink();
+
+        setTimeout(() => {
+          const el = document.getElementById(`staff-card-${match.id}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 300);
+      }
+    }
+  }, [activeDeepLink, staffList, consumeDeepLink]);
 
   const categories = ['Semua', 'Pimpinan', 'Guru Kelas', 'Guru Bidang Studi', 'Tenaga Kependidikan'];
 
@@ -84,7 +111,12 @@ export const StaffSection: React.FC = () => {
           {filteredStaff.map((staff) => (
             <div
               key={staff.id}
-              className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between group"
+              id={`staff-card-${staff.id}`}
+              className={`bg-white rounded-2xl overflow-hidden border shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between group ${
+                highlightedId === staff.id
+                  ? 'ring-4 ring-[#d4af37] border-[#d4af37] shadow-2xl scale-[1.02]'
+                  : 'border-gray-100'
+              }`}
             >
               {/* Image & Tags */}
               <div className="relative h-60 bg-gradient-to-t from-[#072217]/80 via-transparent to-transparent overflow-hidden flex items-center justify-center">
@@ -165,8 +197,8 @@ export const StaffSection: React.FC = () => {
                   </div>
                 </div>
 
-                {staff.phone && (
-                  <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+                <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+                  {staff.phone ? (
                     <a
                       href={`https://wa.me/${staff.phone.replace(/[^0-9]/g, '')}`}
                       target="_blank"
@@ -176,8 +208,27 @@ export const StaffSection: React.FC = () => {
                       <Phone className="w-3 h-3" />
                       <span>Kontak</span>
                     </a>
-                  </div>
-                )}
+                  ) : (
+                    <span className="text-[11px] text-gray-400">GTK MI Ma'arif</span>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => openShare({
+                      type: 'gtk',
+                      id: staff.id,
+                      title: `${staff.name} - ${staff.role}`,
+                      description: `Profil Guru/Tenaga Kependidikan MI Ma'arif Al Ihsan Soborejo. ${staff.education ? 'Pendidikan: ' + staff.education + '.' : ''} ${staff.subjects ? 'Mata Pelajaran: ' + staff.subjects + '.' : ''}`,
+                      category: staff.category,
+                      imageUrl: staff.photoUrl,
+                    })}
+                    className="p-1.5 text-gray-400 hover:text-[#0b3c26] hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer flex items-center gap-1 font-semibold text-[11px]"
+                    title="Bagikan Profil Guru Ini"
+                  >
+                    <Share2 className="w-3.5 h-3.5 text-[#d4af37]" />
+                    <span>Bagikan</span>
+                  </button>
+                </div>
               </div>
             </div>
           ))}

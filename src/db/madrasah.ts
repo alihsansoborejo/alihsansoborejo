@@ -24,10 +24,41 @@ import {
 } from '../data/schoolData.ts';
 import { parseDateTimestamp } from '../lib/dateUtils.ts';
 
+/**
+ * Execute DB operation with automatic retry on transient pool/connection timeouts
+ */
+async function runWithRetry<T>(fn: () => Promise<T>, retries = 3, delayMs = 1200): Promise<T> {
+  let lastError: any;
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      lastError = err;
+      const msg = (err?.message || '') + ' ' + (err?.cause?.message || '');
+      const isConnectionIssue =
+        msg.includes('timeout') ||
+        msg.includes('connect') ||
+        msg.includes('terminated') ||
+        msg.includes('ECONNRESET') ||
+        msg.includes('connection');
+
+      if (isConnectionIssue && attempt < retries) {
+        console.warn(`[DB Retry] Cloud SQL connection note (attempt ${attempt}/${retries}): ${err?.message || 'Retrying...'}`);
+        await new Promise((res) => setTimeout(res, delayMs * attempt));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastError;
+}
+
 // PPDB Operations
 export async function getPPDBList() {
   try {
-    return await db.select().from(ppdbRegistrations).orderBy(desc(ppdbRegistrations.createdAt));
+    return await runWithRetry(async () => {
+      return await db.select().from(ppdbRegistrations).orderBy(desc(ppdbRegistrations.createdAt));
+    });
   } catch (error) {
     console.error('Failed to query PPDB registrations:', error);
     throw new Error('Gagal mengambil data PPDB dari database.', { cause: error });
@@ -107,7 +138,9 @@ export async function deletePPDB(id: string) {
 // Staff Operations
 export async function getStaffList() {
   try {
-    return await db.select().from(staffMembers).orderBy(asc(staffMembers.orderNum), asc(staffMembers.name));
+    return await runWithRetry(async () => {
+      return await db.select().from(staffMembers).orderBy(asc(staffMembers.orderNum), asc(staffMembers.name));
+    });
   } catch (error) {
     console.error('Failed to fetch staff list:', error);
     throw new Error('Gagal mengambil daftar GTK.', { cause: error });
@@ -115,10 +148,10 @@ export async function getStaffList() {
 }
 
 export async function upsertStaff(item: {
-  id: string;
+  id?: string;
   name: string;
   role: string;
-  category: string;
+  category?: string;
   nip?: string;
   nipOrNuptk?: string;
   education?: string;
@@ -130,39 +163,46 @@ export async function upsertStaff(item: {
   order?: number;
 }) {
   try {
-    const nipVal = item.nip || item.nipOrNuptk || null;
-    const subjectVal = item.subject || item.subjects || null;
-    const orderNumVal = item.orderNum ?? item.order ?? 0;
+    return await runWithRetry(async () => {
+      const idVal = item.id && String(item.id).trim() ? String(item.id).trim() : `staff-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const nameVal = (item.name || '').trim() || 'Tanpa Nama';
+      const roleVal = (item.role || '').trim() || 'Guru';
+      const categoryVal = (item.category || '').trim() || 'Guru Kelas';
+      const nipVal = (item.nip || item.nipOrNuptk || '').trim() || null;
+      const subjectVal = (item.subject || item.subjects || '').trim() || null;
+      const rawOrder = item.orderNum ?? item.order ?? 0;
+      const orderNumVal = typeof rawOrder === 'number' && !isNaN(rawOrder) ? Math.round(rawOrder) : (parseInt(String(rawOrder), 10) || 0);
 
-    const result = await db.insert(staffMembers)
-      .values({
-        id: item.id,
-        name: item.name,
-        role: item.role,
-        category: item.category || 'Guru Kelas',
-        nip: nipVal,
-        education: item.education || null,
-        subject: subjectVal,
-        photoUrl: item.photoUrl || null,
-        bio: item.bio || null,
-        orderNum: orderNumVal,
-      })
-      .onConflictDoUpdate({
-        target: staffMembers.id,
-        set: {
-          name: item.name,
-          role: item.role,
-          category: item.category || 'Guru Kelas',
+      const result = await db.insert(staffMembers)
+        .values({
+          id: idVal,
+          name: nameVal,
+          role: roleVal,
+          category: categoryVal,
           nip: nipVal,
           education: item.education || null,
           subject: subjectVal,
           photoUrl: item.photoUrl || null,
           bio: item.bio || null,
           orderNum: orderNumVal,
-        },
-      })
-      .returning();
-    return result[0];
+        })
+        .onConflictDoUpdate({
+          target: staffMembers.id,
+          set: {
+            name: nameVal,
+            role: roleVal,
+            category: categoryVal,
+            nip: nipVal,
+            education: item.education || null,
+            subject: subjectVal,
+            photoUrl: item.photoUrl || null,
+            bio: item.bio || null,
+            orderNum: orderNumVal,
+          },
+        })
+        .returning();
+      return result[0];
+    });
   } catch (error) {
     console.error('Failed to upsert staff member:', error);
     throw new Error('Gagal menyimpan data GTK.', { cause: error });
@@ -171,8 +211,10 @@ export async function upsertStaff(item: {
 
 export async function deleteStaff(id: string) {
   try {
-    await db.delete(staffMembers).where(eq(staffMembers.id, id));
-    return { success: true };
+    return await runWithRetry(async () => {
+      await db.delete(staffMembers).where(eq(staffMembers.id, id));
+      return { success: true };
+    });
   } catch (error) {
     console.error('Failed to delete staff member:', error);
     throw new Error('Gagal menghapus data GTK.', { cause: error });

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDataContext } from '../context/DataContext';
+import { useShare } from '../context/ShareContext';
 import { FacilityItem, GalleryItem, VideoGalleryItem, VideoAspectRatio } from '../types';
-import { parseVideoUrl, isPortraitVideoUrl, getVideoAspectConfig } from '../lib/videoUtils';
+import { parseVideoUrl, isPortraitVideoUrl, getVideoAspectConfig, detectVideoAspectRatio } from '../lib/videoUtils';
 import {
   Building2,
   Camera,
@@ -26,6 +27,7 @@ import {
 
 export const Facilities: React.FC = () => {
   const { facilities, gallery, videoGallery, updateVideoItem } = useDataContext();
+  const { activeDeepLink, consumeDeepLink, openShare } = useShare();
   const [activeTab, setActiveTab] = useState<'galeri' | 'galeri_video' | 'fasilitas'>('galeri');
   const [selectedFacility, setSelectedFacility] = useState<FacilityItem | null>(null);
   const [selectedGallery, setSelectedGallery] = useState<GalleryItem | null>(null);
@@ -34,6 +36,56 @@ export const Facilities: React.FC = () => {
   const [aspectSavedToast, setAspectSavedToast] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>('Semua');
   const [copiedLink, setCopiedLink] = useState(false);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+
+  // Auto-respond to deep links
+  useEffect(() => {
+    if (!activeDeepLink) return;
+
+    if (activeDeepLink.type === 'galeri' && activeDeepLink.id) {
+      const match = gallery.find(
+        (g) => g.id === activeDeepLink.id || g.title.toLowerCase().includes(activeDeepLink.id!.toLowerCase())
+      );
+      if (match) {
+        setActiveTab('galeri');
+        setSelectedGallery(match);
+        setHighlightedId(match.id);
+        consumeDeepLink();
+        setTimeout(() => {
+          const card = document.getElementById(`gallery-card-${match.id}`);
+          if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+      }
+    } else if (activeDeepLink.type === 'video' && activeDeepLink.id) {
+      const match = (videoGallery || []).find(
+        (v) => v.id === activeDeepLink.id || v.title.toLowerCase().includes(activeDeepLink.id!.toLowerCase())
+      );
+      if (match) {
+        setActiveTab('galeri_video');
+        setSelectedVideo(match);
+        setHighlightedId(match.id);
+        consumeDeepLink();
+        setTimeout(() => {
+          const card = document.getElementById(`video-card-${match.id}`);
+          if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+      }
+    } else if (activeDeepLink.type === 'fasilitas' && activeDeepLink.id) {
+      const match = facilities.find(
+        (f) => f.id === activeDeepLink.id || f.name.toLowerCase().includes(activeDeepLink.id!.toLowerCase())
+      );
+      if (match) {
+        setActiveTab('fasilitas');
+        setSelectedFacility(match);
+        setHighlightedId(match.id);
+        consumeDeepLink();
+        setTimeout(() => {
+          const card = document.getElementById(`facility-card-${match.id}`);
+          if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
+      }
+    }
+  }, [activeDeepLink, gallery, videoGallery, facilities, consumeDeepLink]);
 
   const galleryCategories = ['Semua', 'Prestasi', 'Ibadah & Karakter', 'Kegiatan Belajar', 'Ekstrakurikuler', 'Fasilitas'];
   const videoCategories = ['Semua', 'Profil Madrasah', 'Ibadah & Karakter', 'Kegiatan Belajar', 'Ekstrakurikuler', 'Prestasi & Pentas Seni', 'Dokumentasi PPDB'];
@@ -235,10 +287,28 @@ export const Facilities: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="p-4">
-                  <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
+                <div className="p-4 flex items-center justify-between gap-2">
+                  <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed flex-1">
                     {item.description}
                   </p>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openShare({
+                        type: 'galeri',
+                        id: item.id,
+                        title: item.title,
+                        description: item.description,
+                        category: item.category,
+                        imageUrl: item.imageUrl,
+                      });
+                    }}
+                    className="p-1.5 text-gray-400 hover:text-[#0b3c26] hover:bg-emerald-50 rounded-lg transition-colors shrink-0 cursor-pointer"
+                    title="Bagikan Foto Ini"
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             ))
@@ -260,7 +330,8 @@ export const Facilities: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
               {filteredVideos.map((video) => {
-                const parsed = parseVideoUrl(video.videoUrl, video.thumbnailUrl);
+                const autoAspect = detectVideoAspectRatio(video.videoUrl, video.aspectRatio, video.title, video.description);
+                const parsed = parseVideoUrl(video.videoUrl, video.thumbnailUrl, autoAspect, video.title, video.description);
                 const badge = getPlatformBadge(parsed.platform);
 
                 return (
@@ -269,30 +340,48 @@ export const Facilities: React.FC = () => {
                     id={`video-card-${video.id}`}
                     onClick={() => {
                       setSelectedVideo(video);
-                      setPlayerAspect(video.aspectRatio || (isPortraitVideoUrl(video.videoUrl) ? 'portrait' : 'landscape'));
+                      setPlayerAspect(autoAspect);
                     }}
                     className="group bg-white rounded-2xl overflow-hidden border border-gray-200/90 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col justify-between"
                   >
                     {/* Video Thumbnail with Play Button Overlay */}
-                    <div className="relative aspect-video w-full overflow-hidden bg-slate-900">
+                    <div className="relative aspect-video w-full overflow-hidden bg-slate-950 flex items-center justify-center">
+                      {/* Blurred backdrop to fill margins without letterbox lines */}
+                      <img
+                        src={parsed.thumbnailUrl}
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 w-full h-full object-cover blur-md scale-110 opacity-35 pointer-events-none"
+                      />
+                      {/* Sharp intact thumbnail - uncropped with object-contain */}
                       <img
                         src={parsed.thumbnailUrl}
                         alt={video.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        className="relative w-full h-full object-contain z-10 group-hover:scale-105 transition-transform duration-500"
                         onError={(e) => {
                           (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=800&q=80';
                         }}
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent z-10 pointer-events-none" />
 
                       {/* Platform and Portrait Badges */}
-                      <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap">
+                      <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap z-20">
                         <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md border ${badge.bg} ${badge.border}`}>
                           {badge.label}
                         </span>
-                        {(video.aspectRatio === 'portrait' || isPortraitVideoUrl(video.videoUrl)) && (
+                        {autoAspect === 'portrait' && (
                           <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-600 text-white shadow-sm flex items-center gap-1">
                             <Smartphone className="w-2.5 h-2.5" /> Potret (9:16)
+                          </span>
+                        )}
+                        {autoAspect === 'square' && (
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-600 text-white shadow-sm flex items-center gap-1">
+                            <Square className="w-2.5 h-2.5" /> Kotak (1:1)
+                          </span>
+                        )}
+                        {autoAspect === 'classic' && (
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-700 text-white shadow-sm flex items-center gap-1">
+                            <Tv className="w-2.5 h-2.5" /> 4:3 Klasik
                           </span>
                         )}
                         {video.featured && (
@@ -304,14 +393,14 @@ export const Facilities: React.FC = () => {
 
                       {/* Duration Tag */}
                       {video.duration && (
-                        <div className="absolute bottom-3 right-3 bg-black/80 backdrop-blur-xs text-white text-[11px] font-mono font-semibold px-2 py-0.5 rounded-md flex items-center gap-1">
+                        <div className="absolute bottom-3 right-3 bg-black/80 backdrop-blur-xs text-white text-[11px] font-mono font-semibold px-2 py-0.5 rounded-md flex items-center gap-1 z-20">
                           <Clock className="w-3 h-3 text-[#d4af37]" />
                           <span>{video.duration}</span>
                         </div>
                       )}
 
                       {/* Big Center Play Icon Button */}
-                      <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
                         <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-[#0b3c26]/90 text-[#f3e5ab] border-2 border-[#d4af37] shadow-[0_4px_20px_rgba(0,0,0,0.5)] flex items-center justify-center group-hover:scale-110 group-hover:bg-[#072217] transition-all duration-300">
                           <Play className="w-6 h-6 fill-[#d4af37] text-[#d4af37] ml-0.5" />
                         </div>
@@ -345,13 +434,33 @@ export const Facilities: React.FC = () => {
                       </div>
 
                       <div className="pt-3.5 mt-3.5 border-t border-gray-100 flex items-center justify-between text-xs">
-                        <span className="text-[11px] text-gray-400 font-medium truncate max-w-[150px]">
+                        <span className="text-[11px] text-gray-400 font-medium truncate max-w-[130px]">
                           {video.author || 'MI Al Ihsan Soborejo'}
                         </span>
-                        <span className="text-[#0b3c26] font-bold flex items-center gap-1 group-hover:text-[#d4af37] transition-colors">
-                          <PlayCircle className="w-3.5 h-3.5" />
-                          <span>Tonton Video</span>
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openShare({
+                                type: 'video',
+                                id: video.id,
+                                title: video.title,
+                                description: video.description,
+                                category: video.category,
+                                imageUrl: video.thumbnailUrl,
+                              });
+                            }}
+                            className="p-1 text-gray-400 hover:text-[#0b3c26] hover:bg-emerald-50 rounded-md transition-colors cursor-pointer"
+                            title="Bagikan Video Ini"
+                          >
+                            <Share2 className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="text-[#0b3c26] font-bold flex items-center gap-1 group-hover:text-[#d4af37] transition-colors">
+                            <PlayCircle className="w-3.5 h-3.5" />
+                            <span>Tonton Video</span>
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -427,11 +536,29 @@ export const Facilities: React.FC = () => {
             />
 
             <div className="p-6">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#072217] bg-[#d4af37] px-2.5 py-0.5 rounded-full">
-                  {selectedGallery.category}
-                </span>
-                <span className="text-xs text-white/60">• {selectedGallery.date}</span>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#072217] bg-[#d4af37] px-2.5 py-0.5 rounded-full">
+                    {selectedGallery.category}
+                  </span>
+                  <span className="text-xs text-white/60">• {selectedGallery.date}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openShare({
+                    type: 'galeri',
+                    id: selectedGallery.id,
+                    title: selectedGallery.title,
+                    description: selectedGallery.description,
+                    category: selectedGallery.category,
+                    imageUrl: selectedGallery.imageUrl,
+                  })}
+                  className="flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 text-[#f3e5ab] text-xs font-semibold rounded-lg transition-colors cursor-pointer border border-[#d4af37]/30"
+                  title="Bagikan Foto"
+                >
+                  <Share2 className="w-3.5 h-3.5 text-[#d4af37]" />
+                  <span>Bagikan Foto</span>
+                </button>
               </div>
               <h3 className="font-heading text-xl font-bold text-[#f3e5ab] mb-2">
                 {selectedGallery.title}
@@ -446,9 +573,10 @@ export const Facilities: React.FC = () => {
 
       {/* Video Player Lightbox Modal */}
       {selectedVideo && (() => {
-        const isUrlPortrait = isPortraitVideoUrl(selectedVideo.videoUrl);
-        const aspectConfig = getVideoAspectConfig(playerAspect, isUrlPortrait);
-        const parsed = parseVideoUrl(selectedVideo.videoUrl, selectedVideo.thumbnailUrl, aspectConfig.effectiveAspect);
+        const autoAspect = detectVideoAspectRatio(selectedVideo.videoUrl, selectedVideo.aspectRatio, selectedVideo.title, selectedVideo.description);
+        const effectiveAspect = playerAspect && playerAspect !== 'auto' ? playerAspect : autoAspect;
+        const aspectConfig = getVideoAspectConfig(effectiveAspect, effectiveAspect === 'portrait');
+        const parsed = parseVideoUrl(selectedVideo.videoUrl, selectedVideo.thumbnailUrl, effectiveAspect, selectedVideo.title, selectedVideo.description);
         const badge = getPlatformBadge(parsed.platform);
 
         return (
@@ -481,59 +609,76 @@ export const Facilities: React.FC = () => {
                 </button>
               </div>
 
-              {/* Dynamic Frame Orientation Switcher Bar */}
+              {/* Automatic Frame Ratio Indicator & Quick Override */}
               <div className="bg-[#051a11] px-4 py-2 border-b border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[11px] text-[#f3e5ab] font-medium flex items-center gap-1 shrink-0">
-                    <Sparkles className="w-3 h-3 text-[#d4af37]" /> Format Frame:
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-300 bg-emerald-950/80 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+                    <Sparkles className="w-3 h-3 text-[#d4af37]" />
+                    <span>Frame Otomatis: <strong>{aspectConfig.badgeLabel}</strong></span>
                   </span>
-                  <div className="inline-flex bg-black/40 p-0.5 rounded-lg border border-white/10">
-                    <button
-                      type="button"
-                      onClick={() => setPlayerAspect('landscape')}
-                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
-                        aspectConfig.effectiveAspect === 'landscape'
-                          ? 'bg-[#d4af37] text-[#072217] shadow-sm'
-                          : 'text-white/70 hover:text-white hover:bg-white/10'
-                      }`}
-                      title="16:9 Lanskap - Format standar mendatar (YouTube / Facebook Landscape)"
-                    >
-                      <Tv className="w-3 h-3" />
-                      <span>16:9 Lanskap</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPlayerAspect('portrait')}
-                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
-                        aspectConfig.effectiveAspect === 'portrait'
-                          ? 'bg-[#d4af37] text-[#072217] shadow-sm'
-                          : 'text-white/70 hover:text-white hover:bg-white/10'
-                      }`}
-                      title="9:16 Potret - Format vertikal (Facebook Reels, Facebook Video HP, Shorts, TikTok)"
-                    >
-                      <Smartphone className="w-3 h-3" />
-                      <span>9:16 Potret / Reel</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPlayerAspect('square')}
-                      className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
-                        aspectConfig.effectiveAspect === 'square'
-                          ? 'bg-[#d4af37] text-[#072217] shadow-sm'
-                          : 'text-white/70 hover:text-white hover:bg-white/10'
-                      }`}
-                      title="1:1 Persegi - Format kotak"
-                    >
-                      <Square className="w-3 h-3" />
-                      <span>1:1 Kotak</span>
-                    </button>
-                  </div>
+                  {parsed.platform === 'facebook' && (
+                    <span className="text-[10px] text-blue-300/80 hidden sm:inline">
+                      Orientasi video Facebook disesuaikan otomatis
+                    </span>
+                  )}
                 </div>
 
-                {/* Status & Save indicator */}
-                <div className="flex items-center gap-2">
+                {/* Subtle orientation toggles if user wants to switch */}
+                <div className="flex items-center gap-1 text-[11px] flex-wrap">
+                  <span className="text-white/40 text-[10px] mr-1 hidden sm:inline">Rasio Frame:</span>
+                  <button
+                    type="button"
+                    onClick={() => setPlayerAspect('portrait')}
+                    className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                      aspectConfig.effectiveAspect === 'portrait'
+                        ? 'bg-[#d4af37] text-[#072217] shadow-sm'
+                        : 'text-white/60 hover:text-white hover:bg-white/10'
+                    }`}
+                    title="Format Vertikal 9:16 (Facebook Reels, Shorts, TikTok)"
+                  >
+                    <Smartphone className="w-2.5 h-2.5" />
+                    <span>9:16 Potret</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPlayerAspect('landscape')}
+                    className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                      aspectConfig.effectiveAspect === 'landscape'
+                        ? 'bg-[#d4af37] text-[#072217] shadow-sm'
+                        : 'text-white/60 hover:text-white hover:bg-white/10'
+                    }`}
+                    title="Format Mendatar 16:9 (YouTube, Standar)"
+                  >
+                    <Tv className="w-2.5 h-2.5" />
+                    <span>16:9 Lanskap</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPlayerAspect('square')}
+                    className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                      aspectConfig.effectiveAspect === 'square'
+                        ? 'bg-[#d4af37] text-[#072217] shadow-sm'
+                        : 'text-white/60 hover:text-white hover:bg-white/10'
+                    }`}
+                    title="Format Kotak 1:1"
+                  >
+                    <Square className="w-2.5 h-2.5" />
+                    <span>1:1 Kotak</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPlayerAspect('classic')}
+                    className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                      aspectConfig.effectiveAspect === 'classic'
+                        ? 'bg-[#d4af37] text-[#072217] shadow-sm'
+                        : 'text-white/60 hover:text-white hover:bg-white/10'
+                    }`}
+                    title="Format 4:3 Klasik"
+                  >
+                    <Tv className="w-2.5 h-2.5" />
+                    <span>4:3 Klasik</span>
+                  </button>
+
                   {selectedVideo.aspectRatio !== aspectConfig.effectiveAspect && (
                     <button
                       type="button"
@@ -543,36 +688,21 @@ export const Facilities: React.FC = () => {
                         setAspectSavedToast(true);
                         setTimeout(() => setAspectSavedToast(false), 2500);
                       }}
-                      className="text-[10px] text-emerald-300 hover:text-emerald-200 bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-500/30 px-2 py-0.5 rounded flex items-center gap-1 transition-colors cursor-pointer"
-                      title="Jadikan format frame ini default untuk video ini"
+                      className="ml-2 text-[10px] text-emerald-300 hover:text-emerald-200 bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-500/30 px-2.5 py-0.5 rounded flex items-center gap-1 transition-colors cursor-pointer"
+                      title="Kunci format frame ini secara permanen untuk video ini"
                     >
                       <Check className="w-3 h-3" />
-                      <span>Simpan Format Ini</span>
+                      <span>{aspectSavedToast ? 'Tersimpan!' : 'Kunci Format'}</span>
                     </button>
-                  )}
-                  {aspectSavedToast && (
-                    <span className="text-[10px] text-emerald-400 font-bold">
-                      Tersimpan!
-                    </span>
                   )}
                 </div>
               </div>
 
-              {/* Informative Platform Notice for Facebook videos */}
-              {parsed.platform === 'facebook' && (
-                <div className="px-4 py-1.5 bg-blue-950/60 border-b border-blue-500/20 flex items-center justify-between text-[11px] text-blue-200">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-                    <span>Pemutar Facebook: Frame saat ini <strong>{aspectConfig.effectiveAspect === 'portrait' ? '9:16 Potret (Vertikal)' : '16:9 Lanskap'}</strong></span>
-                  </span>
-                  <span className="text-[10px] text-blue-300/80 hidden sm:inline">
-                    Gunakan tombol di atas jika rasio belum pas
-                  </span>
-                </div>
-              )}
-
-              {/* Video Player Container with Adaptive Aspect Ratio */}
-              <div className={`relative ${aspectConfig.containerAspectClass} w-full bg-black flex items-center justify-center overflow-hidden transition-all duration-300`}>
+              {/* Video Player Container with Automatic Adaptive Aspect Ratio */}
+              <div
+                className={`relative ${aspectConfig.containerAspectClass} bg-black flex items-center justify-center overflow-hidden transition-all duration-300 shadow-inner`}
+                style={aspectConfig.containerStyle}
+              >
                 {parsed.isDirectVideo ? (
                   <video
                     controls
@@ -596,10 +726,10 @@ export const Facilities: React.FC = () => {
                     src={parsed.embedUrl}
                     title={selectedVideo.title}
                     scrolling="no"
-                    style={{ border: 'none', overflow: 'hidden' }}
+                    style={{ border: 'none', overflow: 'hidden', width: '100%', height: '100%' }}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
-                    className="w-full h-full border-0"
+                    className="w-full h-full border-0 block"
                   />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-slate-900">
@@ -639,23 +769,22 @@ export const Facilities: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {/* Share / Copy Link */}
+                    {/* Share Button */}
                     <button
-                      onClick={() => handleCopyVideoLink(selectedVideo.videoUrl)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs rounded-lg transition-colors"
-                      title="Salin tautan video"
+                      type="button"
+                      onClick={() => openShare({
+                        type: 'video',
+                        id: selectedVideo.id,
+                        title: selectedVideo.title,
+                        description: selectedVideo.description,
+                        category: selectedVideo.category,
+                        imageUrl: selectedVideo.thumbnailUrl,
+                      })}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-[#f3e5ab] text-xs font-semibold rounded-lg transition-colors cursor-pointer border border-[#d4af37]/30"
+                      title="Bagikan Tautan Video Ini"
                     >
-                      {copiedLink ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          <span className="text-emerald-400 font-semibold">Tersalin!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Share2 className="w-3.5 h-3.5" />
-                          <span>Salin Link</span>
-                        </>
-                      )}
+                      <Share2 className="w-3.5 h-3.5 text-[#d4af37]" />
+                      <span>Bagikan Video</span>
                     </button>
 
                     {/* External Link */}
@@ -756,13 +885,33 @@ export const Facilities: React.FC = () => {
                 ))}
               </div>
 
-              <button
-                id="facility-modal-ok-btn"
-                onClick={() => setSelectedFacility(null)}
-                className="w-full py-2.5 bg-[#0b3c26] hover:bg-[#072217] text-[#f3e5ab] text-xs font-semibold uppercase tracking-wider rounded-xl transition-colors"
-              >
-                Tutup Informasi
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  id="facility-share-btn"
+                  onClick={() => openShare({
+                    type: 'fasilitas',
+                    id: selectedFacility.id,
+                    title: selectedFacility.name,
+                    description: selectedFacility.description,
+                    category: selectedFacility.category,
+                    imageUrl: selectedFacility.imageUrl,
+                  })}
+                  className="flex-1 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-[#0b3c26] border border-emerald-300 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Share2 className="w-3.5 h-3.5 text-[#d4af37]" />
+                  <span>Bagikan Fasilitas</span>
+                </button>
+
+                <button
+                  type="button"
+                  id="facility-modal-ok-btn"
+                  onClick={() => setSelectedFacility(null)}
+                  className="flex-1 py-2.5 bg-[#0b3c26] hover:bg-[#072217] text-[#f3e5ab] text-xs font-semibold uppercase tracking-wider rounded-xl transition-colors cursor-pointer"
+                >
+                  Tutup Informasi
+                </button>
+              </div>
             </div>
           </div>
         </div>

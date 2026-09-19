@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDataContext } from '../context/DataContext';
+import { useShare } from '../context/ShareContext';
 import { NewsArticle } from '../types';
-import { Calendar, User, ArrowRight, X, Share2, Check } from 'lucide-react';
+import { Calendar, User, ArrowRight, X, Share2, Sparkles } from 'lucide-react';
 import { formatDisplayDate, parseDateTimestamp } from '../lib/dateUtils';
 
 const extractParagraphs = (item: any): string[] => {
@@ -23,20 +24,49 @@ const extractParagraphs = (item: any): string[] => {
 
 export const NewsSection: React.FC = () => {
   const { newsList } = useDataContext();
+  const { activeDeepLink, consumeDeepLink, openShare } = useShare();
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+
+  // Auto open news article if navigated via deep link
+  useEffect(() => {
+    if (activeDeepLink && activeDeepLink.type === 'berita' && activeDeepLink.id) {
+      const match = newsList.find(
+        (a) =>
+          a.id === activeDeepLink.id ||
+          a.title.toLowerCase().includes(activeDeepLink.id!.toLowerCase())
+      );
+      if (match) {
+        setSelectedArticle(match);
+        setHighlightedId(match.id);
+        consumeDeepLink();
+
+        // Scroll to card as fallback
+        setTimeout(() => {
+          const card = document.getElementById(`news-card-${match.id}`) || document.getElementById(`featured-news-${match.id}`);
+          if (card) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 300);
+      }
+    }
+  }, [activeDeepLink, newsList, consumeDeepLink]);
 
   // Urutkan berita berdasarkan tanggal terbit terbaru secara otomatis
   const sortedNews = [...newsList].sort((a, b) => {
     return parseDateTimestamp(b.date) - parseDateTimestamp(a.date);
   });
 
-  const handleShare = (article: NewsArticle) => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(`${window.location.origin}#berita`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+  const handleShareArticle = (article: NewsArticle, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    openShare({
+      type: 'berita',
+      id: article.id,
+      title: article.title,
+      description: article.summary,
+      category: article.category,
+      imageUrl: article.imageUrl,
+    });
   };
 
   return (
@@ -155,20 +185,12 @@ export const NewsSection: React.FC = () => {
                       )}
 
                       <button
-                        onClick={() => handleShare(latest)}
-                        className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#0b3c26] font-medium transition-colors"
+                        onClick={() => handleShareArticle(latest)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-emerald-50 text-xs text-gray-700 hover:text-[#0b3c26] font-semibold transition-colors cursor-pointer border border-gray-200/80"
+                        title="Bagikan Warta Terkini"
                       >
-                        {copied ? (
-                          <>
-                            <Check className="w-4 h-4 text-green-600" />
-                            <span className="text-green-600 font-semibold">Tautan Tersalin!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Share2 className="w-4 h-4 text-[#d4af37]" />
-                            <span>Bagikan Warta</span>
-                          </>
-                        )}
+                        <Share2 className="w-4 h-4 text-[#d4af37]" />
+                        <span>Bagikan Warta</span>
                       </button>
                     </div>
                   </div>
@@ -199,7 +221,11 @@ export const NewsSection: React.FC = () => {
                   <article
                     key={article.id}
                     id={`news-card-${article.id}`}
-                    className="group bg-white rounded-2xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_40px_rgba(11,60,38,0.15)] border border-black/5 hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between"
+                    className={`group bg-white rounded-2xl overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_40px_rgba(11,60,38,0.15)] border transition-all duration-300 flex flex-col justify-between ${
+                      highlightedId === article.id
+                        ? 'ring-4 ring-[#d4af37] border-[#d4af37] -translate-y-1.5 shadow-xl'
+                        : 'border-black/5 hover:-translate-y-1.5'
+                    }`}
                   >
                     <div className="relative h-52 overflow-hidden">
                       <img
@@ -227,14 +253,26 @@ export const NewsSection: React.FC = () => {
                         </p>
                       </div>
 
-                      <button
-                        id={`read-news-btn-${article.id}`}
-                        onClick={() => setSelectedArticle(article)}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0b3c26] hover:text-[#d4af37] transition-colors"
-                      >
-                        <span>Baca Selengkapnya</span>
-                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                      </button>
+                      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                        <button
+                          id={`read-news-btn-${article.id}`}
+                          onClick={() => setSelectedArticle(article)}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0b3c26] hover:text-[#d4af37] transition-colors cursor-pointer"
+                        >
+                          <span>Baca Selengkapnya</span>
+                          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                        </button>
+
+                        <button
+                          type="button"
+                          id={`share-news-btn-${article.id}`}
+                          onClick={(e) => handleShareArticle(article, e)}
+                          className="p-2 text-gray-400 hover:text-[#0b3c26] hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                          title="Bagikan Warta"
+                        >
+                          <Share2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </article>
                 ))}
@@ -306,21 +344,14 @@ export const NewsSection: React.FC = () => {
                 </div>
 
                 <button
+                  type="button"
                   id="news-share-btn"
-                  onClick={() => handleShare(selectedArticle)}
-                  className="flex items-center gap-1 text-xs text-[#0b3c26] hover:text-[#d4af37] font-medium"
+                  onClick={() => handleShareArticle(selectedArticle)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-[#0b3c26] rounded-xl text-xs font-semibold transition-colors cursor-pointer border border-emerald-200/80"
+                  title="Bagikan Warta Ini"
                 >
-                  {copied ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-green-600" />
-                      <span className="text-green-600 font-semibold">Tautan Tersalin!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Share2 className="w-3.5 h-3.5" />
-                      <span>Bagikan</span>
-                    </>
-                  )}
+                  <Share2 className="w-3.5 h-3.5 text-[#d4af37]" />
+                  <span>Bagikan Berita</span>
                 </button>
               </div>
 

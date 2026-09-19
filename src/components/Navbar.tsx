@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, BookOpen, ArrowRight, Shield, Lock } from 'lucide-react';
+import { Menu, X, BookOpen, ArrowRight, Shield, Lock, Share2 } from 'lucide-react';
 import { useDataContext } from '../context/DataContext';
+import { useShare } from '../context/ShareContext';
 
 interface NavbarProps {
   onOpenPPDB: () => void;
@@ -11,6 +12,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPPDB, activeSection = 'ber
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { schoolProfile, isAdmin, setIsLoginModalOpen, setViewMode } = useDataContext();
+  const { openShare } = useShare();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -121,9 +123,25 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPPDB, activeSection = 'ber
           </ul>
 
           <button
+            type="button"
+            id="nav-btn-share-desktop"
+            onClick={() => openShare({
+              type: 'profil',
+              title: schoolProfile.name || "MI & RA AL IHSAN SOBOREJO",
+              description: schoolProfile.vision || 'Website Resmi Satu Atap RA Al Ihsan & MI Ma\'arif Al Ihsan Soborejo, Temanggung.',
+              category: 'Madrasah'
+            })}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-emerald-900/20 hover:border-[#0b3c26] text-gray-700 hover:text-[#0b3c26] bg-white hover:bg-emerald-50/50 text-xs font-semibold transition-all cursor-pointer shadow-xs"
+            title="Bagikan Tautan Website"
+          >
+            <Share2 className="w-3.5 h-3.5 text-[#d4af37]" />
+            <span>Bagikan</span>
+          </button>
+
+          <button
             id="nav-btn-ppdb-desktop"
             onClick={onOpenPPDB}
-            className="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#d4af37] via-[#e5c158] to-[#b89228] text-[#072217] font-bold text-xs tracking-wider uppercase px-4 py-2.5 rounded-full shadow-[0_4px_15px_rgba(212,175,55,0.35)] hover:shadow-[0_6px_22px_rgba(212,175,55,0.55)] hover:-translate-y-0.5 transition-all duration-300 border border-[#f3e5ab]"
+            className="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#d4af37] via-[#e5c158] to-[#b89228] text-[#072217] font-bold text-xs tracking-wider uppercase px-4 py-2.5 rounded-full shadow-[0_4px_15px_rgba(212,175,55,0.35)] hover:shadow-[0_6px_22px_rgba(212,175,55,0.55)] hover:-translate-y-0.5 transition-all duration-300 border border-[#f3e5ab] cursor-pointer"
           >
             <span>PPDB Online</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -131,18 +149,34 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPPDB, activeSection = 'ber
         </nav>
 
         {/* Mobile / Tablet Buttons */}
-        <div className="flex items-center gap-2 xl:hidden">
+        <div className="flex items-center gap-1.5 xl:hidden">
+          <button
+            type="button"
+            id="nav-btn-share-mobile"
+            onClick={() => openShare({
+              type: 'profil',
+              title: schoolProfile.name || "MI & RA AL IHSAN SOBOREJO",
+              description: schoolProfile.vision || 'Website Resmi Satu Atap RA Al Ihsan & MI Ma\'arif Al Ihsan Soborejo, Temanggung.',
+              category: 'Madrasah'
+            })}
+            className="p-2 text-gray-600 hover:text-[#0b3c26] rounded-lg transition-colors cursor-pointer"
+            title="Bagikan Website"
+            aria-label="Bagikan Website"
+          >
+            <Share2 className="w-4 h-4 text-[#d4af37]" />
+          </button>
+
           <button
             id="nav-btn-ppdb-mobile-small"
             onClick={onOpenPPDB}
-            className="bg-gradient-to-r from-[#d4af37] to-[#b89228] text-[#072217] font-bold text-[11px] tracking-wider uppercase px-3 py-1.5 rounded-full shadow-sm"
+            className="bg-gradient-to-r from-[#d4af37] to-[#b89228] text-[#072217] font-bold text-[11px] tracking-wider uppercase px-3 py-1.5 rounded-full shadow-sm cursor-pointer"
           >
             PPDB
           </button>
           <button
             id="mobile-menu-toggle-btn"
             onClick={() => setIsOpen(!isOpen)}
-            className="p-2 text-[#072217] hover:text-[#0b3c26] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
+            className="p-2 text-[#072217] hover:text-[#0b3c26] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#d4af37] cursor-pointer"
             aria-label="Toggle Navigation Menu"
           >
             {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
