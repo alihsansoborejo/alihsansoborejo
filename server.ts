@@ -325,7 +325,7 @@ app.post('/api/sync-all', requireAuth, async (req: AuthRequest, res) => {
         const existingStaff = await getStaffList();
         for (const ex of existingStaff) {
           if (!incomingStaffIds.has(ex.id)) {
-            tasks.push(deleteStaff(ex.id).catch(() => {}));
+            await deleteStaff(ex.id).catch(() => {});
           }
         }
       } catch (err) {
@@ -334,7 +334,11 @@ app.post('/api/sync-all', requireAuth, async (req: AuthRequest, res) => {
 
       for (const s of staffList) {
         if (s.name && s.role) {
-          tasks.push(upsertStaff(s).catch((err) => console.warn('Sync staff item note:', err.message)));
+          try {
+            await upsertStaff(s);
+          } catch (err: any) {
+            console.warn('Sync staff item note:', err?.message || err);
+          }
         }
       }
     }
@@ -345,7 +349,7 @@ app.post('/api/sync-all', requireAuth, async (req: AuthRequest, res) => {
         const existingNews = await getNewsList();
         for (const ex of existingNews) {
           if (!incomingNewsIds.has(ex.id)) {
-            tasks.push(deleteNews(ex.id).catch(() => {}));
+            await deleteNews(ex.id).catch(() => {});
           }
         }
       } catch (err) {
@@ -354,7 +358,11 @@ app.post('/api/sync-all', requireAuth, async (req: AuthRequest, res) => {
 
       for (const n of newsList) {
         if (n.title) {
-          tasks.push(upsertNews(n).catch((err) => console.warn('Sync news item note:', err.message)));
+          try {
+            await upsertNews(n);
+          } catch (err: any) {
+            console.warn('Sync news item note:', err?.message || err);
+          }
         }
       }
     }

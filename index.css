@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+@theme {
+  --font-heading: 'Cinzel', serif;
+  --font-serif-sub: 'Playfair Display', serif;
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --color-emerald-dark: #072217;
+  --color-emerald-deep: #0b3c26;
+  --color-emerald-light: #13583a;
+  --color-gold: #d4af37;
+  --color-gold-light: #f3e5ab;
+  --color-gold-glow: rgba(212, 175, 55, 0.4);
+}
+
+.font-heading {
+  font-family: 'Cinzel', serif;
+}
+
+.font-serif-sub {
+  font-family: 'Playfair Display', serif;
+}
+
+.font-body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Islamic Geometric Subtle Dot Pattern */
+.bg-islamic-pattern {
+  background-image: radial-gradient(#d4af37 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f8faf9;
+}
+::-webkit-scrollbar-thumb {
+  background: #0b3c26;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #d4af37;
+}

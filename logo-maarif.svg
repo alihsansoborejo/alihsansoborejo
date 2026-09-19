@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDF0A6" />
+      <stop offset="50%" stop-color="#D4AF37" />
+      <stop offset="100%" stop-color="#AA820A" />
+    </linearGradient>
+    <linearGradient id="greenGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0E5C3A" />
+      <stop offset="50%" stop-color="#0B3C26" />
+      <stop offset="100%" stop-color="#062417" />
+    </linearGradient>
+    <filter id="subtleShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- Outer Emblem Shield / Circle with Islamic Octagon Style -->
+  <circle cx="250" cy="250" r="236" fill="url(#greenGradient)" stroke="url(#goldGradient)" stroke-width="10" filter="url(#subtleShadow)" />
+  <circle cx="250" cy="250" r="218" fill="none" stroke="url(#goldGradient)" stroke-width="3" stroke-dasharray="8 6" />
+
+  <!-- Outer Ring Text Path -->
+  <path id="topTextArc" d="M 65 250 A 185 185 0 0 1 435 250" fill="none" />
+  <path id="bottomTextArc" d="M 435 250 A 185 185 0 0 1 65 250" fill="none" />
+
+  <text fill="#FDF0A6" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="900" font-size="21" letter-spacing="3.5">
+    <textPath href="#topTextArc" startOffset="50%" text-anchor="middle">
+      LP MA'ARIF NU • TEMANGGUNG
+    </textPath>
+  </text>
+  <text fill="#FDF0A6" font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="800" font-size="19" letter-spacing="2.8">
+    <textPath href="#bottomTextArc" startOffset="50%" text-anchor="middle">
+      MI MA'ARIF AL IHSAN SOBOREJO
+    </textPath>
+  </text>
+
+  <!-- Inner Gold Medallion Border -->
+  <circle cx="250" cy="250" r="150" fill="#0B3C26" stroke="url(#goldGradient)" stroke-width="6" />
+
+  <!-- Globe / Bola Dunia (Simbol NU) -->
+  <circle cx="250" cy="250" r="82" fill="#0E5C3A" stroke="#FDF0A6" stroke-width="3.5" />
+  
+  <!-- Garis Lintang dan Bujur Khatulistiwa -->
+  <ellipse cx="250" cy="250" rx="82" ry="32" fill="none" stroke="#FDF0A6" stroke-width="2.5" />
+  <ellipse cx="250" cy="250" rx="82" ry="60" fill="none" stroke="#FDF0A6" stroke-width="2" />
+  <ellipse cx="250" cy="250" rx="42" ry="82" fill="none" stroke="#FDF0A6" stroke-width="2.5" />
+  <line x1="250" y1="168" x2="250" y2="332" stroke="#FDF0A6" stroke-width="2.5" />
+  <line x1="168" y1="250" x2="332" y2="250" stroke="#FDF0A6" stroke-width="3" />
+
+  <!-- Tali Tambang Pengikat Ukhuwah / Simpul Tali Bersegi -->
+  <circle cx="250" cy="250" r="102" fill="none" stroke="url(#goldGradient)" stroke-width="4.5" stroke-dasharray="10 5" />
+
+  <!-- Bintang 9 (Bintang Sembilan NU / Bintang Utama di Atas Rasulullah SAW) -->
+  <!-- 1. Bintang Pusat Besar di Puncak (Rasulullah SAW) -->
+  <polygon points="250,112 255,127 271,127 258,137 263,152 250,142 237,152 242,137 229,127 245,127" fill="url(#goldGradient)" />
+
+  <!-- 4 Bintang di Kanan Atas & Kanan (Khulafaur Rasyidin / Madzhab 4) -->
+  <polygon points="296,122 300,133 312,133 302,141 306,152 296,145 286,152 290,141 280,133 292,133" fill="url(#goldGradient)" transform="scale(0.85) translate(50, 20)" />
+  <polygon points="334,148 338,159 350,159 340,167 344,178 334,171 324,178 328,167 318,159 330,159" fill="url(#goldGradient)" transform="scale(0.75) translate(95, 45)" />
+  <polygon points="352,188 356,199 368,199 358,207 362,218 352,211 342,218 346,207 336,199 348,199" fill="url(#goldGradient)" transform="scale(0.7) translate(145, 80)" />
+  <polygon points="358,234 362,245 374,245 364,253 368,264 358,257 348,264 352,253 342,245 354,245" fill="url(#goldGradient)" transform="scale(0.65) translate(185, 125)" />
+
+  <!-- 4 Bintang di Kiri Atas & Kiri (Wali Songo) -->
+  <polygon points="204,122 208,133 220,133 210,141 214,152 204,145 194,152 198,141 188,133 200,133" fill="url(#goldGradient)" transform="scale(0.85) translate(40, 20)" />
+  <polygon points="166,148 170,159 182,159 172,167 176,178 166,171 156,178 160,167 150,159 162,159" fill="url(#goldGradient)" transform="scale(0.75) translate(55, 45)" />
+  <polygon points="148,188 152,199 164,199 154,207 158,218 148,211 138,218 142,207 132,199 144,199" fill="url(#goldGradient)" transform="scale(0.7) translate(65, 80)" />
+  <polygon points="142,234 146,245 158,245 148,253 152,264 142,257 132,264 136,253 126,245 138,245" fill="url(#goldGradient)" transform="scale(0.65) translate(75, 125)" />
+
+  <!-- Kaligrafi Simbolik Huruf Arab 'Nun' (Nahdlatul Ulama) & Kitab Terbuka Ma'arif -->
+  <g transform="translate(250, 260) scale(1)">
+    <!-- Pita Terbuka / Kitab Terbuka Pendidikan Islam -->
+    <path d="M -55 35 Q 0 15 55 35 Q 30 55 0 45 Q -30 55 -55 35 Z" fill="url(#goldGradient)" stroke="#062417" stroke-width="1.5" />
+    <path d="M -50 36 Q 0 20 50 36" fill="none" stroke="#0B3C26" stroke-width="2" />
+    <!-- Teks Kaligrafi Mini -->
+    <text x="0" y="42" fill="#0B3C26" font-size="11" font-weight="900" text-anchor="middle" font-family="'Amiri', 'Times New Roman', serif">ن • ع</text>
+  </g>
+
+  <!-- Tahun Hijriyah & Masehi Simbolik Ma'arif -->
+  <text x="250" y="375" fill="#FDF0A6" font-size="12" font-weight="bold" text-anchor="middle" letter-spacing="1">
+    TERAKREDITASI • ASWAJA AN-NAHDLIYYAH
+  </text>
+</svg>
