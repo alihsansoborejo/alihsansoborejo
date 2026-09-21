@@ -1,16 +1,26 @@
 import React from 'react';
 import { useDataContext } from '../context/DataContext';
 import { MapPin, Phone, Mail, Globe, ArrowUp, Sparkles, ExternalLink, Lock } from 'lucide-react';
+import { NavigationTab } from '../types';
 
 interface FooterProps {
   onOpenPPDB: () => void;
+  onTabChange?: (tab: NavigationTab) => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onOpenPPDB }) => {
+export const Footer: React.FC<FooterProps> = ({ onOpenPPDB, onTabChange }) => {
   const { schoolProfile, isAdmin, setIsLoginModalOpen, setViewMode } = useDataContext();
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleNavClick = (tab: NavigationTab) => {
+    if (onTabChange) {
+      onTabChange(tab);
+    } else {
+      scrollToTop();
+    }
   };
 
   const handleAdminClick = () => {
@@ -67,49 +77,101 @@ export const Footer: React.FC<FooterProps> = ({ onOpenPPDB }) => {
             </div>
           </div>
 
-          {/* Column 2: Navigasi Cepat */}
+          {/* Column 2: Navigasi Cepat (Halaman Mandiri) */}
           <div>
             <h4 className="font-heading text-sm font-bold text-[#d4af37] uppercase tracking-wider mb-4">
-              Navigasi Cepat
+              Navigasi Halaman
             </h4>
-            <ul className="space-y-2.5 text-xs sm:text-sm list-none p-0 m-0">
+            <ul className="space-y-2 text-xs sm:text-sm list-none p-0 m-0">
               <li>
-                <a href="#beranda" className="hover:text-[#f3e5ab] hover:translate-x-1 inline-block transition-transform">
-                  Beranda Madrasah
-                </a>
-              </li>
-              <li>
-                <a href="#profil" className="hover:text-[#f3e5ab] hover:translate-x-1 inline-block transition-transform">
-                  Sambutan & Visi Misi
-                </a>
-              </li>
-              <li>
-                <a href="#program" className="hover:text-[#f3e5ab] hover:translate-x-1 inline-block transition-transform">
-                  Program Unggulan
-                </a>
-              </li>
-              <li>
-                <a href="#ekstrakurikuler" className="hover:text-[#f3e5ab] hover:translate-x-1 inline-block transition-transform">
-                  Ekstrakurikuler Santri
-                </a>
-              </li>
-              <li>
-                <a href="#prestasi" className="hover:text-[#f3e5ab] hover:translate-x-1 inline-block transition-transform">
-                  Prestasi Madrasah
-                </a>
-              </li>
-              <li>
-                <a href="#galeri" className="hover:text-[#f3e5ab] hover:translate-x-1 inline-block transition-transform">
-                  Galeri Foto & Fasilitas
-                </a>
+                <button
+                  type="button"
+                  onClick={() => handleNavClick('beranda')}
+                  className="hover:text-[#f3e5ab] hover:translate-x-1 inline-flex items-center gap-1.5 transition-transform text-left cursor-pointer"
+                >
+                  <span>• Beranda Madrasah</span>
+                </button>
               </li>
               <li>
                 <button
-                  onClick={onOpenPPDB}
-                  className="text-[#d4af37] hover:underline font-semibold text-left flex items-center gap-1"
+                  type="button"
+                  onClick={() => handleNavClick('berita')}
+                  className="hover:text-[#f3e5ab] hover:translate-x-1 inline-flex items-center gap-1.5 transition-transform text-left cursor-pointer"
+                >
+                  <span>• Warta &amp; Berita Terkini</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => handleNavClick('profil')}
+                  className="hover:text-[#f3e5ab] hover:translate-x-1 inline-flex items-center gap-1.5 transition-transform text-left cursor-pointer"
+                >
+                  <span>• Profil, Visi Misi &amp; Sejarah</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => handleNavClick('gtk')}
+                  className="hover:text-[#f3e5ab] hover:translate-x-1 inline-flex items-center gap-1.5 transition-transform text-left cursor-pointer"
+                >
+                  <span>• Guru &amp; Tenaga Kependidikan</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => handleNavClick('program')}
+                  className="hover:text-[#f3e5ab] hover:translate-x-1 inline-flex items-center gap-1.5 transition-transform text-left cursor-pointer"
+                >
+                  <span>• Program Unggulan</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => handleNavClick('ekstrakurikuler')}
+                  className="hover:text-[#f3e5ab] hover:translate-x-1 inline-flex items-center gap-1.5 transition-transform text-left cursor-pointer"
+                >
+                  <span>• Ekstrakurikuler Santri</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => handleNavClick('prestasi')}
+                  className="hover:text-[#f3e5ab] hover:translate-x-1 inline-flex items-center gap-1.5 transition-transform text-left cursor-pointer"
+                >
+                  <span>• Prestasi Santri &amp; Madrasah</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => handleNavClick('galeri')}
+                  className="hover:text-[#f3e5ab] hover:translate-x-1 inline-flex items-center gap-1.5 transition-transform text-left cursor-pointer"
+                >
+                  <span>• Galeri Foto &amp; Fasilitas</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => handleNavClick('ppdb')}
+                  className="text-[#d4af37] hover:underline font-semibold text-left flex items-center gap-1 cursor-pointer"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>Pendaftaran PPDB Online</span>
+                  <span>Informasi PPDB Online</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => handleNavClick('kontak')}
+                  className="hover:text-[#f3e5ab] hover:translate-x-1 inline-flex items-center gap-1.5 transition-transform text-left cursor-pointer"
+                >
+                  <span>• Kontak &amp; Lokasi Madrasah</span>
                 </button>
               </li>
             </ul>

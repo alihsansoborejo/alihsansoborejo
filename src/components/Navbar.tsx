@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Menu, X, BookOpen, ArrowRight, Shield, Lock, Share2 } from 'lucide-react';
 import { useDataContext } from '../context/DataContext';
 import { useShare } from '../context/ShareContext';
+import { NavigationTab } from '../types';
 
 interface NavbarProps {
   onOpenPPDB: () => void;
-  activeSection?: string;
+  activeTab: NavigationTab;
+  onTabChange: (tab: NavigationTab) => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onOpenPPDB, activeSection = 'beranda' }) => {
+export const Navbar: React.FC<NavbarProps> = ({ onOpenPPDB, activeTab, onTabChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { schoolProfile, isAdmin, setIsLoginModalOpen, setViewMode } = useDataContext();
@@ -22,25 +24,22 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPPDB, activeSection = 'ber
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const navLinks = [
-    { label: 'Beranda', href: '#beranda' },
-    { label: 'Berita', href: '#berita' },
-    { label: 'Profil', href: '#profil' },
-    { label: 'GTK', href: '#gtk' },
-    { label: 'Program', href: '#program' },
-    { label: 'Ekstrakurikuler', href: '#ekstrakurikuler' },
-    { label: 'Prestasi', href: '#prestasi' },
-    { label: 'Galeri', href: '#galeri' },
-    { label: 'PPDB', href: '#ppdb' },
-    { label: 'Kontak', href: '#kontak' },
+  const navLinks: { id: NavigationTab; label: string }[] = [
+    { id: 'beranda', label: 'Beranda' },
+    { id: 'berita', label: 'Berita' },
+    { id: 'profil', label: 'Profil' },
+    { id: 'gtk', label: 'GTK' },
+    { id: 'program', label: 'Program' },
+    { id: 'ekstrakurikuler', label: 'Ekstrakurikuler' },
+    { id: 'prestasi', label: 'Prestasi' },
+    { id: 'galeri', label: 'Galeri' },
+    { id: 'ppdb', label: 'PPDB' },
+    { id: 'kontak', label: 'Kontak' },
   ];
 
-  const handleNavClick = (href: string) => {
+  const handleNavClick = (tab: NavigationTab) => {
     setIsOpen(false);
-    const element = document.querySelector(href);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
+    onTabChange(tab);
   };
 
   return (
@@ -48,20 +47,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPPDB, activeSection = 'ber
       id="main-header"
       className={`sticky top-0 z-40 transition-all duration-300 ${
         scrolled
-          ? 'bg-white/95 backdrop-blur-md shadow-md border-b border-[#d4af37]/30 py-2.5 sm:py-3'
-          : 'bg-white/90 backdrop-blur-md border-b border-[#d4af37]/20 py-3 sm:py-4'
+          ? 'bg-white/98 backdrop-blur-md shadow-md border-b border-[#d4af37]/30 py-2.5 sm:py-3'
+          : 'bg-white/95 backdrop-blur-md border-b border-[#d4af37]/20 py-3 sm:py-3.5'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-8 flex justify-between items-center">
         {/* Brand Logo & Title */}
-        <a
+        <button
           id="brand-logo-link"
-          href="#beranda"
-          onClick={(e) => {
-            e.preventDefault();
-            handleNavClick('#beranda');
-          }}
-          className="flex items-center gap-3 group"
+          type="button"
+          onClick={() => handleNavClick('beranda')}
+          className="flex items-center gap-3 group text-left cursor-pointer"
+          title="Menuju Halaman Beranda"
         >
           {/* Islamic Emblem Crest or Custom Logo */}
           <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-white border-2 border-[#d4af37] flex items-center justify-center overflow-hidden shadow-[0_2px_12px_rgba(212,175,55,0.35)] group-hover:scale-105 transition-all duration-300 shrink-0">
@@ -100,27 +97,33 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPPDB, activeSection = 'ber
               Soborejo, Pringsurat, Temanggung
             </p>
           </div>
-        </a>
+        </button>
 
         {/* Desktop Navigation */}
-        <nav className="hidden xl:flex items-center gap-5">
-          <ul className="flex items-center gap-4 lg:gap-5 list-none m-0 p-0">
-            {navLinks.map((link) => (
-              <li key={link.label}>
-                <a
-                  id={`nav-link-${link.label.toLowerCase()}`}
-                  href={link.href}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleNavClick(link.href);
-                  }}
-                  className="font-body text-xs font-semibold text-gray-700 hover:text-[#0b3c26] relative py-1 transition-colors uppercase tracking-wider after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-gradient-to-r after:from-[#d4af37] after:to-[#0b3c26] hover:after:w-full after:transition-all after:duration-300"
-                >
-                  {link.label}
-                </a>
-              </li>
-            ))}
+        <nav className="hidden xl:flex items-center gap-4">
+          <ul className="flex items-center gap-1.5 lg:gap-2 list-none m-0 p-0">
+            {navLinks.map((link) => {
+              const isActive = activeTab === link.id;
+              return (
+                <li key={link.id}>
+                  <button
+                    id={`nav-link-${link.id}`}
+                    type="button"
+                    onClick={() => handleNavClick(link.id)}
+                    className={`font-body text-xs font-semibold px-3 py-1.5 rounded-xl transition-all duration-200 uppercase tracking-wider cursor-pointer ${
+                      isActive
+                        ? 'bg-[#0b3c26] text-[#f3e5ab] shadow-sm font-bold ring-1 ring-[#d4af37]/60'
+                        : 'text-gray-700 hover:text-[#0b3c26] hover:bg-emerald-50/80'
+                    }`}
+                  >
+                    {link.label}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
+
+          <div className="h-6 w-[1px] bg-gray-200 ml-1" />
 
           <button
             type="button"
@@ -131,7 +134,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPPDB, activeSection = 'ber
               description: schoolProfile.vision || 'Website Resmi Satu Atap RA Al Ihsan & MI Ma\'arif Al Ihsan Soborejo, Temanggung.',
               category: 'Madrasah'
             })}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-emerald-900/20 hover:border-[#0b3c26] text-gray-700 hover:text-[#0b3c26] bg-white hover:bg-emerald-50/50 text-xs font-semibold transition-all cursor-pointer shadow-xs"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-900/20 hover:border-[#0b3c26] text-gray-700 hover:text-[#0b3c26] bg-white hover:bg-emerald-50/50 text-xs font-semibold transition-all cursor-pointer shadow-xs"
             title="Bagikan Tautan Website"
           >
             <Share2 className="w-3.5 h-3.5 text-[#d4af37]" />
@@ -140,10 +143,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPPDB, activeSection = 'ber
 
           <button
             id="nav-btn-ppdb-desktop"
+            type="button"
             onClick={onOpenPPDB}
-            className="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#d4af37] via-[#e5c158] to-[#b89228] text-[#072217] font-bold text-xs tracking-wider uppercase px-4 py-2.5 rounded-full shadow-[0_4px_15px_rgba(212,175,55,0.35)] hover:shadow-[0_6px_22px_rgba(212,175,55,0.55)] hover:-translate-y-0.5 transition-all duration-300 border border-[#f3e5ab] cursor-pointer"
+            className="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#d4af37] via-[#e5c158] to-[#b89228] text-[#072217] font-bold text-xs tracking-wider uppercase px-4 py-2 rounded-full shadow-[0_4px_15px_rgba(212,175,55,0.35)] hover:shadow-[0_6px_22px_rgba(212,175,55,0.55)] hover:-translate-y-0.5 transition-all duration-300 border border-[#f3e5ab] cursor-pointer"
           >
-            <span>PPDB Online</span>
+            <span>Daftar PPDB</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </nav>
@@ -168,6 +172,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPPDB, activeSection = 'ber
 
           <button
             id="nav-btn-ppdb-mobile-small"
+            type="button"
             onClick={onOpenPPDB}
             className="bg-gradient-to-r from-[#d4af37] to-[#b89228] text-[#072217] font-bold text-[11px] tracking-wider uppercase px-3 py-1.5 rounded-full shadow-sm cursor-pointer"
           >
@@ -175,6 +180,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPPDB, activeSection = 'ber
           </button>
           <button
             id="mobile-menu-toggle-btn"
+            type="button"
             onClick={() => setIsOpen(!isOpen)}
             className="p-2 text-[#072217] hover:text-[#0b3c26] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#d4af37] cursor-pointer"
             aria-label="Toggle Navigation Menu"
@@ -188,33 +194,43 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPPDB, activeSection = 'ber
       {isOpen && (
         <div
           id="mobile-menu-drawer"
-          className="xl:hidden bg-white/98 border-t border-[#d4af37]/20 px-6 py-5 shadow-2xl animate-in slide-in-from-top-3 duration-200"
+          className="xl:hidden bg-white/98 border-t border-[#d4af37]/20 px-4 sm:px-6 py-4 shadow-2xl animate-in slide-in-from-top-3 duration-200"
         >
+          <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2 px-1">
+            Pilih Halaman:
+          </div>
           <ul className="grid grid-cols-2 gap-2 list-none m-0 p-0">
-            {navLinks.map((link) => (
-              <li key={link.label}>
-                <a
-                  id={`mobile-nav-${link.label.toLowerCase()}`}
-                  href={link.href}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleNavClick(link.href);
-                  }}
-                  className="block py-2 px-3 text-sm font-medium text-[#072217] hover:bg-emerald-50 hover:text-[#0b3c26] rounded-lg transition-colors"
-                >
-                  {link.label}
-                </a>
-              </li>
-            ))}
+            {navLinks.map((link) => {
+              const isActive = activeTab === link.id;
+              return (
+                <li key={link.id}>
+                  <button
+                    id={`mobile-nav-${link.id}`}
+                    type="button"
+                    onClick={() => handleNavClick(link.id)}
+                    className={`w-full text-left py-2.5 px-3 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center justify-between ${
+                      isActive
+                        ? 'bg-[#0b3c26] text-[#f3e5ab] font-bold shadow-xs border border-[#d4af37]/40'
+                        : 'text-[#072217] hover:bg-emerald-50 hover:text-[#0b3c26] bg-gray-50/70'
+                    }`}
+                  >
+                    <span>{link.label}</span>
+                    {isActive && <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]" />}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
+
           <div className="mt-4 pt-3 border-t border-gray-100 flex flex-col gap-2">
             <button
               id="mobile-nav-ppdb-btn"
+              type="button"
               onClick={() => {
                 setIsOpen(false);
                 onOpenPPDB();
               }}
-              className="w-full py-3 bg-gradient-to-r from-[#d4af37] via-[#e5c158] to-[#b89228] text-[#072217] font-bold text-xs tracking-wider uppercase rounded-xl flex items-center justify-center gap-2 shadow-md"
+              className="w-full py-3 bg-gradient-to-r from-[#d4af37] via-[#e5c158] to-[#b89228] text-[#072217] font-bold text-xs tracking-wider uppercase rounded-xl flex items-center justify-center gap-2 shadow-md cursor-pointer"
             >
               <span>DAFTAR PPDB ONLINE SEKARANG</span>
               <ArrowRight className="w-4 h-4" />
@@ -222,6 +238,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPPDB, activeSection = 'ber
 
             <button
               id="mobile-nav-admin-btn"
+              type="button"
               onClick={() => {
                 setIsOpen(false);
                 if (isAdmin) {
@@ -230,7 +247,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPPDB, activeSection = 'ber
                   setIsLoginModalOpen(true);
                 }
               }}
-              className="w-full py-2 bg-[#072217] text-[#f3e5ab] font-semibold text-xs tracking-wider rounded-xl flex items-center justify-center gap-2"
+              className="w-full py-2 bg-[#072217] text-[#f3e5ab] font-semibold text-xs tracking-wider rounded-xl flex items-center justify-center gap-2 cursor-pointer"
             >
               <Lock className="w-3.5 h-3.5 text-[#d4af37]" />
               <span>{isAdmin ? 'Masuk ke Panel Admin (CMS)' : 'Login Pengelola Madrasah'}</span>

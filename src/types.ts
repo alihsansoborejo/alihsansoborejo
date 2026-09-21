@@ -1,3 +1,15 @@
+export type NavigationTab =
+  | 'beranda'
+  | 'berita'
+  | 'profil'
+  | 'gtk'
+  | 'program'
+  | 'ekstrakurikuler'
+  | 'prestasi'
+  | 'galeri'
+  | 'ppdb'
+  | 'kontak';
+
 export interface SchoolProfile {
   name: string;
   shortName: string;
