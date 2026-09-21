@@ -276,7 +276,9 @@ app.delete('/api/news/:id', requireAuth, async (req: AuthRequest, res) => {
 app.post('/api/settings/:key', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { key } = req.params;
-    const { value } = req.body;
+    const value = req.body?.value !== undefined 
+      ? req.body.value 
+      : (req.body?.data !== undefined ? req.body.data : req.body?.[key]);
     const saved = await setAppSetting(key, value);
     notifyDataChanged(key, saved);
     res.json({ success: true, data: saved });
@@ -305,19 +307,23 @@ app.post('/api/sync-all', requireAuth, async (req: AuthRequest, res) => {
       newsList,
     } = req.body;
 
-    const tasks: Promise<any>[] = [];
+    const settingsToSave: { key: string; value: any }[] = [];
 
-    if (schoolProfile) tasks.push(setAppSetting('school_profile', schoolProfile));
-    if (statsList !== undefined) tasks.push(setAppSetting('stats_list', statsList));
-    if (programs) tasks.push(setAppSetting('programs', programs));
-    if (extracurriculars) tasks.push(setAppSetting('extracurriculars', extracurriculars));
-    if (achievements) tasks.push(setAppSetting('achievements', achievements));
-    if (facilities) tasks.push(setAppSetting('facilities', facilities));
-    if (gallery) tasks.push(setAppSetting('gallery', gallery));
-    if (videoGallery) tasks.push(setAppSetting('video_gallery', videoGallery));
-    if (testimonials) tasks.push(setAppSetting('testimonials', testimonials));
-    if (faqs) tasks.push(setAppSetting('faqs', faqs));
-    if (studentList && Array.isArray(studentList)) tasks.push(setAppSetting('student_list', studentList));
+    if (schoolProfile !== undefined) settingsToSave.push({ key: 'school_profile', value: schoolProfile });
+    if (statsList !== undefined) settingsToSave.push({ key: 'stats_list', value: statsList });
+    if (programs !== undefined) settingsToSave.push({ key: 'programs', value: programs });
+    if (extracurriculars !== undefined) settingsToSave.push({ key: 'extracurriculars', value: extracurriculars });
+    if (achievements !== undefined) settingsToSave.push({ key: 'achievements', value: achievements });
+    if (facilities !== undefined) settingsToSave.push({ key: 'facilities', value: facilities });
+    if (gallery !== undefined) settingsToSave.push({ key: 'gallery', value: gallery });
+    if (videoGallery !== undefined) settingsToSave.push({ key: 'video_gallery', value: videoGallery });
+    if (testimonials !== undefined) settingsToSave.push({ key: 'testimonials', value: testimonials });
+    if (faqs !== undefined) settingsToSave.push({ key: 'faqs', value: faqs });
+    if (studentList !== undefined) settingsToSave.push({ key: 'student_list', value: Array.isArray(studentList) ? studentList : [] });
+
+    for (const item of settingsToSave) {
+      await setAppSetting(item.key, item.value);
+    }
 
     if (staffList && Array.isArray(staffList)) {
       try {
@@ -367,8 +373,6 @@ app.post('/api/sync-all', requireAuth, async (req: AuthRequest, res) => {
       }
     }
 
-    await Promise.all(tasks);
-
     notifyDataChanged('all');
     res.json({ success: true, message: 'Semua perubahan berhasil disinkronkan ke Cloud SQL Database.' });
   } catch (error: any) {
@@ -410,4 +414,14 @@ async function startServer() {
   });
 }
 
-startServer();
+// Process error listeners to prevent abrupt server crashes
+process.on('unhandledRejection', (reason) => {
+  console.warn('Unhandled Rejection at server level:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception at server level:', err);
+});
+
+startServer().catch((err) => {
+  console.error('Fatal error starting server:', err);
+});

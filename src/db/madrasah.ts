@@ -224,14 +224,16 @@ export async function deleteStaff(id: string) {
 // News Operations
 export async function getNewsList() {
   try {
-    const list = await db.select().from(newsArticles);
-    return list.sort((a, b) => {
-      const timeA = parseDateTimestamp(a.date);
-      const timeB = parseDateTimestamp(b.date);
-      if (timeB !== timeA) return timeB - timeA;
-      const createdA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const createdB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return createdB - createdA;
+    return await runWithRetry(async () => {
+      const list = await db.select().from(newsArticles);
+      return list.sort((a, b) => {
+        const timeA = parseDateTimestamp(a.date);
+        const timeB = parseDateTimestamp(b.date);
+        if (timeB !== timeA) return timeB - timeA;
+        const createdA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const createdB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return createdB - createdA;
+      });
     });
   } catch (error) {
     console.error('Failed to fetch news list:', error);
@@ -254,27 +256,14 @@ export async function upsertNews(item: {
   isPublished?: boolean;
 }) {
   try {
-    const slugVal = item.slug || (item.title ? item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : `berita-${item.id}`);
-    const excerptVal = item.excerpt || item.summary || (typeof item.content === 'string' ? item.content.slice(0, 150) : '') || '';
-    const contentVal = Array.isArray(item.content) ? item.content.join('\n\n') : (item.content || '');
+    return await runWithRetry(async () => {
+      const slugVal = item.slug || (item.title ? item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : `berita-${item.id}`);
+      const excerptVal = item.excerpt || item.summary || (typeof item.content === 'string' ? item.content.slice(0, 150) : '') || '';
+      const contentVal = Array.isArray(item.content) ? item.content.join('\n\n') : (item.content || '');
 
-    const result = await db.insert(newsArticles)
-      .values({
-        id: item.id,
-        title: item.title,
-        slug: slugVal,
-        category: item.category || 'Berita Madrasah',
-        excerpt: excerptVal,
-        content: contentVal,
-        date: item.date || new Date().toLocaleDateString('id-ID'),
-        author: item.author || 'Admin Madrasah',
-        imageUrl: item.imageUrl || null,
-        readTime: item.readTime || '3 menit',
-        isPublished: item.isPublished ?? true,
-      })
-      .onConflictDoUpdate({
-        target: newsArticles.id,
-        set: {
+      const result = await db.insert(newsArticles)
+        .values({
+          id: item.id,
           title: item.title,
           slug: slugVal,
           category: item.category || 'Berita Madrasah',
@@ -285,10 +274,25 @@ export async function upsertNews(item: {
           imageUrl: item.imageUrl || null,
           readTime: item.readTime || '3 menit',
           isPublished: item.isPublished ?? true,
-        },
-      })
-      .returning();
-    return result[0];
+        })
+        .onConflictDoUpdate({
+          target: newsArticles.id,
+          set: {
+            title: item.title,
+            slug: slugVal,
+            category: item.category || 'Berita Madrasah',
+            excerpt: excerptVal,
+            content: contentVal,
+            date: item.date || new Date().toLocaleDateString('id-ID'),
+            author: item.author || 'Admin Madrasah',
+            imageUrl: item.imageUrl || null,
+            readTime: item.readTime || '3 menit',
+            isPublished: item.isPublished ?? true,
+          },
+        })
+        .returning();
+      return result[0];
+    });
   } catch (error) {
     console.error('Failed to upsert news article:', error);
     throw new Error('Gagal menyimpan artikel berita.', { cause: error });
@@ -297,8 +301,10 @@ export async function upsertNews(item: {
 
 export async function deleteNews(id: string) {
   try {
-    await db.delete(newsArticles).where(eq(newsArticles.id, id));
-    return { success: true };
+    return await runWithRetry(async () => {
+      await db.delete(newsArticles).where(eq(newsArticles.id, id));
+      return { success: true };
+    });
   } catch (error) {
     console.error('Failed to delete news article:', error);
     throw new Error('Gagal menghapus berita.', { cause: error });
@@ -308,8 +314,10 @@ export async function deleteNews(id: string) {
 // App Settings Operations
 export async function getAppSetting(key: string) {
   try {
-    const records = await db.select().from(appSettings).where(eq(appSettings.settingKey, key));
-    return records.length > 0 ? records[0].settingValue : null;
+    return await runWithRetry(async () => {
+      const records = await db.select().from(appSettings).where(eq(appSettings.settingKey, key));
+      return records.length > 0 ? records[0].settingValue : null;
+    });
   } catch (error) {
     console.error(`Failed to get app setting for ${key}:`, error);
     throw new Error(`Gagal mengambil pengaturan ${key}.`, { cause: error });
@@ -318,21 +326,42 @@ export async function getAppSetting(key: string) {
 
 export async function setAppSetting(key: string, value: any) {
   try {
-    const result = await db.insert(appSettings)
-      .values({
-        settingKey: key,
-        settingValue: value,
-        updatedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: appSettings.settingKey,
-        set: {
-          settingValue: value,
+    // Ensure value is never null or undefined for NOT NULL jsonb column
+    let safeValue: any = value;
+    const isListKey = key.endsWith('_list') || [
+      'student_list', 'stats_list', 'programs', 'extracurriculars',
+      'achievements', 'facilities', 'gallery', 'video_gallery',
+      'testimonials', 'faqs'
+    ].includes(key);
+
+    if (safeValue === undefined || safeValue === null) {
+      safeValue = isListKey ? [] : {};
+    } else {
+      // Ensure serializable JSON without undefined, symbols or circular references
+      try {
+        safeValue = JSON.parse(JSON.stringify(safeValue));
+      } catch {
+        safeValue = Array.isArray(value) ? [] : {};
+      }
+    }
+
+    return await runWithRetry(async () => {
+      const result = await db.insert(appSettings)
+        .values({
+          settingKey: key,
+          settingValue: safeValue,
           updatedAt: new Date(),
-        },
-      })
-      .returning();
-    return result[0];
+        })
+        .onConflictDoUpdate({
+          target: appSettings.settingKey,
+          set: {
+            settingValue: safeValue,
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
+      return result[0];
+    });
   } catch (error) {
     console.error(`Failed to set app setting for ${key}:`, error);
     throw new Error(`Gagal menyimpan pengaturan ${key}.`, { cause: error });
@@ -347,12 +376,14 @@ export async function getAllMadrasahOnlineData() {
       dbStaff,
       dbNews,
       dbPPDB
-    ] = await Promise.all([
-      db.select().from(appSettings),
-      db.select().from(staffMembers).orderBy(asc(staffMembers.orderNum)),
-      db.select().from(newsArticles).orderBy(desc(newsArticles.createdAt)),
-      db.select().from(ppdbRegistrations).orderBy(desc(ppdbRegistrations.createdAt)),
-    ]);
+    ] = await runWithRetry(async () => {
+      return await Promise.all([
+        db.select().from(appSettings),
+        db.select().from(staffMembers).orderBy(asc(staffMembers.orderNum)),
+        db.select().from(newsArticles).orderBy(desc(newsArticles.createdAt)),
+        db.select().from(ppdbRegistrations).orderBy(desc(ppdbRegistrations.createdAt)),
+      ]);
+    });
 
     const settingsMap: Record<string, any> = {};
     dbSettings.forEach((row) => {
@@ -436,8 +467,23 @@ export async function getAllMadrasahOnlineData() {
       ppdbRegistrations: dbPPDB,
     };
   } catch (error) {
-    console.error('Failed to get all madrasah online data:', error);
-    throw new Error('Gagal memuat data online dari Cloud SQL database.', { cause: error });
+    console.warn('Failed to get all madrasah online data from Cloud SQL, using initial baseline fallback:', error);
+    return {
+      schoolProfile: SCHOOL_PROFILE,
+      statsList: STATS_DATA,
+      programs: PROGRAMS_DATA,
+      extracurriculars: EXTRACURRICULARS,
+      achievements: ACHIEVEMENTS,
+      facilities: FACILITIES,
+      gallery: GALLERY_DATA,
+      videoGallery: INITIAL_VIDEOS,
+      testimonials: TESTIMONIALS,
+      faqs: FAQ_DATA,
+      staffList: STAFF_DATA,
+      studentList: INITIAL_STUDENTS,
+      newsList: INITIAL_NEWS,
+      ppdbRegistrations: INITIAL_PPDB_REGISTRATIONS,
+    };
   }
 }
 
@@ -502,6 +548,10 @@ export async function seedInitialDatabaseIfEmpty() {
     const existingFAQs = await getAppSetting('faqs');
     if (!existingFAQs) {
       await setAppSetting('faqs', FAQ_DATA);
+    }
+    const existingStudents = await getAppSetting('student_list');
+    if (!existingStudents) {
+      await setAppSetting('student_list', INITIAL_STUDENTS);
     }
 
     console.log('Cloud SQL baseline data check completed.');
