@@ -21,7 +21,7 @@ export const PageBanner: React.FC<PageBannerProps> = ({
   actions,
 }) => {
   return (
-    <div className="relative bg-gradient-to-r from-[#041a11] via-[#072217] to-[#0b3c26] text-white py-12 sm:py-16 px-4 sm:px-8 border-b-2 border-[#d4af37]/40 overflow-hidden">
+    <div className="relative bg-gradient-to-r from-[#041a11] via-[#072217] to-[#0b3c26] text-white py-8 sm:py-10 px-4 sm:px-8 border-b-2 border-[#d4af37]/40 overflow-hidden">
       {/* Background Decorative Accents */}
       <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#d4af37_1px,transparent_1px)] [background-size:24px_24px]" />
       <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-[#d4af37]/10 blur-3xl pointer-events-none" />
@@ -29,7 +29,7 @@ export const PageBanner: React.FC<PageBannerProps> = ({
 
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Breadcrumb & Quick Return */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-white/70">
             <button
               type="button"

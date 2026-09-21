@@ -16,34 +16,34 @@ export const TopBar: React.FC = () => {
   };
 
   return (
-    <div id="top-bar-container" className="bg-[#072217] text-[#f3e5ab] text-xs sm:text-sm py-2 px-4 sm:px-8 border-b border-[#d4af37]/20 relative z-30 transition-all">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-2">
-        <div className="flex flex-wrap justify-center md:justify-start items-center gap-4 text-xs sm:text-xs">
+    <div id="top-bar-container" className="bg-[#072217] text-[#f3e5ab] text-[11px] sm:text-xs py-1 sm:py-1.5 px-4 sm:px-8 border-b border-[#d4af37]/20 relative z-30 transition-all">
+      <div className="max-w-7xl mx-auto flex flex-row justify-between items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[11px] sm:text-xs">
           <a
             id="topbar-email-link"
             href={`mailto:${schoolProfile.email}`}
-            className="flex items-center gap-1.5 hover:text-[#d4af37] transition-colors"
+            className="flex items-center gap-1.5 hover:text-[#d4af37] transition-colors truncate max-w-[160px] sm:max-w-none"
           >
-            <Mail className="w-3.5 h-3.5 text-[#d4af37]" />
-            <span>{schoolProfile.email}</span>
+            <Mail className="w-3 h-3 text-[#d4af37] shrink-0" />
+            <span className="truncate">{schoolProfile.email}</span>
           </a>
           <a
             id="topbar-phone-link"
             href={`tel:${schoolProfile.phone.replace(/[^0-9]/g, '')}`}
-            className="flex items-center gap-1.5 hover:text-[#d4af37] transition-colors"
+            className="hidden sm:flex items-center gap-1.5 hover:text-[#d4af37] transition-colors"
           >
-            <Phone className="w-3.5 h-3.5 text-[#d4af37]" />
+            <Phone className="w-3 h-3 text-[#d4af37] shrink-0" />
             <span>{schoolProfile.phone}</span>
           </a>
           <div className="hidden lg:flex items-center gap-1.5 text-white/80">
-            <MapPin className="w-3.5 h-3.5 text-[#d4af37]" />
+            <MapPin className="w-3 h-3 text-[#d4af37] shrink-0" />
             <span>Soborejo, Pringsurat, Temanggung</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 text-xs">
-          <div className="hidden sm:flex items-center gap-1.5 text-white/85">
-            <Calendar className="w-3.5 h-3.5 text-[#d4af37]" />
+        <div className="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs shrink-0">
+          <div className="hidden md:flex items-center gap-1.5 text-white/85">
+            <Calendar className="w-3 h-3 text-[#d4af37]" />
             <span>PPDB Baru Dibuka</span>
           </div>
 
@@ -51,12 +51,12 @@ export const TopBar: React.FC = () => {
             <button
               id="topbar-prayer-toggle"
               onClick={() => setShowPrayers(!showPrayers)}
-              className="flex items-center gap-1.5 bg-[#0b3c26] hover:bg-[#13583a] text-[#f3e5ab] px-2.5 py-1 rounded-full border border-[#d4af37]/30 transition-colors"
+              className="flex items-center gap-1 bg-[#0b3c26] hover:bg-[#13583a] text-[#f3e5ab] px-2 py-0.5 rounded-full border border-[#d4af37]/30 transition-colors text-[10px] sm:text-[11px]"
               title="Jadwal Sholat Temanggung & Sekitarnya"
             >
-              <Clock className="w-3 h-3 text-[#d4af37]" />
-              <span className="font-medium">Jadwal Sholat</span>
-              <ChevronDown className={`w-3 h-3 transition-transform ${showPrayers ? 'rotate-180' : ''}`} />
+              <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#d4af37]" />
+              <span className="font-medium">Sholat</span>
+              <ChevronDown className={`w-2.5 h-2.5 transition-transform ${showPrayers ? 'rotate-180' : ''}`} />
             </button>
 
             {showPrayers && (

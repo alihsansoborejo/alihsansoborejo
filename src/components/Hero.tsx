@@ -169,7 +169,7 @@ export const Hero: React.FC<HeroProps> = ({
       onMouseLeave={() => setIsHovered(false)}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
-      className="relative min-h-[90vh] bg-gradient-to-br from-[#063b25] via-[#042819] to-[#02180f] flex items-center justify-center text-white px-4 sm:px-8 py-16 sm:py-24 overflow-hidden select-none"
+      className="relative min-h-[520px] lg:min-h-[580px] xl:min-h-[620px] bg-gradient-to-br from-[#063b25] via-[#042819] to-[#02180f] flex items-center justify-center text-white px-4 sm:px-8 py-8 sm:py-12 lg:py-14 overflow-hidden select-none"
     >
       {/* Background Cover Image with Transition */}
       <div
@@ -253,33 +253,33 @@ export const Hero: React.FC<HeroProps> = ({
                     {/* Main Hero Headline (Slide Title) */}
                     <h1
                       id="hero-main-title"
-                      className="font-heading text-2xl sm:text-4xl lg:text-[42px] xl:text-[46px] font-bold leading-[1.18] tracking-tight mb-4 sm:mb-5 bg-gradient-to-b from-white via-white to-[#f3e5ab] bg-clip-text text-transparent drop-shadow-sm"
+                      className="font-heading text-xl sm:text-3xl lg:text-[34px] xl:text-[38px] font-bold leading-[1.2] tracking-tight mb-3 sm:mb-4 bg-gradient-to-b from-white via-white to-[#f3e5ab] bg-clip-text text-transparent drop-shadow-sm"
                     >
                       {activeSlide.title}
                     </h1>
 
                     {/* Subtitle with local context (Slide Subtitle) */}
-                    <p className="font-body text-sm sm:text-base lg:text-lg text-white/90 font-light max-w-2xl mb-6 sm:mb-8 leading-relaxed">
+                    <p className="font-body text-xs sm:text-sm lg:text-base text-white/90 font-light max-w-2xl mb-5 sm:mb-6 leading-relaxed">
                       {activeSlide.subtitle}
                     </p>
 
                     {/* Primary Action Buttons */}
-                    <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 sm:gap-3.5 w-full sm:w-auto">
+                    <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2.5 sm:gap-3 w-full sm:w-auto">
                       <button
                         id="hero-btn-register"
                         onClick={onOpenPPDB}
-                        className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-[#d4af37] via-[#e6c25a] to-[#b89228] text-[#072217] font-bold text-xs sm:text-sm tracking-wider uppercase px-6 sm:px-7 py-3 sm:py-3.5 rounded-full shadow-[0_4px_20px_rgba(212,175,55,0.4)] hover:shadow-[0_8px_30px_rgba(212,175,55,0.6)] hover:-translate-y-0.5 transition-all duration-300 border border-[#f3e5ab]"
+                        className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-[#d4af37] via-[#e6c25a] to-[#b89228] text-[#072217] font-bold text-xs sm:text-xs tracking-wider uppercase px-5 sm:px-6 py-2.5 sm:py-3 rounded-full shadow-[0_4px_16px_rgba(212,175,55,0.4)] hover:shadow-[0_6px_24px_rgba(212,175,55,0.55)] hover:-translate-y-0.5 transition-all duration-200 border border-[#f3e5ab]"
                       >
                         <span>Daftar PPDB Online</span>
-                        <ArrowRight className="w-4 h-4" />
+                        <ArrowRight className="w-3.5 h-3.5" />
                       </button>
 
                       <button
                         id="hero-btn-profile"
                         onClick={onExploreProfile}
-                        className="inline-flex items-center justify-center gap-2 border border-white/40 text-white hover:text-[#d4af37] hover:border-[#d4af37] hover:bg-[#d4af37]/10 px-5 sm:px-6 py-3 sm:py-3.5 rounded-full text-xs sm:text-sm font-semibold tracking-wide backdrop-blur-sm transition-all duration-300"
+                        className="inline-flex items-center justify-center gap-2 border border-white/40 text-white hover:text-[#d4af37] hover:border-[#d4af37] hover:bg-[#d4af37]/10 px-4 sm:px-5 py-2.5 sm:py-3 rounded-full text-xs font-semibold tracking-wide backdrop-blur-sm transition-all duration-200"
                       >
-                        <Compass className="w-4 h-4" />
+                        <Compass className="w-3.5 h-3.5" />
                         <span>Jelajahi Profil</span>
                       </button>
                     </div>
@@ -292,8 +292,8 @@ export const Hero: React.FC<HeroProps> = ({
                       <div className="absolute -inset-2 bg-gradient-to-tr from-[#d4af37]/40 via-[#126b40]/50 to-[#d4af37]/30 rounded-3xl blur-xl opacity-75 group-hover:opacity-100 transition duration-700 pointer-events-none" />
 
                       {/* Photo Frame Card */}
-                      <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden border-2 border-[#d4af37]/60 shadow-[0_20px_50px_rgba(0,0,0,0.6)] bg-[#042819]/90 backdrop-blur-md">
-                        <div className="aspect-[4/3] sm:aspect-[16/11] w-full overflow-hidden relative bg-black/40">
+                      <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden border-2 border-[#d4af37]/60 shadow-[0_16px_40px_rgba(0,0,0,0.5)] bg-[#042819]/90 backdrop-blur-md">
+                        <div className="aspect-[4/3] sm:aspect-[16/12] w-full max-h-[360px] sm:max-h-[420px] overflow-hidden relative bg-black/40">
                           <img
                             src={activeSlide.photoUrl}
                             alt={activeSlide.title}
@@ -303,16 +303,16 @@ export const Hero: React.FC<HeroProps> = ({
                           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none" />
 
                           {/* Top Floating Badge */}
-                          <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 text-[11px] text-[#f3e5ab] font-medium shadow-md">
-                            <Camera className="w-3.5 h-3.5 text-[#d4af37]" />
+                          <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20 text-[10px] text-[#f3e5ab] font-medium shadow-md">
+                            <Camera className="w-3 h-3 text-[#d4af37]" />
                             <span>Foto Slide {currentIndex + 1} dari {totalSlides}</span>
                           </div>
 
                           {/* Bottom Caption Pill */}
                           {activeSlide.photoCaption && (
-                            <div className="absolute bottom-3 left-3 right-3 bg-black/75 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-white/20 text-left flex items-start gap-2 shadow-lg">
-                              <span className="w-2 h-2 rounded-full bg-[#d4af37] shrink-0 mt-1 shadow-[0_0_6px_#d4af37]" />
-                              <p className="text-xs text-white/95 font-medium leading-snug line-clamp-2">
+                            <div className="absolute bottom-2.5 left-2.5 right-2.5 bg-black/75 backdrop-blur-md px-3 py-2 rounded-xl border border-white/20 text-left flex items-start gap-1.5 shadow-lg">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37] shrink-0 mt-1 shadow-[0_0_6px_#d4af37]" />
+                              <p className="text-[11px] sm:text-xs text-white/95 font-medium leading-snug line-clamp-2">
                                 {activeSlide.photoCaption}
                               </p>
                             </div>
@@ -376,19 +376,19 @@ export const Hero: React.FC<HeroProps> = ({
 
         {/* Interactive Slider Navigation & Indicators */}
         {totalSlides > 1 && (
-          <div className="flex items-center justify-center gap-2.5 sm:gap-3 mt-8 mb-6">
+          <div className="flex items-center justify-center gap-2 sm:gap-2.5 mt-5 sm:mt-6 mb-3 sm:mb-4">
             {/* Prev button for mobile */}
             <button
               type="button"
               onClick={prevSlide}
               aria-label="Sebelumnya"
-              className="sm:hidden w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/80 hover:text-white"
+              className="sm:hidden w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white/80 hover:text-white"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-3.5 h-3.5" />
             </button>
 
             {/* Slide Dots / Indicator Pills */}
-            <div className="flex items-center gap-2 bg-black/30 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/15">
+            <div className="flex items-center gap-1.5 bg-black/30 backdrop-blur-md px-3 py-1 rounded-full border border-white/15">
               {slides.map((slide, idx) => {
                 const isActive = idx === currentIndex;
                 return (
@@ -399,8 +399,8 @@ export const Hero: React.FC<HeroProps> = ({
                     aria-label={`Buka slide ${idx + 1}`}
                     className={`transition-all duration-300 rounded-full flex items-center justify-center ${
                       isActive
-                        ? 'w-8 sm:w-10 h-2 sm:h-2.5 bg-[#d4af37] shadow-[0_0_8px_rgba(212,175,55,0.6)]'
-                        : 'w-2 sm:w-2.5 h-2 sm:h-2.5 bg-white/40 hover:bg-white/70'
+                        ? 'w-7 sm:w-8 h-1.5 sm:h-2 bg-[#d4af37] shadow-[0_0_8px_rgba(212,175,55,0.6)]'
+                        : 'w-1.5 sm:w-2 h-1.5 sm:h-2 bg-white/40 hover:bg-white/70'
                     }`}
                   />
                 );
@@ -408,7 +408,7 @@ export const Hero: React.FC<HeroProps> = ({
             </div>
 
             {/* Slide Counter & Duration Info */}
-            <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono text-[#f3e5ab]/80 bg-black/30 px-2.5 py-1 rounded-full border border-white/15">
+            <div className="hidden sm:flex items-center gap-1 text-[10px] font-mono text-[#f3e5ab]/80 bg-black/30 px-2 py-0.5 rounded-full border border-white/15">
               <span className="text-white font-bold">{String(currentIndex + 1).padStart(2, '0')}</span>
               <span>/</span>
               <span>{String(totalSlides).padStart(2, '0')}</span>
@@ -420,9 +420,9 @@ export const Hero: React.FC<HeroProps> = ({
               onClick={() => setIsPlaying(!isPlaying)}
               title={isPlaying ? `Jeda putar otomatis (${durationSec} detik/slide)` : 'Putar otomatis slider'}
               aria-label={isPlaying ? 'Jeda putar otomatis' : 'Putar otomatis'}
-              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/30 hover:bg-black/60 border border-white/15 flex items-center justify-center text-[#f3e5ab] hover:text-white transition-all text-xs"
+              className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-black/30 hover:bg-black/60 border border-white/15 flex items-center justify-center text-[#f3e5ab] hover:text-white transition-all text-xs"
             >
-              {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 ml-0.5" />}
+              {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3 ml-0.5" />}
             </button>
 
             {/* Next button for mobile */}
@@ -430,40 +430,40 @@ export const Hero: React.FC<HeroProps> = ({
               type="button"
               onClick={nextSlide}
               aria-label="Berikutnya"
-              className="sm:hidden w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/80 hover:text-white"
+              className="sm:hidden w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white/80 hover:text-white"
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
 
         {/* Secondary Action Link Buttons (Cek Status & Unduh Brosur) */}
-        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mb-8">
+        <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 mb-4 sm:mb-5">
           <button
             id="hero-btn-status-check"
             onClick={onOpenStatusCheck}
-            className="inline-flex items-center justify-center gap-1.5 border border-[#d4af37]/40 bg-[#072217]/60 text-[#f3e5ab] hover:border-[#d4af37] hover:bg-[#072217]/90 px-4 py-2 rounded-full text-xs font-medium tracking-wide transition-all shadow-sm"
+            className="inline-flex items-center justify-center gap-1.5 border border-[#d4af37]/40 bg-[#072217]/60 text-[#f3e5ab] hover:border-[#d4af37] hover:bg-[#072217]/90 px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-medium tracking-wide transition-all shadow-sm"
           >
-            <Search className="w-3.5 h-3.5 text-[#d4af37]" />
-            <span>Cek Status Kelulusan PPDB</span>
+            <Search className="w-3 h-3 text-[#d4af37]" />
+            <span>Cek Status PPDB</span>
           </button>
 
           <button
             id="hero-btn-brochure"
             onClick={onDownloadBrochure}
-            className="inline-flex items-center justify-center gap-1.5 text-white/75 hover:text-white px-4 py-2 text-xs font-medium tracking-wide transition-all hover:underline"
+            className="inline-flex items-center justify-center gap-1.5 text-white/75 hover:text-white px-3 py-1.5 text-[11px] sm:text-xs font-medium tracking-wide transition-all hover:underline"
           >
-            <Download className="w-3.5 h-3.5 text-[#d4af37]" />
-            <span>Unduh Brosur Madrasah</span>
+            <Download className="w-3 h-3 text-[#d4af37]" />
+            <span>Unduh Brosur</span>
           </button>
         </div>
 
         {/* Micro highlights pill bar */}
         {highlights && highlights.length > 0 && (
-          <div className="pt-6 border-t border-white/10 flex flex-wrap items-center justify-center gap-2.5 sm:gap-5 text-xs text-white/85 max-w-3xl mx-auto">
+          <div className="pt-4 border-t border-white/10 flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-[11px] sm:text-xs text-white/85 max-w-3xl mx-auto">
             {highlights.map((hl, idx) => (
-              <div key={idx} className="flex items-center justify-center gap-1.5 py-1 px-3 rounded-full bg-white/5 border border-white/10">
-                <Sparkles className="w-3.5 h-3.5 text-[#d4af37] shrink-0" />
+              <div key={idx} className="flex items-center justify-center gap-1 py-0.5 px-2.5 rounded-full bg-white/5 border border-white/10">
+                <Sparkles className="w-3 h-3 text-[#d4af37] shrink-0" />
                 <span>{hl}</span>
               </div>
             ))}

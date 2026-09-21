@@ -45,148 +45,168 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPPDB, activeTab, onTabChan
   return (
     <header
       id="main-header"
-      className={`sticky top-0 z-40 transition-all duration-300 ${
-        scrolled
-          ? 'bg-white/98 backdrop-blur-md shadow-md border-b border-[#d4af37]/30 py-2.5 sm:py-3'
-          : 'bg-white/95 backdrop-blur-md border-b border-[#d4af37]/20 py-3 sm:py-3.5'
-      }`}
+      className="sticky top-0 z-40 transition-all duration-300 bg-white shadow-sm border-b border-[#d4af37]/30"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 flex justify-between items-center">
-        {/* Brand Logo & Title */}
-        <button
-          id="brand-logo-link"
-          type="button"
-          onClick={() => handleNavClick('beranda')}
-          className="flex items-center gap-3 group text-left cursor-pointer"
-          title="Menuju Halaman Beranda"
-        >
-          {/* Islamic Emblem Crest or Custom Logo */}
-          <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-white border-2 border-[#d4af37] flex items-center justify-center overflow-hidden shadow-[0_2px_12px_rgba(212,175,55,0.35)] group-hover:scale-105 transition-all duration-300 shrink-0">
-            {schoolProfile.logoUrl ? (
-              <img
-                src={schoolProfile.logoUrl}
-                alt="Logo MI Ma'arif Al Ihsan Soborejo"
-                className="w-full h-full object-contain p-1"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/assets/logo-maarif.svg';
-                }}
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-[#0b3c26] via-[#072217] to-[#041a11] flex items-center justify-center text-[#d4af37]">
-                <BookOpen className="w-5 h-5 text-[#d4af37]" />
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#d4af37] flex items-center justify-center text-[#072217] text-[8px] font-bold">
-                  NU
+      {/* BAGIAN 1: BRAND IDENTITAS LEMBAGA (DI ATAS BARIS TAB) */}
+      <div className={`transition-all duration-200 border-b border-gray-100 bg-white/98 backdrop-blur-md ${
+        scrolled ? 'py-1 sm:py-1.5' : 'py-1.5 sm:py-2'
+      }`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 flex justify-between items-center gap-3">
+          {/* Brand Logo & Text Hierarchy */}
+          <button
+            id="brand-logo-link"
+            type="button"
+            onClick={() => handleNavClick('beranda')}
+            className="flex items-center gap-2.5 sm:gap-3 group text-left cursor-pointer min-w-0"
+            title="Menuju Halaman Beranda"
+          >
+            {/* Islamic Emblem Crest or Custom Logo */}
+            <div className={`relative rounded-xl bg-white border-2 border-[#d4af37] flex items-center justify-center overflow-hidden shadow-[0_2px_10px_rgba(212,175,55,0.3)] group-hover:scale-105 transition-all duration-200 shrink-0 ${
+              scrolled ? 'w-9 h-9 sm:w-10 sm:h-10' : 'w-10 h-10 sm:w-11 sm:h-11'
+            }`}>
+              {schoolProfile.logoUrl ? (
+                <img
+                  src={schoolProfile.logoUrl}
+                  alt="Logo MI Ma'arif Al Ihsan Soborejo"
+                  className="w-full h-full object-contain p-0.5"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/assets/logo-maarif.svg';
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-[#0b3c26] via-[#072217] to-[#041a11] flex items-center justify-center text-[#d4af37]">
+                  <BookOpen className="w-5 h-5 text-[#d4af37]" />
+                  <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#d4af37] flex items-center justify-center text-[#072217] text-[7px] font-bold">
+                    NU
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-          
-          <div className="leading-tight">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] font-bold tracking-widest text-[#0b3c26] uppercase bg-[#e8f3ee] px-1.5 py-0.5 rounded">
-                LP MA'ARIF NU
-              </span>
-              <span className="text-[10px] font-bold text-amber-900 bg-amber-100 border border-amber-300/80 px-1.5 py-0.5 rounded-full">
-                SATU ATAP (MI &amp; RA)
-              </span>
+              )}
             </div>
-            <h1 className="font-heading text-sm sm:text-base md:text-lg font-bold tracking-tight text-[#072217] group-hover:text-[#0b3c26] transition-colors">
-              {schoolProfile.shortName || "MI & RA AL IHSAN SOBOREJO"}
-            </h1>
-            <p className="text-[11px] font-medium text-emerald-800">
-              Soborejo, Pringsurat, Temanggung
-            </p>
-          </div>
-        </button>
+            
+            {/* Susunan Teks Rapi & Ringkas */}
+            <div className="leading-tight">
+              {/* Badges Baris Atas */}
+              <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap mb-0.5">
+                <span className="text-[9px] sm:text-[10px] font-bold tracking-wider text-[#0b3c26] uppercase bg-emerald-50 border border-emerald-200/80 px-1.5 py-0.5 rounded">
+                  LP MA'ARIF NU
+                </span>
+                <span className="text-[9px] sm:text-[10px] font-bold text-amber-900 bg-amber-50 border border-amber-300/80 px-1.5 py-0.5 rounded-full">
+                  SATU ATAP (MI &amp; RA)
+                </span>
+                <span className="hidden md:inline-block text-[9px] font-medium text-gray-500 bg-gray-50 border border-gray-200 px-1 py-0.5 rounded">
+                  NPSN: {schoolProfile.miNpsn || schoolProfile.npsn || '60710665'}
+                </span>
+              </div>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden xl:flex items-center gap-4">
-          <ul className="flex items-center gap-1.5 lg:gap-2 list-none m-0 p-0">
+              {/* Nama Madrasah Rapi & Proporsional */}
+              <h1 className="font-heading text-sm sm:text-base md:text-lg font-bold tracking-tight text-[#072217] group-hover:text-[#0b3c26] transition-colors leading-tight">
+                {schoolProfile.shortName || "MI & RA AL IHSAN SOBOREJO"}
+              </h1>
+
+              {/* Subtitle / Lokasi */}
+              <p className="text-[10px] sm:text-[11px] font-medium text-emerald-800 flex items-center gap-1">
+                <span>Soborejo, Pringsurat, Kab. Temanggung</span>
+              </p>
+            </div>
+          </button>
+
+          {/* Tombol Aksi di Baris Atas */}
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            <button
+              type="button"
+              id="nav-btn-share-desktop"
+              onClick={() => openShare({
+                type: 'profil',
+                title: schoolProfile.name || "MI & RA AL IHSAN SOBOREJO",
+                description: schoolProfile.vision || 'Website Resmi Satu Atap RA Al Ihsan & MI Ma\'arif Al Ihsan Soborejo, Temanggung.',
+                category: 'Madrasah'
+              })}
+              className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-emerald-900/15 hover:border-[#0b3c26] text-gray-700 hover:text-[#0b3c26] bg-white hover:bg-emerald-50/60 text-[11px] font-semibold transition-all cursor-pointer shadow-xs"
+              title="Bagikan Tautan Website"
+            >
+              <Share2 className="w-3 h-3 text-[#d4af37]" />
+              <span className="hidden md:inline">Bagikan</span>
+            </button>
+
+            <button
+              id="nav-btn-ppdb-desktop"
+              type="button"
+              onClick={onOpenPPDB}
+              className="inline-flex items-center gap-1 bg-gradient-to-r from-[#d4af37] via-[#e5c158] to-[#b89228] text-[#072217] font-bold text-[11px] sm:text-xs tracking-wider uppercase px-3 py-1.5 sm:py-2 rounded-lg shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 border border-[#f3e5ab] cursor-pointer"
+            >
+              <span className="hidden sm:inline">Daftar</span>
+              <span>PPDB</span>
+              <ArrowRight className="w-3 h-3 hidden sm:inline" />
+            </button>
+
+            {/* Mobile Menu Toggle Button */}
+            <button
+              id="mobile-menu-toggle-btn"
+              type="button"
+              onClick={() => setIsOpen(!isOpen)}
+              className="xl:hidden p-1.5 text-[#072217] hover:text-[#0b3c26] hover:bg-emerald-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#d4af37] cursor-pointer"
+              aria-label="Toggle Navigation Menu"
+            >
+              {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* BAGIAN 2: BARIS TAB NAVIGASI MANDIRI */}
+      <div className="bg-[#072217] text-white border-t border-[#d4af37]/30 shadow-inner">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8">
+          {/* Desktop Navigation Tabs */}
+          <nav className="hidden xl:flex items-center justify-between py-1">
+            <ul className="flex items-center gap-1 list-none m-0 p-0 flex-wrap">
+              {navLinks.map((link) => {
+                const isActive = activeTab === link.id;
+                return (
+                  <li key={link.id}>
+                    <button
+                      id={`nav-link-${link.id}`}
+                      type="button"
+                      onClick={() => handleNavClick(link.id)}
+                      className={`font-body text-[11px] font-semibold px-2.5 py-1 rounded transition-all duration-150 uppercase tracking-wider cursor-pointer flex items-center gap-1 ${
+                        isActive
+                          ? 'bg-[#d4af37] text-[#072217] font-bold shadow-sm ring-1 ring-[#f3e5ab]'
+                          : 'text-white/85 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      <span>{link.label}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+
+            <div className="text-[10px] text-[#f3e5ab]/90 font-medium flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37] animate-pulse" />
+              <span>Satu Atap LP Ma'arif NU</span>
+            </div>
+          </nav>
+
+          {/* Mobile & Tablet Horizontal Scrollable Tab Bar */}
+          <div className="xl:hidden py-1 overflow-x-auto no-scrollbar flex items-center gap-1 text-[11px]">
             {navLinks.map((link) => {
               const isActive = activeTab === link.id;
               return (
-                <li key={link.id}>
-                  <button
-                    id={`nav-link-${link.id}`}
-                    type="button"
-                    onClick={() => handleNavClick(link.id)}
-                    className={`font-body text-xs font-semibold px-3 py-1.5 rounded-xl transition-all duration-200 uppercase tracking-wider cursor-pointer ${
-                      isActive
-                        ? 'bg-[#0b3c26] text-[#f3e5ab] shadow-sm font-bold ring-1 ring-[#d4af37]/60'
-                        : 'text-gray-700 hover:text-[#0b3c26] hover:bg-emerald-50/80'
-                    }`}
-                  >
-                    {link.label}
-                  </button>
-                </li>
+                <button
+                  key={link.id}
+                  id={`mobile-tab-scroll-${link.id}`}
+                  type="button"
+                  onClick={() => handleNavClick(link.id)}
+                  className={`shrink-0 px-2.5 py-1 rounded text-[11px] font-semibold uppercase tracking-wider transition-colors cursor-pointer ${
+                    isActive
+                      ? 'bg-[#d4af37] text-[#072217] font-bold shadow-xs'
+                      : 'text-white/85 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {link.label}
+                </button>
               );
             })}
-          </ul>
-
-          <div className="h-6 w-[1px] bg-gray-200 ml-1" />
-
-          <button
-            type="button"
-            id="nav-btn-share-desktop"
-            onClick={() => openShare({
-              type: 'profil',
-              title: schoolProfile.name || "MI & RA AL IHSAN SOBOREJO",
-              description: schoolProfile.vision || 'Website Resmi Satu Atap RA Al Ihsan & MI Ma\'arif Al Ihsan Soborejo, Temanggung.',
-              category: 'Madrasah'
-            })}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-900/20 hover:border-[#0b3c26] text-gray-700 hover:text-[#0b3c26] bg-white hover:bg-emerald-50/50 text-xs font-semibold transition-all cursor-pointer shadow-xs"
-            title="Bagikan Tautan Website"
-          >
-            <Share2 className="w-3.5 h-3.5 text-[#d4af37]" />
-            <span>Bagikan</span>
-          </button>
-
-          <button
-            id="nav-btn-ppdb-desktop"
-            type="button"
-            onClick={onOpenPPDB}
-            className="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#d4af37] via-[#e5c158] to-[#b89228] text-[#072217] font-bold text-xs tracking-wider uppercase px-4 py-2 rounded-full shadow-[0_4px_15px_rgba(212,175,55,0.35)] hover:shadow-[0_6px_22px_rgba(212,175,55,0.55)] hover:-translate-y-0.5 transition-all duration-300 border border-[#f3e5ab] cursor-pointer"
-          >
-            <span>Daftar PPDB</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </nav>
-
-        {/* Mobile / Tablet Buttons */}
-        <div className="flex items-center gap-1.5 xl:hidden">
-          <button
-            type="button"
-            id="nav-btn-share-mobile"
-            onClick={() => openShare({
-              type: 'profil',
-              title: schoolProfile.name || "MI & RA AL IHSAN SOBOREJO",
-              description: schoolProfile.vision || 'Website Resmi Satu Atap RA Al Ihsan & MI Ma\'arif Al Ihsan Soborejo, Temanggung.',
-              category: 'Madrasah'
-            })}
-            className="p-2 text-gray-600 hover:text-[#0b3c26] rounded-lg transition-colors cursor-pointer"
-            title="Bagikan Website"
-            aria-label="Bagikan Website"
-          >
-            <Share2 className="w-4 h-4 text-[#d4af37]" />
-          </button>
-
-          <button
-            id="nav-btn-ppdb-mobile-small"
-            type="button"
-            onClick={onOpenPPDB}
-            className="bg-gradient-to-r from-[#d4af37] to-[#b89228] text-[#072217] font-bold text-[11px] tracking-wider uppercase px-3 py-1.5 rounded-full shadow-sm cursor-pointer"
-          >
-            PPDB
-          </button>
-          <button
-            id="mobile-menu-toggle-btn"
-            type="button"
-            onClick={() => setIsOpen(!isOpen)}
-            className="p-2 text-[#072217] hover:text-[#0b3c26] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#d4af37] cursor-pointer"
-            aria-label="Toggle Navigation Menu"
-          >
-            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          </div>
         </div>
       </div>
 
