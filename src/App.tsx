@@ -38,6 +38,8 @@ import {
   MapPin, 
   ArrowRight,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   ShieldCheck,
   Calendar
 } from 'lucide-react';
@@ -50,6 +52,15 @@ function AppContent() {
   const [ppdbInitialTab, setPpdbInitialTab] = useState<'form' | 'status' | 'alur'>('form');
   const [preselectedProgram, setPreselectedProgram] = useState<string | undefined>(undefined);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [expandedPreviewNewsIds, setExpandedPreviewNewsIds] = useState<Record<string, boolean>>({});
+
+  const togglePreviewNews = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setExpandedPreviewNewsIds((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
 
   // Sync favicon with schoolProfile.faviconUrl or fallback to logoUrl
   useEffect(() => {
@@ -224,46 +235,110 @@ function AppContent() {
                     </div>
 
                     {/* Preview Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {latestNews.map((article) => (
-                        <div
-                          key={article.id}
-                          className="bg-white rounded-2xl overflow-hidden border border-[#0b3c26]/10 shadow-sm hover:shadow-md transition-all flex flex-col group cursor-pointer"
-                          onClick={() => handleTabChange('berita')}
-                        >
-                          <div className="relative h-48 overflow-hidden bg-gray-100">
-                            <img
-                              src={article.imageUrl || '/assets/madrasah-gedung.svg'}
-                              alt={article.title}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = '/assets/madrasah-gedung.svg';
-                              }}
-                            />
-                            <div className="absolute top-3 left-3 bg-[#0b3c26]/90 backdrop-blur-xs text-[#f3e5ab] text-[10px] font-bold px-2.5 py-1 rounded-md">
-                              {article.category || 'Warta'}
-                            </div>
-                          </div>
-                          <div className="p-5 flex-1 flex flex-col justify-between">
-                            <div>
-                              <div className="flex items-center gap-2 text-[11px] text-gray-500 mb-2">
-                                <Calendar className="w-3.5 h-3.5 text-[#d4af37]" />
-                                <span>{article.date}</span>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                      {latestNews.map((article) => {
+                        const isExpanded = !!expandedPreviewNewsIds[article.id];
+                        const contentParagraphs = Array.isArray(article.content)
+                          ? article.content
+                          : typeof article.content === 'string' && article.content.trim()
+                          ? article.content.split(/\n\n+/).filter(Boolean)
+                          : article.summary
+                          ? [article.summary]
+                          : [];
+
+                        return (
+                          <div
+                            key={article.id}
+                            className={`bg-white rounded-2xl overflow-hidden border transition-all flex flex-col justify-between ${
+                              isExpanded
+                                ? 'border-[#0b3c26]/40 shadow-md ring-1 ring-emerald-700/20'
+                                : 'border-[#0b3c26]/10 shadow-sm hover:shadow-md'
+                            }`}
+                          >
+                            <div className="relative h-48 overflow-hidden bg-gray-100">
+                              <img
+                                src={article.imageUrl || '/assets/madrasah-gedung.svg'}
+                                alt={article.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = '/assets/madrasah-gedung.svg';
+                                }}
+                              />
+                              <div className="absolute top-3 left-3 bg-[#0b3c26]/90 backdrop-blur-xs text-[#f3e5ab] text-[10px] font-bold px-2.5 py-1 rounded-md">
+                                {article.category || 'Warta'}
                               </div>
-                              <h3 className="font-heading text-base font-bold text-[#072217] group-hover:text-[#0b3c26] line-clamp-2 transition-colors">
-                                {article.title}
-                              </h3>
-                              <p className="text-xs text-gray-600 line-clamp-2 mt-2 leading-relaxed">
-                                {article.summary || (Array.isArray(article.content) ? article.content[0] : article.content)}
-                              </p>
                             </div>
-                            <div className="mt-4 pt-3 border-t border-gray-100 flex items-center text-xs font-bold text-[#0b3c26] group-hover:text-[#d4af37]">
-                              <span>Baca Selengkapnya</span>
-                              <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                            <div className="p-5 flex-1 flex flex-col justify-between">
+                              <div>
+                                <div className="flex items-center gap-2 text-[11px] text-gray-500 mb-2">
+                                  <Calendar className="w-3.5 h-3.5 text-[#d4af37]" />
+                                  <span>{article.date}</span>
+                                </div>
+                                <h3 className="font-heading text-base font-bold text-[#072217] group-hover:text-[#0b3c26] line-clamp-2 transition-colors">
+                                  {article.title}
+                                </h3>
+
+                                <div className="text-xs text-gray-600 mt-2 leading-relaxed">
+                                  {isExpanded ? (
+                                    <div className="space-y-2.5 text-gray-800 animate-in fade-in duration-200">
+                                      {contentParagraphs.length > 0 ? (
+                                        contentParagraphs.map((p, pIdx) => (
+                                          <p key={pIdx} className={pIdx === 0 ? "font-medium text-gray-900" : ""}>
+                                            {p}
+                                          </p>
+                                        ))
+                                      ) : (
+                                        <p>{article.summary}</p>
+                                      )}
+                                      <div className="pt-2 text-[11px] text-emerald-800 font-medium border-t border-gray-100 flex items-center justify-between">
+                                        <span>Penulis: {article.author}</span>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleTabChange('berita')}
+                                          className="text-[#0b3c26] hover:text-[#d4af37] underline cursor-pointer"
+                                        >
+                                          Buka Tab Berita
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <p className="line-clamp-3">
+                                      {article.summary || (contentParagraphs[0] ?? '')}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                                <button
+                                  type="button"
+                                  onClick={(e) => togglePreviewNews(article.id, e)}
+                                  className={`inline-flex items-center gap-1.5 text-xs font-bold transition-all px-2.5 py-1.5 rounded-lg cursor-pointer ${
+                                    isExpanded
+                                      ? 'bg-amber-100 text-amber-950 hover:bg-amber-200 border border-amber-300/80 shadow-xs'
+                                      : 'text-[#0b3c26] hover:text-[#d4af37] hover:bg-emerald-50'
+                                  }`}
+                                >
+                                  <span>{isExpanded ? 'Ciutkan Berita' : 'Baca Selengkapnya'}</span>
+                                  {isExpanded ? (
+                                    <ChevronUp className="w-3.5 h-3.5 text-amber-900" />
+                                  ) : (
+                                    <ChevronDown className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleTabChange('berita')}
+                                  className="text-[11px] text-gray-500 hover:text-[#0b3c26] transition-colors cursor-pointer"
+                                >
+                                  Lihat Semua
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </section>
 
