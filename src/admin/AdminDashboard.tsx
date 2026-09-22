@@ -100,6 +100,7 @@ import {
 } from '../types';
 import { StudentManagement } from './StudentManagement';
 import { StaffCsvImportModal } from './StaffCsvImportModal';
+import { FormattedTextEditor } from '../components/FormattedTextEditor';
 import {
   generateCSV,
   downloadCSV,
@@ -3463,19 +3464,20 @@ export const AdminDashboard: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      Paragraf Sambutan Kepala Madrasah (Pisahkan setiap paragraf dengan baris kosong/enter)
-                    </label>
-                    <textarea
+                    <FormattedTextEditor
+                      id="admin-headmaster-welcome-editor"
+                      label="Paragraf Sambutan Kepala Madrasah"
+                      helperText="Gunakan Enter 2x untuk memisahkan antar-paragraf. Teks mendukung **tebal**, *miring*, <u>garis bawah</u>, emoji, serta ikon."
                       rows={6}
-                      value={profileForm.headmasterWelcome.join('\n\n')}
-                      onChange={(e) =>
+                      value={(profileForm.headmasterWelcome || []).join('\n\n')}
+                      onChange={(val) => {
+                        const paragraphs = val.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
                         setProfileForm({
                           ...profileForm,
-                          headmasterWelcome: e.target.value.split('\n\n').filter(Boolean),
-                        })
-                      }
-                      className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#0b3c26]"
+                          headmasterWelcome: paragraphs.length > 0 ? paragraphs : [''],
+                        });
+                      }}
+                      placeholder="Tuliskan kata sambutan hangat kepala madrasah untuk menyambut wali santri dan masyarakat..."
                     />
                   </div>
                 </div>
@@ -3487,45 +3489,46 @@ export const AdminDashboard: React.FC = () => {
                   </h3>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Visi Madrasah</label>
-                      <textarea
+                      <FormattedTextEditor
+                        id="admin-vision-editor"
+                        label="Visi Madrasah"
+                        helperText="Teks visi madrasah mendukung format tebal, miring, garis bawah, emoji, dan ikon."
                         rows={2}
-                        value={profileForm.vision}
-                        onChange={(e) => setProfileForm({ ...profileForm, vision: e.target.value })}
-                        className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#0b3c26]"
+                        value={profileForm.vision || ''}
+                        onChange={(val) => setProfileForm({ ...profileForm, vision: val })}
+                        placeholder="Terwujudnya Generasi Qur'ani, Berakhlak Mulia, dan Berprestasi Unggul..."
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        Butir-butir Misi (Pisahkan setiap butir misi dengan baris baru / Enter)
-                      </label>
-                      <textarea
+                      <FormattedTextEditor
+                        id="admin-missions-editor"
+                        label="Butir-butir Misi Madrasah"
+                        helperText="Pisahkan setiap butir misi dengan Enter (baris baru). Anda dapat menambahkan format, emoji, dan ikon."
                         rows={5}
-                        value={profileForm.missions.join('\n')}
-                        onChange={(e) =>
+                        value={(profileForm.missions || []).join('\n')}
+                        onChange={(val) =>
                           setProfileForm({
                             ...profileForm,
-                            missions: e.target.value.split('\n').filter(Boolean),
+                            missions: val.split('\n').filter(Boolean),
                           })
                         }
-                        className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#0b3c26]"
+                        placeholder="1. Menanamkan aqidah Islam Ahlussunnah wal Jama'ah..."
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        Butir-butir Tujuan Madrasah (Pisahkan setiap butir tujuan dengan baris baru / Enter)
-                      </label>
-                      <textarea
-                        rows={6}
+                      <FormattedTextEditor
+                        id="admin-goals-editor"
+                        label="Butir-butir Tujuan Madrasah"
+                        helperText="Pisahkan setiap butir tujuan dengan Enter (baris baru). Anda dapat menambahkan format teks, emoji, dan ikon."
+                        rows={5}
                         value={(profileForm.goals || []).join('\n')}
-                        onChange={(e) =>
+                        onChange={(val) =>
                           setProfileForm({
                             ...profileForm,
-                            goals: e.target.value.split('\n').filter(Boolean),
+                            goals: val.split('\n').filter(Boolean),
                           })
                         }
-                        placeholder="a. Dalam Ujian, siswa memperoleh..."
-                        className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#0b3c26]"
+                        placeholder="a. Membekali santri kecakapan membaca Al-Qur'an tartil..."
                       />
                     </div>
                   </div>
@@ -3542,11 +3545,11 @@ export const AdminDashboard: React.FC = () => {
                         </h3>
                       </div>
                       <p className="text-[11px] text-gray-500 mt-0.5">
-                        Kelola uraian narasi berdirinya lembaga satu atap, tokoh pendiri, tonggak perkembangan, dan transformasi RA &amp; MI Ma'arif Al Ihsan Soborejo.
+                        Tuliskan sejarah berdirinya lembaga, tokoh pendiri, dan perkembangan madrasah secara praktis. Pisahkan antar-paragraf dengan menekan <strong>Enter 2 kali</strong>.
                       </p>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => {
@@ -3556,126 +3559,44 @@ export const AdminDashboard: React.FC = () => {
                             "Berakar dari cita-cita luhur mencetak generasi yang tidak hanya mahir membaca dan berhitung, tetapi juga tekun dalam sholat, gemar menghafal Al-Qur'an, berbakti kepada orang tua, serta berpegang teguh pada aqidah Ahlussunnah wal Jama'ah An-Nahdliyyah.",
                             "Kini, lembaga satu atap ini terus bertumbuh dengan sarana belajar representatif yang ramah anak, program tahfidz terpadu, pembinaan seni rebana hadroh, serta pelayanan PPDB terpadu satu pintu untuk jenjang RA dan MI."
                           ];
-                          if (window.confirm('Muat teks sejarah referensi asli pendirian Soborejo? Data yang belum disimpan akan digantikan dengan teks referensi.')) {
+                          if (window.confirm('Muat teks narasi sejarah asli pendirian Soborejo? Teks saat ini akan diperbarui dengan data referensi.')) {
                             setProfileForm({ ...profileForm, history: defaultRef });
                           }
                         }}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 text-[11px] font-medium transition-all"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 text-[11px] font-medium transition-all shadow-2xs"
                         title="Muat teks narasi sejarah default"
                       >
-                        <RotateCcw className="w-3 h-3 text-gray-500" />
+                        <RotateCcw className="w-3.5 h-3.5 text-gray-500" />
                         <span>Muat Referensi Asli</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const currentHist = profileForm.history && profileForm.history.length > 0 ? [...profileForm.history] : [];
-                          setProfileForm({ ...profileForm, history: [...currentHist, ''] });
-                        }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0b3c26] text-[#f3e5ab] hover:bg-[#072217] text-[11px] font-bold transition-all shadow-sm"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Tambah Paragraf</span>
                       </button>
                     </div>
                   </div>
 
-                  {/* List of Paragraph Cards */}
-                  <div className="space-y-3">
-                    {(profileForm.history && profileForm.history.length > 0 ? profileForm.history : ['']).map((item, idx) => (
-                      <div key={idx} className="p-3.5 bg-white rounded-xl border border-gray-200 shadow-sm space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="w-5 h-5 rounded-full bg-[#0b3c26] text-white text-[10px] font-bold flex items-center justify-center">
-                              {idx + 1}
-                            </span>
-                            <span className="text-xs font-semibold text-gray-700">
-                              Paragraf Sejarah #{idx + 1}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              disabled={idx === 0}
-                              onClick={() => {
-                                const arr = [...(profileForm.history || [])];
-                                const temp = arr[idx];
-                                arr[idx] = arr[idx - 1];
-                                arr[idx - 1] = temp;
-                                setProfileForm({ ...profileForm, history: arr });
-                              }}
-                              className="p-1 rounded text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
-                              title="Pindahkan ke atas"
-                            >
-                              <ChevronUp className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              disabled={idx === (profileForm.history?.length || 1) - 1}
-                              onClick={() => {
-                                const arr = [...(profileForm.history || [])];
-                                const temp = arr[idx];
-                                arr[idx] = arr[idx + 1];
-                                arr[idx + 1] = temp;
-                                setProfileForm({ ...profileForm, history: arr });
-                              }}
-                              className="p-1 rounded text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
-                              title="Pindahkan ke bawah"
-                            >
-                              <ChevronDown className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const arr = (profileForm.history || []).filter((_, i) => i !== idx);
-                                setProfileForm({ ...profileForm, history: arr.length > 0 ? arr : [''] });
-                              }}
-                              className="p-1 rounded text-rose-600 hover:bg-rose-50"
-                              title="Hapus paragraf ini"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-
-                        <textarea
-                          rows={3}
-                          value={item}
-                          onChange={(e) => {
-                            const arr = [...(profileForm.history || [''])];
-                            arr[idx] = e.target.value;
-                            setProfileForm({ ...profileForm, history: arr });
-                          }}
-                          placeholder={`Tuliskan uraian sejarah paragraf #${idx + 1}...`}
-                          className="w-full px-3 py-2 text-xs text-gray-800 border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#0b3c26] leading-relaxed"
-                        />
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Bulk Textarea Option */}
-                  <div className="pt-3 border-t border-gray-200 space-y-1">
-                    <label className="block text-[11px] font-semibold text-gray-700">
-                      Editor Narasi Utuh (Pisahkan antar paragraf dengan Enter 2x):
-                    </label>
-                    <textarea
-                      rows={5}
+                  {/* Unified Rich Text Editor for History */}
+                  <div>
+                    <FormattedTextEditor
+                      id="admin-history-editor"
+                      label="Narasi Lengkap Sejarah Madrasah"
+                      helperText="Pisahkan antar-paragraf cukup dengan menekan Enter 2 kali. Gunakan toolbar di atas untuk format tebal (**teks**), miring (*teks*), garis bawah (<u>teks</u>), emoji, dan ikon."
+                      rows={8}
                       value={(profileForm.history || []).join('\n\n')}
-                      onChange={(e) => {
-                        const parsed = e.target.value
+                      onChange={(val) => {
+                        const parsed = val
                           .split(/\n\s*\n/)
                           .map((p) => p.trim())
                           .filter(Boolean);
                         setProfileForm({ ...profileForm, history: parsed.length > 0 ? parsed : [''] });
                       }}
-                      placeholder="Tempel atau ketik teks sejarah lengkap madrasah di sini..."
-                      className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#0b3c26] leading-relaxed"
+                      placeholder="Tuliskan sejarah berdirinya MI & RA Al Ihsan Soborejo, tokoh pendiri, serta tonggak perkembangannya di sini..."
                     />
-                    <p className="text-[10px] text-gray-400">
-                      Perubahan teks sejarah akan tersimpan bersama data profil madrasah saat tombol Simpan Perubahan Profil di bawah ditekan.
-                    </p>
+                    <div className="flex items-center justify-between text-[11px] text-gray-500 mt-2 px-1">
+                      <span>
+                        💡 Terdeteksi: <strong>{(profileForm.history || []).filter((h) => h.trim().length > 0).length}</strong> paragraf tersusun rapi.
+                      </span>
+                      <span className="text-gray-400">
+                        Otomatis diproses menjadi alinea terpisah saat disimpan
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -4698,26 +4619,28 @@ export const AdminDashboard: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block font-semibold text-gray-700 mb-1">Ringkasan Berita *</label>
-                        <textarea
+                        <FormattedTextEditor
+                          id="admin-news-summary-editor"
+                          label="Ringkasan Berita *"
+                          helperText="Deskripsi singkat yang tampil pada kartu berita. Mendukung tebal, miring, emoji, dan ikon."
                           rows={2}
                           required
                           value={newsForm.summary}
-                          onChange={(e) => setNewsForm({ ...newsForm, summary: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                          onChange={(val) => setNewsForm({ ...newsForm, summary: val })}
+                          placeholder="Tulis ringkasan singkat cuplikan berita..."
                         />
                       </div>
 
                       <div>
-                        <label className="block font-semibold text-gray-700 mb-1">
-                          Isi Lengkap Artikel (Gunakan enter 2x untuk paragraf baru)
-                        </label>
-                        <textarea
-                          rows={6}
+                        <FormattedTextEditor
+                          id="admin-news-content-editor"
+                          label="Isi Lengkap Artikel *"
+                          helperText="Pisahkan antar-paragraf dengan Enter 2x. Gunakan tombol toolbar untuk tebal, miring, garis bawah, emoji, dan ikon."
+                          rows={7}
                           required
                           value={newsForm.contentString}
-                          onChange={(e) => setNewsForm({ ...newsForm, contentString: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg leading-relaxed"
+                          onChange={(val) => setNewsForm({ ...newsForm, contentString: val })}
+                          placeholder="Tuliskan berita lengkap acara, liputan prestasi, atau pengumuman madrasah di sini..."
                         />
                       </div>
 
@@ -4997,13 +4920,14 @@ export const AdminDashboard: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block font-semibold text-gray-700 mb-1">Deskripsi Singkat Prestasi</label>
-                        <textarea
+                        <FormattedTextEditor
+                          id="admin-achievement-desc-editor"
+                          label="Deskripsi Singkat Prestasi"
+                          helperText="Ceritakan penyelenggara lomba, lokasi, atau capaian santri. Mendukung tebal, miring, emoji piala 🏆, dan ikon."
                           rows={3}
                           value={achForm.description}
-                          onChange={(e) => setAchForm({ ...achForm, description: e.target.value })}
+                          onChange={(val) => setAchForm({ ...achForm, description: val })}
                           placeholder="Ceritakan penyelenggara lomba, lokasi, atau capaian santri..."
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                         />
                       </div>
 
@@ -5266,14 +5190,15 @@ export const AdminDashboard: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block font-semibold text-gray-700 mb-1">Deskripsi Singkat *</label>
-                        <textarea
+                        <FormattedTextEditor
+                          id="admin-program-shortdesc-editor"
+                          label="Deskripsi Singkat Program *"
+                          helperText="Uraian manfaat dan keunggulan program. Mendukung teks tebal, miring, emoji, dan ikon."
                           rows={3}
                           required
                           value={programForm.shortDesc}
-                          onChange={(e) => setProgramForm({ ...programForm, shortDesc: e.target.value })}
+                          onChange={(val) => setProgramForm({ ...programForm, shortDesc: val })}
                           placeholder="Uraian manfaat dan metode program..."
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                         />
                       </div>
 
@@ -5407,12 +5332,14 @@ export const AdminDashboard: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block font-semibold text-gray-700 mb-1">Deskripsi Kegiatan</label>
-                        <textarea
-                          rows={2}
+                        <FormattedTextEditor
+                          id="admin-ekskul-desc-editor"
+                          label="Deskripsi Kegiatan Ekskul"
+                          helperText="Uraian kegiatan latihan, kompetisi, dan pembiasaan. Mendukung format tebal, miring, emoji, dan ikon."
+                          rows={3}
                           value={ekskulForm.description}
-                          onChange={(e) => setEkskulForm({ ...ekskulForm, description: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                          onChange={(val) => setEkskulForm({ ...ekskulForm, description: val })}
+                          placeholder="Tuliskan gambaran latihan, capaian, atau keistimewaan ekskul ini..."
                         />
                       </div>
 
@@ -6074,12 +6001,14 @@ export const AdminDashboard: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block font-semibold text-gray-700 mb-1">Deskripsi Singkat</label>
-                        <textarea
+                        <FormattedTextEditor
+                          id="admin-gallery-desc-editor"
+                          label="Deskripsi Singkat Foto"
+                          helperText="Keterangan singkat momen foto. Mendukung format tebal, miring, emoji, dan ikon."
                           rows={2}
                           value={galleryForm.description}
-                          onChange={(e) => setGalleryForm({ ...galleryForm, description: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                          onChange={(val) => setGalleryForm({ ...galleryForm, description: val })}
+                          placeholder="Tuliskan keterangan momen dokumentasi foto..."
                         />
                       </div>
 
@@ -6202,12 +6131,14 @@ export const AdminDashboard: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block font-semibold text-gray-700 mb-1">Deskripsi Singkat</label>
-                        <textarea
+                        <FormattedTextEditor
+                          id="admin-facility-desc-editor"
+                          label="Deskripsi Fasilitas"
+                          helperText="Penjelasan fungsi, kapasitas, dan kenyamanan fasilitas madrasah. Mendukung format tebal, miring, emoji, dan ikon."
                           rows={2}
                           value={facilityForm.description}
-                          onChange={(e) => setFacilityForm({ ...facilityForm, description: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                          onChange={(val) => setFacilityForm({ ...facilityForm, description: val })}
+                          placeholder="Penjelasan fungsi, kenyamanan, atau keunggulan fasilitas madrasah..."
                         />
                       </div>
 
@@ -6504,13 +6435,14 @@ export const AdminDashboard: React.FC = () => {
 
                         {/* Description */}
                         <div>
-                          <label className="block font-semibold text-gray-700 mb-1">Deskripsi Ringkas Video</label>
-                          <textarea
+                          <FormattedTextEditor
+                            id="admin-video-desc-editor"
+                            label="Deskripsi Ringkas Video"
+                            helperText="Keterangan singkat mengenai isi video dan momen kegiatan santri. Mendukung teks tebal, miring, emoji, dan ikon."
                             rows={2}
                             value={videoForm.description}
-                            onChange={(e) => setVideoForm({ ...videoForm, description: e.target.value })}
+                            onChange={(val) => setVideoForm({ ...videoForm, description: val })}
                             placeholder="Tuliskan keterangan singkat mengenai isi video dan momen kegiatan..."
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                           />
                         </div>
 
@@ -7036,14 +6968,15 @@ export const AdminDashboard: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block font-semibold text-gray-700 mb-1">Isi Kutipan Testimoni *</label>
-                        <textarea
+                        <FormattedTextEditor
+                          id="admin-testimonial-quote-editor"
+                          label="Isi Kutipan Testimoni *"
+                          helperText="Ceritakan pengalaman dan kesan selama menyekolahkan anak di madrasah. Mendukung tebal, miring, emoji, dan ikon."
                           rows={3}
                           required
                           value={testiForm.quote}
-                          onChange={(e) => setTestiForm({ ...testiForm, quote: e.target.value })}
+                          onChange={(val) => setTestiForm({ ...testiForm, quote: val })}
                           placeholder="Ceritakan pengalaman dan kesan selama menyekolahkan anak di madrasah..."
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                         />
                       </div>
 
@@ -7118,14 +7051,15 @@ export const AdminDashboard: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block font-semibold text-gray-700 mb-1">Jawaban Lengkap *</label>
-                        <textarea
+                        <FormattedTextEditor
+                          id="admin-faq-answer-editor"
+                          label="Jawaban Lengkap *"
+                          helperText="Tuliskan jawaban yang ramah, jelas, dan solutif. Mendukung tebal, miring, garis bawah, emoji, dan ikon."
                           rows={4}
                           required
                           value={faqForm.answer}
-                          onChange={(e) => setFaqForm({ ...faqForm, answer: e.target.value })}
+                          onChange={(val) => setFaqForm({ ...faqForm, answer: val })}
                           placeholder="Tuliskan jawaban yang ramah, jelas, dan solutif..."
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                         />
                       </div>
 

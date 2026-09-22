@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Sparkles
 } from 'lucide-react';
+import { FormattedText } from './FormattedText';
 
 export type ActiveMedia =
   | { type: 'foto'; item: GalleryItem }
@@ -31,7 +32,7 @@ export const Facilities: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'galeri' | 'galeri_video' | 'fasilitas'>('galeri');
   const [selectedFacility, setSelectedFacility] = useState<FacilityItem | null>(null);
   const [activeMedia, setActiveMedia] = useState<ActiveMedia | null>(null);
-  const [sidebarFilter, setSidebarFilter] = useState<'semua' | 'foto' | 'video'>('semua');
+  const [sidebarFilter, setSidebarFilter] = useState<'semua' | 'foto' | 'video'>('foto');
   const [facilitySidebarFilter, setFacilitySidebarFilter] = useState<string>('Semua');
   const [fullscreenPhoto, setFullscreenPhoto] = useState<{
     id: string;
@@ -42,6 +43,29 @@ export const Facilities: React.FC = () => {
   } | null>(null);
   const [playerAspect, setPlayerAspect] = useState<VideoAspectRatio>('auto');
   const [activeCategory, setActiveCategory] = useState<string>('Semua');
+
+  // Auto-initialize active item so Galeri & Fasilitas always display in the showcase layout (Layout.png)
+  useEffect(() => {
+    if (activeTab === 'galeri') {
+      if (!activeMedia || activeMedia.type !== 'foto') {
+        if (gallery && gallery.length > 0) {
+          setActiveMedia({ type: 'foto', item: gallery[0] });
+          setSidebarFilter('foto');
+        }
+      }
+    } else if (activeTab === 'galeri_video') {
+      if (!activeMedia || activeMedia.type !== 'video') {
+        if (videoGallery && videoGallery.length > 0) {
+          setActiveMedia({ type: 'video', item: videoGallery[0] });
+          setSidebarFilter('video');
+        }
+      }
+    } else if (activeTab === 'fasilitas') {
+      if (!selectedFacility && facilities && facilities.length > 0) {
+        setSelectedFacility(facilities[0]);
+      }
+    }
+  }, [activeTab, gallery, videoGallery, facilities, activeMedia, selectedFacility]);
 
   const sidebarFacilities = useMemo(() => {
     return facilities.filter((fac) => {
@@ -253,7 +277,7 @@ export const Facilities: React.FC = () => {
   };
 
   return (
-    <section id="galeri" className="py-12 sm:py-16 px-4 sm:px-8 max-w-7xl mx-auto">
+    <section id="galeri" className="pt-3 sm:pt-4 pb-14 sm:pb-16 px-4 sm:px-8 max-w-7xl mx-auto">
       {selectedFacility ? (
         /* ========================================================================= */
         /* SHOWCASE VIEW FOR FASILITAS & RUANG BELAJAR (Matching Layout.png)        */
@@ -404,15 +428,15 @@ export const Facilities: React.FC = () => {
                 </div>
 
                 {/* Judul Fasilitas */}
-                <h2 className="font-heading text-2xl sm:text-3xl font-bold text-[#072217] tracking-tight leading-snug">
+                <h2 className="font-heading text-xl sm:text-2xl font-bold text-[#072217] tracking-tight leading-snug">
                   {selectedFacility.name}
                 </h2>
 
                 {/* Deskripsi Lengkap */}
                 <div className="pt-2 border-t border-gray-200/80">
-                  <p className="font-body text-sm sm:text-base text-gray-700 leading-relaxed whitespace-pre-line">
-                    {selectedFacility.description}
-                  </p>
+                  <div className="font-body text-sm sm:text-base text-gray-700 leading-relaxed whitespace-pre-line">
+                    <FormattedText text={selectedFacility.description} />
+                  </div>
                 </div>
 
                 {/* Spesifikasi & Keunggulan Fasilitas */}
@@ -486,9 +510,9 @@ export const Facilities: React.FC = () => {
                         <h4 className="font-heading text-xs sm:text-sm font-bold text-[#072217] group-hover:text-[#0b3c26] transition-colors line-clamp-2 leading-snug">
                           {fac.name}
                         </h4>
-                        <p className="text-[11px] text-gray-500 line-clamp-2 mt-1 leading-relaxed">
-                          {fac.description}
-                        </p>
+                        <div className="text-[11px] text-gray-500 line-clamp-2 mt-1 leading-relaxed">
+                          <FormattedText text={fac.description} asParagraphs={false} />
+                        </div>
                       </div>
                     </div>
                   ))
@@ -521,9 +545,13 @@ export const Facilities: React.FC = () => {
                 onClick={() => {
                   setActiveTab('galeri');
                   setSidebarFilter('foto');
+                  setSelectedFacility(null);
+                  if (gallery && gallery.length > 0) {
+                    setActiveMedia({ type: 'foto', item: gallery[0] });
+                  }
                 }}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  activeMedia.type === 'foto' && sidebarFilter === 'foto'
+                  activeMedia?.type === 'foto' && sidebarFilter === 'foto'
                     ? 'bg-[#0b3c26] text-[#f3e5ab] shadow-sm'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
@@ -535,9 +563,13 @@ export const Facilities: React.FC = () => {
                 onClick={() => {
                   setActiveTab('galeri_video');
                   setSidebarFilter('video');
+                  setSelectedFacility(null);
+                  if (videoGallery && videoGallery.length > 0) {
+                    setActiveMedia({ type: 'video', item: videoGallery[0] });
+                  }
                 }}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  activeMedia.type === 'video' && sidebarFilter === 'video'
+                  activeMedia?.type === 'video' && sidebarFilter === 'video'
                     ? 'bg-[#0b3c26] text-[#f3e5ab] shadow-sm'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
@@ -549,6 +581,9 @@ export const Facilities: React.FC = () => {
                 onClick={() => {
                   setActiveMedia(null);
                   setActiveTab('fasilitas');
+                  if (facilities && facilities.length > 0) {
+                    setSelectedFacility(facilities[0]);
+                  }
                 }}
                 className="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer bg-gray-100 text-gray-700 hover:bg-gray-200"
               >
@@ -734,7 +769,7 @@ export const Facilities: React.FC = () => {
                 </div>
 
                 {/* Judul Foto/Video */}
-                <h2 className="font-heading text-2xl sm:text-3xl font-bold text-[#072217] tracking-tight leading-snug">
+                <h2 className="font-heading text-xl sm:text-2xl font-bold text-[#072217] tracking-tight leading-snug">
                   {activeMedia.item.title}
                 </h2>
 
@@ -748,9 +783,9 @@ export const Facilities: React.FC = () => {
 
                 {/* Deskripsi lengkap mengenai photo/video yang ada pada galeri */}
                 <div className="mt-4 pt-4 border-t border-gray-200/80">
-                  <p className="font-body text-sm sm:text-base text-gray-700 leading-relaxed whitespace-pre-line">
-                    {activeMedia.item.description}
-                  </p>
+                  <div className="font-body text-sm sm:text-base text-gray-700 leading-relaxed whitespace-pre-line">
+                    <FormattedText text={activeMedia.item.description || ''} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -863,9 +898,9 @@ export const Facilities: React.FC = () => {
                           <h4 className="font-heading text-sm font-bold text-[#072217] group-hover:text-[#0b3c26] transition-colors line-clamp-2 leading-snug">
                             {item.title}
                           </h4>
-                          <p className="font-body text-xs text-gray-600 line-clamp-2 leading-relaxed mt-1">
-                            {item.description}
-                          </p>
+                          <div className="font-body text-xs text-gray-600 line-clamp-2 leading-relaxed mt-1">
+                            <FormattedText text={item.description} asParagraphs={false} />
+                          </div>
                         </div>
                         <div className="flex items-center gap-2 mt-2 text-[11px] text-gray-400">
                           <span className="font-semibold text-[#0b3c26] bg-[#e8f3ee] px-2 py-0.5 rounded">
@@ -892,20 +927,20 @@ export const Facilities: React.FC = () => {
         /* ========================================================================= */
         <div>
           {/* Section Header */}
-          <div className="text-center max-w-2xl mx-auto mb-10">
-            <span className="text-xs uppercase font-bold tracking-widest text-[#0b3c26] bg-[#e8f3ee] px-3.5 py-1 rounded-full inline-block mb-3 border border-[#0b3c26]/20">
-              DOKUMENTASI & SARANA PRASARANA
+          <div className="text-center max-w-2xl mx-auto mb-4">
+            <span className="text-[10px] sm:text-[11px] uppercase font-bold tracking-wider text-[#0b3c26] bg-[#e8f3ee] px-3 py-0.5 rounded-full inline-block mb-1.5 border border-[#0b3c26]/20">
+              DOKUMENTASI &amp; SARANA PRASARANA
             </span>
-            <h3 className="font-heading text-2xl sm:text-4xl font-bold text-[#072217] tracking-tight">
-              Galeri Kegiatan & Fasilitas Madrasah
-            </h3>
-            <p className="font-body text-sm sm:text-base text-gray-600 mt-2">
+            <h2 className="font-heading text-xl sm:text-2xl font-bold text-[#072217] tracking-tight">
+              Galeri Kegiatan &amp; Fasilitas Madrasah
+            </h2>
+            <p className="font-body text-xs sm:text-sm text-gray-600 mt-1">
               Potret kehangatan belajar, dokumentasi video pembiasaan ibadah harian, dan sarana representatif di lingkungan MI Ma'arif Al Ihsan Soborejo.
             </p>
           </div>
 
           {/* Main Mode Tabs (Foto vs Video vs Fasilitas) */}
-          <div className="flex justify-center mb-8">
+          <div className="flex justify-center mb-6">
             <div className="inline-flex flex-wrap justify-center p-1.5 bg-gray-100 rounded-2xl border border-gray-200 gap-1 sm:gap-0">
               <button
                 id="tab-galeri-btn"
@@ -1021,9 +1056,9 @@ export const Facilities: React.FC = () => {
                     </div>
 
                     <div className="p-4 flex items-center justify-between gap-2">
-                      <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed flex-1">
-                        {item.description}
-                      </p>
+                      <div className="text-xs text-gray-600 line-clamp-2 leading-relaxed flex-1">
+                        <FormattedText text={item.description} asParagraphs={false} />
+                      </div>
                       <button
                         type="button"
                         onClick={(e) => {
@@ -1139,9 +1174,9 @@ export const Facilities: React.FC = () => {
                             </h4>
 
                             {video.description && (
-                              <p className="text-xs text-gray-600 mt-2 line-clamp-2 leading-relaxed">
-                                {video.description}
-                              </p>
+                              <div className="text-xs text-gray-600 mt-2 line-clamp-2 leading-relaxed">
+                                <FormattedText text={video.description} asParagraphs={false} />
+                              </div>
                             )}
                           </div>
 
@@ -1209,9 +1244,9 @@ export const Facilities: React.FC = () => {
                       <h4 className="font-heading text-base sm:text-lg font-bold text-[#072217] mb-2 group-hover:text-[#0b3c26] transition-colors">
                         {fac.name}
                       </h4>
-                      <p className="text-xs text-[#52635c] line-clamp-2 mb-4 leading-relaxed">
-                        {fac.description}
-                      </p>
+                      <div className="text-xs text-[#52635c] line-clamp-2 mb-4 leading-relaxed">
+                        <FormattedText text={fac.description} asParagraphs={false} />
+                      </div>
                     </div>
 
                     <div className="pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-[#0b3c26] font-semibold">

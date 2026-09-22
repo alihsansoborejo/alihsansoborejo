@@ -3,6 +3,7 @@ import { useDataContext } from '../context/DataContext';
 import { useShare } from '../context/ShareContext';
 import { ProgramItem } from '../types';
 import { BookOpen, Cpu, Languages, HeartHandshake, CheckCircle2, ArrowRight, X, Clock, Target, Sparkles, Palette, GraduationCap, BookOpenCheck, School, Share2 } from 'lucide-react';
+import { FormattedText } from './FormattedText';
 
 interface ProgramsProps {
   onRegisterProgram?: (programTitle: string) => void;
@@ -69,23 +70,23 @@ export const Programs: React.FC<ProgramsProps> = ({ onRegisterProgram }) => {
   });
 
   return (
-    <section id="program" className="py-24 px-4 sm:px-8 max-w-7xl mx-auto">
+    <section id="program" className="pt-3 sm:pt-4 pb-14 sm:pb-16 px-4 sm:px-8 max-w-7xl mx-auto">
       {/* Section Header */}
-      <div className="text-center max-w-2xl mx-auto mb-10">
-        <span className="text-xs sm:text-sm font-semibold tracking-widest text-[#d4af37] uppercase mb-2 block">
+      <div className="text-center max-w-2xl mx-auto mb-3.5">
+        <span className="text-[10px] sm:text-[11px] font-semibold tracking-wider text-[#d4af37] uppercase mb-1 block">
           Pendidikan Berkualitas &amp; Terintegrasi
         </span>
-        <h2 className="font-heading text-3xl sm:text-4xl text-[#072217] font-bold relative inline-block">
+        <h2 className="font-heading text-xl sm:text-2xl text-[#072217] font-bold relative inline-block">
           Program Unggulan Satu Atap
         </h2>
-        <div className="w-16 h-1 bg-[#d4af37] mx-auto mt-4 rounded-full" />
-        <p className="font-body text-sm sm:text-base text-[#52635c] mt-4">
+        <div className="w-12 h-0.5 bg-[#d4af37] mx-auto mt-2 rounded-full" />
+        <p className="font-body text-xs sm:text-sm text-[#52635c] mt-2">
           Kurikulum berkesinambungan sejak prasekolah Raudhatul Athfal (RA) hingga Madrasah Ibtidaiyah (MI) Al Ihsan Soborejo.
         </p>
       </div>
 
       {/* Filter Tabs by Institution Level */}
-      <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-10">
+      <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 mb-6 sm:mb-8">
         <button
           type="button"
           onClick={() => setFilterLevel('ALL')}
@@ -175,9 +176,9 @@ export const Programs: React.FC<ProgramsProps> = ({ onRegisterProgram }) => {
               <h3 className="font-heading text-lg sm:text-xl font-bold text-[#072217] mb-3 leading-snug">
                 {prog.title}
               </h3>
-              <p className="font-body text-xs sm:text-sm text-[#52635c] leading-relaxed mb-6">
-                {prog.shortDesc}
-              </p>
+              <div className="font-body text-xs sm:text-sm text-[#52635c] leading-relaxed mb-6">
+                <FormattedText text={prog.shortDesc} asParagraphs={false} />
+              </div>
             </div>
 
             {/* Read More & Share Buttons */}
@@ -255,9 +256,9 @@ export const Programs: React.FC<ProgramsProps> = ({ onRegisterProgram }) => {
               </div>
             </div>
 
-            <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-              {selectedProgram.fullDesc}
-            </p>
+            <div className="text-sm text-gray-600 mb-6 leading-relaxed">
+              <FormattedText text={selectedProgram.fullDesc} />
+            </div>
 
             <div className="bg-[#f8faf9] p-4 rounded-xl border border-gray-100 mb-6 space-y-2">
               <div className="flex items-center gap-2 text-xs font-semibold text-[#072217]">
@@ -278,7 +279,9 @@ export const Programs: React.FC<ProgramsProps> = ({ onRegisterProgram }) => {
                 {selectedProgram.highlights.map((point, index) => (
                   <li key={index} className="flex items-start gap-2.5 text-xs sm:text-sm text-gray-700">
                     <CheckCircle2 className="w-4 h-4 text-[#0b3c26] shrink-0 mt-0.5" />
-                    <span>{point}</span>
+                    <span>
+                      <FormattedText text={point} asParagraphs={false} />
+                    </span>
                   </li>
                 ))}
               </ul>

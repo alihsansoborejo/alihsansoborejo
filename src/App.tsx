@@ -549,7 +549,7 @@ function AppContent() {
 
               {/* VIEW 2: BERITA & WARTA */}
               {activeTab === 'berita' && (
-                <div id="berita-page-view" className="space-y-8">
+                <div id="berita-page-view" className="space-y-3 sm:space-y-4">
                   <PageBanner
                     title="Warta, Berita &amp; Agenda Madrasah"
                     subtitle="Kabar prestasi, informasi agenda akademik, kalender pendidikan, dan dinamika kegiatan santri RA &amp; MI Ma'arif Al Ihsan Soborejo"
@@ -564,7 +564,7 @@ function AppContent() {
 
               {/* VIEW 3: PROFIL & SAMBUTAN */}
               {activeTab === 'profil' && (
-                <div id="profil-page-view" className="space-y-8">
+                <div id="profil-page-view" className="space-y-3 sm:space-y-4">
                   <PageBanner
                     title="Profil Lembaga Satu Atap"
                     subtitle="Mengenal identitas madrasah, dewan pimpinan, visi misi lembaga, serta sejarah singkat perjuangan berdirinya RA &amp; MI Ma'arif Al Ihsan Soborejo"
@@ -579,7 +579,7 @@ function AppContent() {
 
               {/* VIEW 4: GTK (GURU & TENAGA KEPENDIDIKAN) */}
               {activeTab === 'gtk' && (
-                <div id="gtk-page-view" className="space-y-8">
+                <div id="gtk-page-view" className="space-y-3 sm:space-y-4">
                   <PageBanner
                     title="Guru &amp; Tenaga Kependidikan (GTK)"
                     subtitle="Dewan Asatidz dan Asatidzah yang berdedikasi tinggi, berjiwa Ahlussunnah wal Jama'ah An-Nahdliyyah, membimbing santri dengan keteladanan dan kasih sayang"
@@ -594,7 +594,7 @@ function AppContent() {
 
               {/* VIEW 5: PROGRAM UNGGULAN */}
               {activeTab === 'program' && (
-                <div id="program-page-view" className="space-y-8">
+                <div id="program-page-view" className="space-y-3 sm:space-y-4">
                   <PageBanner
                     title="Program Unggulan Madrasah"
                     subtitle="Kurikulum terpadu berbasis keislaman, penguatan akhlak karimah, tahfidz Al-Qur'an, dan pembiasaan ibadah harian"
@@ -619,7 +619,7 @@ function AppContent() {
 
               {/* VIEW 6: EKSTRAKURIKULER */}
               {activeTab === 'ekstrakurikuler' && (
-                <div id="ekstrakurikuler-page-view" className="space-y-8">
+                <div id="ekstrakurikuler-page-view" className="space-y-3 sm:space-y-4">
                   <PageBanner
                     title="Ekstrakurikuler Santri"
                     subtitle="Wadah pembinaan minat, bakat, kepemimpinan, seni Islam hadroh, kepramukaan, dan kebugaran jasmani santri"
@@ -634,7 +634,7 @@ function AppContent() {
 
               {/* VIEW 7: PRESTASI */}
               {activeTab === 'prestasi' && (
-                <div id="prestasi-page-view" className="space-y-8">
+                <div id="prestasi-page-view" className="space-y-3 sm:space-y-4">
                   <PageBanner
                     title="Prestasi Santri &amp; Madrasah"
                     subtitle="Rekam jejak kebanggaan raihan juara santri di bidang keagamaan, sains, seni, dan kepramukaan"
@@ -649,7 +649,7 @@ function AppContent() {
 
               {/* VIEW 8: GALERI & FASILITAS */}
               {activeTab === 'galeri' && (
-                <div id="galeri-page-view" className="space-y-8">
+                <div id="galeri-page-view" className="space-y-3 sm:space-y-4">
                   <PageBanner
                     title="Galeri Foto &amp; Sarana Prasarana"
                     subtitle="Dokumentasi visual lingkungan belajar, ruang kelas representatif, perpustakaan, dan fasilitas penunjang pembelajaran"
@@ -664,7 +664,7 @@ function AppContent() {
 
               {/* VIEW 9: PPDB ONLINE */}
               {activeTab === 'ppdb' && (
-                <div id="ppdb-page-view" className="space-y-8">
+                <div id="ppdb-page-view" className="space-y-3 sm:space-y-4">
                   <PageBanner
                     title="Penerimaan Peserta Didik Baru (PPDB) Online"
                     subtitle="Pendaftaran santri baru RA Al Ihsan dan MI Ma'arif Al Ihsan Soborejo Tahun Ajaran Baru secara terpadu satu atap"
@@ -693,7 +693,7 @@ function AppContent() {
 
               {/* VIEW 10: KONTAK & LOKASI */}
               {activeTab === 'kontak' && (
-                <div id="kontak-page-view" className="space-y-8">
+                <div id="kontak-page-view" className="space-y-3 sm:space-y-4">
                   <PageBanner
                     title="Kontak &amp; Lokasi Madrasah"
                     subtitle="Layanan konsultasi informasi, pendaftaran santri via WhatsApp, serta peta lokasi Desa Soborejo, Pringsurat, Temanggung"

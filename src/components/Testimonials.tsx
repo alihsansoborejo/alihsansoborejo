@@ -1,6 +1,7 @@
 import React from 'react';
 import { useDataContext } from '../context/DataContext';
 import { Quote, Heart, Users } from 'lucide-react';
+import { FormattedText } from './FormattedText';
 
 export const Testimonials: React.FC = () => {
   const { testimonials } = useDataContext();
@@ -27,9 +28,9 @@ export const Testimonials: React.FC = () => {
           >
             <Quote className="w-8 h-8 text-[#d4af37]/30 mb-4" />
 
-            <p className="font-body text-xs sm:text-sm text-gray-700 italic leading-relaxed mb-6">
-              "{item.quote}"
-            </p>
+            <div className="font-body text-xs sm:text-sm text-gray-700 italic leading-relaxed mb-6">
+              "<FormattedText text={item.quote} asParagraphs={false} />"
+            </div>
 
             <div className="flex items-center gap-3.5 pt-4 border-t border-gray-100">
               <img

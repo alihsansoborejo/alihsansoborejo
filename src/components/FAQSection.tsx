@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useDataContext } from '../context/DataContext';
 import { ChevronDown, HelpCircle } from 'lucide-react';
+import { FormattedText } from './FormattedText';
 
 export const FAQSection: React.FC = () => {
   const { faqs } = useDataContext();
@@ -60,7 +61,7 @@ export const FAQSection: React.FC = () => {
                   id={`faq-answer-${faq.id}`}
                   className="px-5 sm:px-6 pb-6 pt-1 text-xs sm:text-sm text-gray-600 leading-relaxed border-t border-gray-50 animate-in fade-in duration-200"
                 >
-                  <p>{faq.answer}</p>
+                  <FormattedText text={faq.answer} />
                 </div>
               )}
             </div>

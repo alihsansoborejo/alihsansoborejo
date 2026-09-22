@@ -3,6 +3,7 @@ import { useDataContext } from '../context/DataContext';
 import { Quote, Sparkles, Compass, Eye, BookOpen, History, Shield, Heart, Award, Target, CheckCircle2, Sliders, Camera, Edit3 } from 'lucide-react';
 import { HeadmasterPhotoModal } from './HeadmasterPhotoModal';
 import { HistoryEditModal } from './HistoryEditModal';
+import { FormattedText } from './FormattedText';
 
 export const PrincipalWelcome: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'sambutan' | 'visi-misi' | 'sejarah'>('sambutan');
@@ -171,7 +172,9 @@ export const PrincipalWelcome: React.FC = () => {
 
               <div className="space-y-3 font-body text-xs sm:text-sm text-white/85 leading-relaxed">
                 {schoolProfile.headmasterWelcome.map((paragraph, idx) => (
-                  <p key={idx}>{paragraph}</p>
+                  <div key={idx}>
+                    <FormattedText text={paragraph} asParagraphs={false} />
+                  </div>
                 ))}
               </div>
 
@@ -198,7 +201,7 @@ export const PrincipalWelcome: React.FC = () => {
                 <span>Visi Utama Madrasah</span>
               </div>
               <p className="font-serif-sub text-lg sm:text-xl text-[#f3e5ab] leading-relaxed">
-                "{schoolProfile.vision}"
+                "<FormattedText text={schoolProfile.vision} asParagraphs={false} />"
               </p>
             </div>
 
@@ -217,7 +220,9 @@ export const PrincipalWelcome: React.FC = () => {
                     <div className="w-7 h-7 rounded-full bg-[#d4af37]/20 text-[#d4af37] flex items-center justify-center shrink-0 mt-0.5 font-bold text-xs uppercase border border-[#d4af37]/30">
                       {alphabet[i] || `${i + 1}`}
                     </div>
-                    <span className="leading-relaxed">{misi}</span>
+                    <div className="leading-relaxed">
+                      <FormattedText text={misi} asParagraphs={false} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -238,7 +243,9 @@ export const PrincipalWelcome: React.FC = () => {
                     <div className="w-6 h-6 rounded-full bg-[#d4af37] text-[#072217] flex items-center justify-center shrink-0 mt-0.5 font-bold text-xs uppercase shadow-sm">
                       {alphabet[idx] || `${idx + 1}`}
                     </div>
-                    <span className="leading-relaxed">{goal}</span>
+                    <div className="leading-relaxed">
+                      <FormattedText text={goal} asParagraphs={false} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -257,7 +264,9 @@ export const PrincipalWelcome: React.FC = () => {
                       <Sparkles className="w-4 h-4" />
                     </div>
                     <div className="font-heading text-sm font-bold text-[#f3e5ab]">{v.title}</div>
-                    <div className="text-[11px] text-white/70 mt-1 leading-snug">{v.desc}</div>
+                    <div className="text-[11px] text-white/70 mt-1 leading-snug">
+                      <FormattedText text={v.desc} asParagraphs={false} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -296,7 +305,9 @@ export const PrincipalWelcome: React.FC = () => {
               {schoolProfile.history.map((hist, i) => (
                 <div key={i} className="flex items-start gap-3.5 bg-[#052317]/90 p-4 sm:p-5 rounded-2xl border border-emerald-500/30 shadow-md">
                   <div className="w-2.5 h-2.5 rounded-full bg-[#d4af37] shrink-0 mt-1.5 shadow-sm" />
-                  <p className="text-white text-xs sm:text-sm leading-relaxed">{hist}</p>
+                  <div className="text-white text-xs sm:text-sm leading-relaxed">
+                    <FormattedText text={hist} asParagraphs={false} />
+                  </div>
                 </div>
               ))}
             </div>
