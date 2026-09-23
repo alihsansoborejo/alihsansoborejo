@@ -59,6 +59,18 @@ export const NewsSection: React.FC = () => {
   // Apakah artikel di bagian atas sedang dalam mode dibaca selengkapnya
   const isTopArticleExpanded = activeReadingId !== null;
 
+  // Daftar kartu berita di bagian bawah:
+  // Semua berita SELAIN berita yang sedang aktif ditampilkan di bagian atas (currentTopArticle).
+  // Ketika berita selain berita terbaru sedang dibaca di atas, berita terbaru otomatis berubah menjadi kartu di bawah!
+  const bottomArticles = sortedNews.filter((article) => article.id !== currentTopArticle?.id);
+
+  // Apakah artikel yang sedang dibaca di atas merupakan berita arsip (bukan berita terbaru)
+  const isOtherArticleReadingAtTop = !!(
+    activeReadingId &&
+    defaultLatestArticle &&
+    activeReadingId !== defaultLatestArticle.id
+  );
+
   // Auto expand news article if navigated via deep link
   useEffect(() => {
     if (activeDeepLink && activeDeepLink.type === 'berita' && activeDeepLink.id) {
@@ -207,7 +219,7 @@ export const NewsSection: React.FC = () => {
                     </div>
 
                     {/* FOTO BERITA BESAR DI BAGIAN ATAS TEKS (Utuh & Tidak Terpotong) */}
-                    <div className="relative w-full bg-neutral-950 flex items-center justify-center overflow-hidden border-b border-gray-200">
+                    <div className="relative w-full bg-neutral-950 flex items-center justify-center overflow-hidden border-b border-gray-200 min-h-[300px] sm:min-h-[440px] lg:min-h-[520px]">
                       {/* Ambient Backdrop */}
                       <img
                         src={topArticle.imageUrl}
@@ -219,7 +231,7 @@ export const NewsSection: React.FC = () => {
                       <img
                         src={topArticle.imageUrl}
                         alt={topArticle.title}
-                        className="relative z-10 w-full max-h-[500px] sm:max-h-[580px] object-contain mx-auto"
+                        className="relative z-10 w-full max-h-[560px] sm:max-h-[660px] lg:max-h-[760px] object-contain mx-auto shadow-2xl"
                       />
 
                       {/* Badge Kategori & Warta Utama */}
@@ -250,32 +262,32 @@ export const NewsSection: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* TEKS LENGKAP ARTIKEL DI BAWAH FOTO */}
-                    <div className="p-6 sm:p-10 lg:p-12 bg-white">
-                      <div className="max-w-4xl mx-auto">
+                    {/* TEKS LENGKAP ARTIKEL DI BAWAH FOTO (Tampilan Lebar Penuh) */}
+                    <div className="w-full p-6 sm:p-10 lg:p-14 bg-white">
+                      <div className="w-full max-w-5xl xl:max-w-6xl mx-auto">
                         <div className="flex items-center gap-2 text-xs font-semibold text-[#d4af37] uppercase tracking-wider mb-2.5">
                           <span>{isFromArchive ? 'Arsip Berita Madrasah' : 'Warta Utama Madrasah'}</span>
                           <span>•</span>
                           <span>{topArticle.readTime || '3 Menit'} Baca</span>
                         </div>
 
-                        <h3 className="font-heading text-xl sm:text-3xl font-bold text-[#072217] leading-tight mb-6">
+                        <h3 className="font-heading text-2xl sm:text-3xl lg:text-4xl font-bold text-[#072217] leading-tight mb-6">
                           {topArticle.title}
                         </h3>
 
                         {/* Paragraf / Seluruh Isi Berita */}
-                        <div className="font-body text-sm sm:text-base text-gray-800 leading-relaxed space-y-4">
+                        <div className="font-body text-base sm:text-lg text-gray-800 leading-relaxed sm:leading-loose space-y-5">
                           {paragraphs.length > 0 ? (
                             paragraphs.map((p, idx) => (
                               <div
                                 key={idx}
-                                className={idx === 0 ? 'font-medium text-gray-950 leading-relaxed text-base sm:text-lg' : 'leading-relaxed text-gray-800'}
+                                className={idx === 0 ? 'font-medium text-gray-950 leading-relaxed sm:leading-loose text-lg sm:text-xl' : 'leading-relaxed sm:leading-loose text-gray-800'}
                               >
                                 <FormattedText text={p} asParagraphs={false} />
                               </div>
                             ))
                           ) : (
-                            <div className="leading-relaxed text-gray-800">
+                            <div className="leading-relaxed sm:leading-loose text-gray-800">
                               <FormattedText text={topArticle.summary} asParagraphs={false} />
                             </div>
                           )}
@@ -328,8 +340,12 @@ export const NewsSection: React.FC = () => {
                   /* KONDISI B: DEFAULT PREVIEW (Ringkasan Berita Terkini)           */
                   /* --------------------------------------------------------------- */
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
-                    {/* Foto Berita Terbaru - Uncropped via object-contain */}
-                    <div className="lg:col-span-5 relative min-h-[260px] lg:min-h-[360px] bg-neutral-950 group flex items-center justify-center overflow-hidden">
+                    {/* Foto Berita Terbaru - Klik untuk baca lengkap */}
+                    <div
+                      onClick={(e) => handleReadArticleAtTop(topArticle, e)}
+                      className="lg:col-span-5 relative min-h-[260px] lg:min-h-[360px] bg-neutral-950 group flex items-center justify-center overflow-hidden cursor-pointer"
+                      title="Klik foto untuk membaca berita lengkap di bagian atas"
+                    >
                       <img
                         src={topArticle.imageUrl}
                         alt=""
@@ -342,6 +358,14 @@ export const NewsSection: React.FC = () => {
                         className="relative z-10 max-h-[340px] w-full object-contain group-hover:scale-105 transition-transform duration-700"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+
+                      {/* Hover Overlay Prompt */}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors flex items-center justify-center z-15 pointer-events-none">
+                        <span className="opacity-0 group-hover:opacity-100 transition-all duration-300 scale-95 group-hover:scale-100 bg-[#072217]/95 text-[#f3e5ab] text-xs font-bold px-4 py-2 rounded-full border border-[#d4af37]/50 shadow-xl flex items-center gap-2 backdrop-blur-xs">
+                          <BookOpen className="w-4 h-4 text-[#d4af37]" />
+                          <span>Klik untuk Baca Lengkap</span>
+                        </span>
+                      </div>
 
                       <div className="absolute top-4 left-4 z-20 flex flex-wrap items-center gap-2">
                         <span className="bg-[#d4af37] text-[#072217] text-xs uppercase font-extrabold tracking-wider px-3 py-1 rounded-full shadow-md">
@@ -373,12 +397,21 @@ export const NewsSection: React.FC = () => {
                           <span>{topArticle.readTime || '3 Menit'} Baca</span>
                         </div>
 
-                        <h3 className="font-heading text-xl sm:text-2xl font-bold text-[#072217] leading-tight mb-3">
+                        {/* Judul Berita - Klik untuk baca lengkap */}
+                        <h3
+                          onClick={(e) => handleReadArticleAtTop(topArticle, e)}
+                          className="font-heading text-xl sm:text-2xl font-bold text-[#072217] hover:text-[#0b3c26] transition-colors leading-tight mb-3 cursor-pointer hover:underline decoration-[#d4af37]/60 underline-offset-4"
+                          title="Klik judul untuk membaca berita lengkap di bagian atas"
+                        >
                           {topArticle.title}
                         </h3>
 
-                        {/* Paragraf Cuplikan */}
-                        <div className="font-body text-xs sm:text-sm text-gray-700 leading-relaxed space-y-2">
+                        {/* Paragraf Cuplikan - Klik untuk baca lengkap */}
+                        <div
+                          onClick={(e) => handleReadArticleAtTop(topArticle, e)}
+                          className="font-body text-xs sm:text-sm text-gray-700 leading-relaxed space-y-2 cursor-pointer hover:text-gray-950 transition-colors"
+                          title="Klik untuk membaca berita lengkap di bagian atas"
+                        >
                           {paragraphs.length > 0 ? (
                             <>
                               <div className="font-medium text-gray-900 leading-relaxed">
@@ -430,26 +463,34 @@ export const NewsSection: React.FC = () => {
           {/* ========================================================================= */}
           {/* 2. ARSIP BERITA LAINNYA (Grid Kompak: Semua Berita Otomatis Menciut)     */}
           {/* ========================================================================= */}
-          {sortedNews.length > 1 && (
+          {bottomArticles.length > 0 && (
             <div className="pt-2">
               <div className="flex items-center justify-between mb-6 pb-2.5 border-b border-gray-200/80">
                 <div>
                   <h4 className="font-heading text-lg sm:text-xl font-bold text-[#072217]">
-                    Kabar &amp; Berita Lainnya
+                    {isOtherArticleReadingAtTop ? 'Kabar & Warta Lainnya (Termasuk Berita Terkini)' : 'Kabar & Berita Lainnya'}
                   </h4>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    Klik <strong>"Baca Selengkapnya"</strong> pada berita mana pun untuk langsung membacanya di bagian atas layar.
+                    {isOtherArticleReadingAtTop ? (
+                      <>
+                        <strong>Berita Terkini</strong> dan warta lainnya otomatis berada di daftar bawah. Klik foto, judul, atau <strong>"Baca Selengkapnya"</strong> untuk beralih membacanya di atas.
+                      </>
+                    ) : (
+                      <>
+                        Klik foto, judul, atau <strong>"Baca Selengkapnya"</strong> pada berita mana pun untuk langsung membacanya di bagian atas layar.
+                      </>
+                    )}
                   </p>
                 </div>
                 <span className="hidden sm:inline-block text-xs font-semibold px-3 py-1 bg-emerald-50 text-[#0b3c26] border border-emerald-200 rounded-full">
-                  {sortedNews.length - 1} Berita Lainnya
+                  {bottomArticles.length} Berita Lainnya
                 </span>
               </div>
 
               {/* Grid 3-kolom kartu kompak: semua kartu otomatis menciut agar hemat tempat */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-                {sortedNews.slice(1).map((article) => {
-                  const isCurrentlyReadAtTop = activeReadingId === article.id;
+                {bottomArticles.map((article) => {
+                  const isLatestArticle = defaultLatestArticle && article.id === defaultLatestArticle.id;
                   const paragraphs = extractParagraphs(article);
 
                   return (
@@ -457,15 +498,19 @@ export const NewsSection: React.FC = () => {
                       key={article.id}
                       id={`news-card-${article.id}`}
                       className={`group bg-white rounded-2xl overflow-hidden shadow-[0_6px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_15px_30px_rgba(11,60,38,0.1)] border transition-all duration-300 flex flex-col justify-between scroll-mt-28 ${
-                        isCurrentlyReadAtTop
-                          ? 'ring-3 ring-[#d4af37] border-[#d4af37] bg-emerald-50/20'
-                          : highlightedId === article.id
-                          ? 'ring-2 ring-emerald-600 border-emerald-600'
+                        highlightedId === article.id
+                          ? 'ring-2 ring-emerald-600 border-emerald-600 shadow-md'
+                          : isLatestArticle
+                          ? 'border-[#d4af37]/60 hover:border-[#0b3c26] ring-1 ring-[#d4af37]/20 shadow-sm'
                           : 'border-black/10 hover:border-[#0b3c26]/30'
                       }`}
                     >
-                      {/* Foto Berita (Utuh & Tidak Terpotong) */}
-                      <div className="relative h-44 sm:h-48 overflow-hidden bg-neutral-950 flex items-center justify-center shrink-0">
+                      {/* Foto Berita (Utuh & Tidak Terpotong) - Klik untuk membaca lengkap di bagian atas */}
+                      <div
+                        onClick={(e) => handleReadArticleAtTop(article, e)}
+                        className="relative h-44 sm:h-52 overflow-hidden bg-neutral-950 flex items-center justify-center shrink-0 cursor-pointer group/photo"
+                        title={isLatestArticle ? "Klik foto untuk membaca Berita Terkini di bagian atas" : "Klik foto untuk membaca berita lengkap di bagian atas"}
+                      >
                         <img
                           src={article.imageUrl}
                           alt=""
@@ -475,23 +520,29 @@ export const NewsSection: React.FC = () => {
                         <img
                           src={article.imageUrl}
                           alt={article.title}
-                          className="relative z-10 w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                          className="relative z-10 w-full h-full object-contain group-hover/photo:scale-105 transition-transform duration-500"
                         />
 
-                        {/* Category Badge */}
-                        <span className="absolute top-2.5 left-2.5 z-20 bg-[#072217]/85 backdrop-blur-md text-[#d4af37] text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full border border-[#d4af37]/30">
-                          {article.category}
-                        </span>
+                        {/* Hover Overlay Prompt */}
+                        <div className="absolute inset-0 bg-black/0 group-hover/photo:bg-black/30 transition-colors flex items-center justify-center z-15 pointer-events-none">
+                          <span className="opacity-0 group-hover/photo:opacity-100 transition-all duration-300 scale-95 group-hover/photo:scale-100 bg-[#072217]/95 text-[#f3e5ab] text-[11px] font-bold px-3 py-1.5 rounded-full border border-[#d4af37]/50 shadow-lg flex items-center gap-1.5 backdrop-blur-xs">
+                            <BookOpen className="w-3.5 h-3.5 text-[#d4af37]" />
+                            <span>{isLatestArticle ? 'Baca Berita Terkini di Atas' : 'Baca Lengkap di Atas'}</span>
+                          </span>
+                        </div>
 
-                        {/* Indikator Sedang Terbaca di Atas */}
-                        {isCurrentlyReadAtTop && (
-                          <div className="absolute top-2.5 right-2.5 z-20">
-                            <span className="bg-[#d4af37] text-[#072217] text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md shadow-xs flex items-center gap-1 animate-pulse">
-                              <Eye className="w-3 h-3" />
-                              <span>Sedang Dibaca di Atas</span>
+                        {/* Category & Status Badge */}
+                        <div className="absolute top-2.5 left-2.5 z-20 flex items-center gap-1.5 flex-wrap">
+                          {isLatestArticle && (
+                            <span className="bg-[#d4af37] text-[#072217] text-[10px] uppercase font-extrabold tracking-wider px-2.5 py-0.5 rounded-full shadow-md flex items-center gap-1">
+                              <Sparkles className="w-3 h-3 text-[#072217]" />
+                              <span>Berita Terkini</span>
                             </span>
-                          </div>
-                        )}
+                          )}
+                          <span className="bg-[#072217]/85 backdrop-blur-md text-[#d4af37] text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full border border-[#d4af37]/30">
+                            {article.category}
+                          </span>
+                        </div>
                       </div>
 
                       {/* Konten Kartu Ringkas (Menciut untuk Menghemat Ruang) */}
@@ -506,12 +557,21 @@ export const NewsSection: React.FC = () => {
                             </span>
                           </div>
 
-                          <h4 className="font-heading text-sm sm:text-base font-bold text-[#072217] group-hover:text-[#0b3c26] transition-colors leading-snug mb-2 line-clamp-2">
+                          {/* Judul Berita - Klik untuk membaca lengkap di bagian atas */}
+                          <h4
+                            onClick={(e) => handleReadArticleAtTop(article, e)}
+                            className="font-heading text-sm sm:text-base font-bold text-[#072217] hover:text-[#0b3c26] hover:underline decoration-[#d4af37]/60 underline-offset-2 transition-colors leading-snug mb-2 line-clamp-2 cursor-pointer"
+                            title={isLatestArticle ? "Klik judul untuk membaca Berita Terkini di bagian atas" : "Klik judul untuk membaca berita lengkap di bagian atas"}
+                          >
                             {article.title}
                           </h4>
 
-                          {/* Cuplikan Singkat Menciut (Maksimal 2-3 baris agar tidak menghabiskan ruang) */}
-                          <div className="font-body text-xs text-gray-600 leading-relaxed mb-4 line-clamp-2">
+                          {/* Cuplikan Singkat Menciut - Klik untuk membaca lengkap di bagian atas */}
+                          <div
+                            onClick={(e) => handleReadArticleAtTop(article, e)}
+                            className="font-body text-xs text-gray-600 hover:text-gray-950 transition-colors leading-relaxed mb-4 line-clamp-2 cursor-pointer"
+                            title={isLatestArticle ? "Klik untuk membaca Berita Terkini di bagian atas" : "Klik untuk membaca berita lengkap di bagian atas"}
+                          >
                             <FormattedText
                               text={article.summary || (paragraphs[0] ?? '')}
                               asParagraphs={false}
@@ -521,16 +581,16 @@ export const NewsSection: React.FC = () => {
 
                         {/* Tombol Aksi: Klik Baca Selengkapnya Langsung Membaca di Atas */}
                         <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-auto">
-                          {isCurrentlyReadAtTop ? (
+                          {isLatestArticle ? (
                             <button
                               id={`toggle-news-btn-${article.id}`}
                               type="button"
-                              onClick={(e) => handleCollapseArticle(article.id, e)}
-                              className="inline-flex items-center gap-1.5 text-xs font-bold transition-all px-3 py-1.5 rounded-lg bg-amber-100 text-amber-950 hover:bg-amber-200 border border-amber-300 shadow-2xs cursor-pointer"
-                              title="Ciutkan dan tutup tampilan di atas"
+                              onClick={(e) => handleReadArticleAtTop(article, e)}
+                              className="inline-flex items-center gap-1.5 text-xs font-bold transition-all px-3 py-1.5 rounded-lg bg-emerald-800 text-[#f3e5ab] hover:bg-[#072217] border border-[#d4af37]/40 shadow-xs cursor-pointer group/btn"
+                              title="Baca Berita Terkini di bagian atas layar"
                             >
-                              <ChevronUp className="w-3.5 h-3.5 text-amber-900" />
-                              <span>Ciutkan Berita</span>
+                              <span>Baca Berita Terkini</span>
+                              <ArrowUp className="w-3.5 h-3.5 text-[#d4af37] group-hover/btn:-translate-y-0.5 transition-transform" />
                             </button>
                           ) : (
                             <button

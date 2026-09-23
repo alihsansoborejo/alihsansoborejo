@@ -255,11 +255,15 @@ function AppContent() {
                                 : 'border-[#0b3c26]/10 shadow-sm hover:shadow-md'
                             }`}
                           >
-                            <div className="relative h-48 overflow-hidden bg-gray-100">
+                            <div
+                              onClick={(e) => togglePreviewNews(article.id, e)}
+                              className="relative h-48 overflow-hidden bg-gray-100 cursor-pointer group/img"
+                              title="Klik foto untuk membaca berita"
+                            >
                               <img
                                 src={article.imageUrl || '/assets/madrasah-gedung.svg'}
                                 alt={article.title}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300"
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).src = '/assets/madrasah-gedung.svg';
                                 }}
@@ -274,7 +278,11 @@ function AppContent() {
                                   <Calendar className="w-3.5 h-3.5 text-[#d4af37]" />
                                   <span>{article.date}</span>
                                 </div>
-                                <h3 className="font-heading text-base font-bold text-[#072217] group-hover:text-[#0b3c26] line-clamp-2 transition-colors">
+                                <h3
+                                  onClick={(e) => togglePreviewNews(article.id, e)}
+                                  className="font-heading text-base font-bold text-[#072217] group-hover:text-[#0b3c26] line-clamp-2 transition-colors cursor-pointer hover:underline decoration-[#d4af37]/60"
+                                  title="Klik judul untuk membaca"
+                                >
                                   {article.title}
                                 </h3>
 
