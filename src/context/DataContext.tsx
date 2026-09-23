@@ -964,6 +964,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     markLocalEdit();
     const newItem: StaffMember = { ...item, id: generateUniqueId('staff') };
     setData((prev) => ({ ...prev, staffList: [...prev.staffList, newItem] }));
+    upsertStaffToSupabase(newItem).catch(() => {});
+    apiRequest('/api/staff', { method: 'POST', body: JSON.stringify(newItem) }).catch(() => {});
   };
 
   const addStaffBatch = (items: Omit<StaffMember, 'id'>[], replaceAll: boolean = false) => {
@@ -972,18 +974,32 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...item,
       id: generateUniqueId(`staff-batch-${idx}`),
     }));
-    setData((prev) => ({
-      ...prev,
-      staffList: replaceAll ? newItems : [...prev.staffList, ...newItems],
-    }));
+    setData((prev) => {
+      const merged = replaceAll ? newItems : [...prev.staffList, ...newItems];
+      for (const ni of newItems) {
+        upsertStaffToSupabase(ni).catch(() => {});
+      }
+      return {
+        ...prev,
+        staffList: merged,
+      };
+    });
   };
 
   const updateStaff = (id: string, updated: Partial<StaffMember>) => {
     markLocalEdit();
-    setData((prev) => ({
-      ...prev,
-      staffList: prev.staffList.map((s) => (s.id === id ? { ...s, ...updated } : s)),
-    }));
+    setData((prev) => {
+      const updatedList = prev.staffList.map((s) => (s.id === id ? { ...s, ...updated } : s));
+      const fullStaff = updatedList.find((s) => s.id === id);
+      if (fullStaff) {
+        upsertStaffToSupabase(fullStaff).catch(() => {});
+        apiRequest('/api/staff', { method: 'POST', body: JSON.stringify(fullStaff) }).catch(() => {});
+      }
+      return {
+        ...prev,
+        staffList: updatedList,
+      };
+    });
   };
 
   const deleteStaff = (id: string) => {

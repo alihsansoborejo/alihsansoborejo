@@ -320,6 +320,7 @@ app.post('/api/sync-all', requireAuth, async (req: AuthRequest, res) => {
     if (testimonials !== undefined) settingsToSave.push({ key: 'testimonials', value: testimonials });
     if (faqs !== undefined) settingsToSave.push({ key: 'faqs', value: faqs });
     if (studentList !== undefined) settingsToSave.push({ key: 'student_list', value: Array.isArray(studentList) ? studentList : [] });
+    if (staffList !== undefined) settingsToSave.push({ key: 'staff_list', value: Array.isArray(staffList) ? staffList : [] });
 
     for (const item of settingsToSave) {
       await setAppSetting(item.key, item.value);

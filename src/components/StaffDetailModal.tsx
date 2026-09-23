@@ -250,7 +250,7 @@ export const StaffDetailModal: React.FC<StaffDetailModalProps> = ({
             <div className="flex items-center gap-2 mb-2 text-[#072217]">
               <Heart className="w-4 h-4 text-[#0b3c26]" />
               <h4 className="font-heading font-bold text-sm sm:text-base">
-                Profil &amp; Dedikasi Pengabdian
+                Biografi &amp; Profil Lengkap Dedikasi Pengabdian
               </h4>
             </div>
             <p className="font-body text-xs sm:text-sm text-gray-700 leading-relaxed">

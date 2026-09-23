@@ -412,7 +412,7 @@ export const StaffSection: React.FC = () => {
                   <div className="flex items-center gap-1.5 mb-1.5 text-[#072217]">
                     <Heart className="w-3.5 h-3.5 text-[#0b3c26]" />
                     <h4 className="font-heading font-bold text-xs sm:text-sm">
-                      Profil &amp; Dedikasi Pengabdian
+                      Biografi &amp; Profil Lengkap Dedikasi Pengabdian
                     </h4>
                   </div>
                   <div className="font-body text-xs sm:text-sm text-gray-700 leading-relaxed space-y-2">
@@ -599,36 +599,41 @@ export const StaffSection: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Deskripsi Lengkap Profil GTK */}
-                  <div className="pt-1">
-                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5">
-                      Profil &amp; Amanah Pendidik
-                    </h4>
-                    <div className="text-xs sm:text-sm text-gray-700 leading-relaxed space-y-2 font-body">
-                      {currentActiveStaff.bio ? (
-                        <FormattedText text={currentActiveStaff.bio} />
-                      ) : (
-                        <p>
-                          Mendedikasikan diri dalam pembinaan ilmu, akhlakul karimah, dan pembiasaan adab islami bagi seluruh peserta didik di lingkungan MI Ma'arif dan RA Al Ihsan Soborejo.
+                  {/* Pesan Inspiratif & Mutiara Hikmah Pendidik (Hanya bagian ini yang dimunculkan sebelum klik Detail Lengkap) */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#072217] via-[#0b3c26] to-[#041a11] text-white border border-[#d4af37]/40 shadow-sm relative overflow-hidden">
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-[#d4af37]/20 border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37] shrink-0 shadow-2xs mt-0.5">
+                        <Quote className="w-4 h-4" />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#d4af37] block">
+                          Pesan Inspiratif &amp; Mutiara Hikmah Pendidik
+                        </span>
+                        <p className="font-serif italic text-xs sm:text-sm text-[#f3e5ab] leading-relaxed">
+                          "{defaultQuote}"
                         </p>
-                      )}
+                        <span className="text-[10px] text-emerald-200/80 block mt-1">
+                          — {currentActiveStaff.name} ({currentActiveStaff.role})
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Pesan & Kata Mutiara Pendidik */}
-                  {currentActiveStaff.quote && (
-                    <div className="p-3 rounded-xl bg-[#e8f3ee] border border-emerald-200 text-[#072217] flex items-start gap-2.5">
-                      <Quote className="w-4 h-4 text-[#d4af37] shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#0b3c26] mb-0.5">
-                          Pesan Pendidik
-                        </p>
-                        <p className="text-xs italic text-gray-800 leading-relaxed font-serif">
-                          "{currentActiveStaff.quote}"
-                        </p>
-                      </div>
+                  {/* Ajakan Membuka Biografi & Profil Lengkap Dedikasi Pengabdian */}
+                  <div className="pt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-emerald-50/70 p-3.5 rounded-xl border border-emerald-200/60">
+                    <div className="flex items-center gap-2 text-xs text-gray-700">
+                      <Sparkles className="w-4 h-4 text-[#d4af37] shrink-0" />
+                      <span>Ingin membaca seluruh biografi &amp; rekam dedikasi pengabdian pendidik ini?</span>
                     </div>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => setIsFullDetailMode(true)}
+                      className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#0b3c26] hover:bg-[#072217] text-[#f3e5ab] text-xs font-bold transition-all shadow-xs cursor-pointer border border-[#d4af37]/40 group shrink-0"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-[#d4af37] group-hover:rotate-12 transition-transform" />
+                      <span>Detail Lengkap (Biografi Dedikasi)</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
