@@ -453,7 +453,7 @@ export async function saveAllToSupabase(
   }
 
   try {
-    // 1. Save master snapshot into madrasah_store
+    // 1. Save master snapshot into madrasah_store first (instant single-query write)
     const { error: storeError } = await supabase
       .from('madrasah_store')
       .upsert({
@@ -461,293 +461,6 @@ export async function saveAllToSupabase(
         data: state,
         updated_at: new Date().toISOString(),
       });
-
-    // 2. Save School Profile
-    try {
-      if (state.schoolProfile) {
-        const sp = state.schoolProfile;
-        await supabase.from('school_profile').upsert({
-          id: 'main',
-          nsm: sp.nsm || null,
-          npsn: sp.npsn || null,
-          name: sp.name,
-          short_name: sp.shortName || null,
-          tagline: sp.tagline || null,
-          logo_url: sp.logoUrl || null,
-          email: sp.email || null,
-          phone: sp.phone || null,
-          whatsapp: sp.whatsapp || null,
-          address: sp.address || null,
-          village: sp.village || null,
-          district: sp.district || null,
-          regency: sp.regency || null,
-          province: sp.province || null,
-          postal_code: sp.postalCode || null,
-          akreditasi: sp.accreditation || null,
-          headmaster_name: sp.headmasterName || null,
-          headmaster_nip: sp.headmasterNip || null,
-          headmaster_title: sp.headmasterTitle || null,
-          headmaster_photo: sp.headmasterPhotoUrl || null,
-          headmaster_welcome: sp.headmasterWelcome || [],
-          vision: sp.vision || null,
-          missions: sp.missions || [],
-          goals: sp.goals || [],
-          history: sp.history || [],
-          core_values: sp.coreValues || [],
-          updated_at: new Date().toISOString(),
-        });
-      }
-    } catch (_) {}
-
-    // 3. Save PPDB Registrations
-    try {
-      const ppdbIds = (state.ppdbRegistrations || []).map((p) => p.id);
-      await syncTableRecords('ppdb_registrations', ppdbIds);
-      if (state.ppdbRegistrations && state.ppdbRegistrations.length > 0) {
-        await supabase.from('ppdb_registrations').upsert(
-          state.ppdbRegistrations.map((p) => ({
-            id: p.id,
-            registration_number: p.registrationNumber,
-            student_name: p.studentName,
-            nik: p.nik || null,
-            nisn: p.nisn || null,
-            gender: p.gender,
-            birth_place: p.birthPlace || null,
-            birth_date: p.birthDate,
-            target_class: p.targetClass || 'Kelas 1 (Satu)',
-            origin_school: p.originSchool,
-            parent_name: p.parentName,
-            parent_phone: p.parentPhone,
-            parent_address: p.address,
-            submission_date: p.submissionDate,
-            status: p.status,
-            notes: p.notes || null,
-          }))
-        );
-      }
-    } catch (_) {}
-
-    // 4. Save Staff Members (GTK)
-    try {
-      const dummyStaffIds = ['staff-1', 'staff-2', 'staff-1789528823190-1-64pi7', 'staff-1789529008391-2-hk1tr'];
-      const validStaffList = (state.staffList || []).filter((s) => !dummyStaffIds.includes(s.id));
-      const staffIds = validStaffList.map((s) => s.id);
-      await syncTableRecords('staff_members', staffIds);
-      // Clean any accidental dummy records
-      await supabase.from('staff_members').delete().in('id', dummyStaffIds);
-      if (validStaffList.length > 0) {
-        const fullStaffPayload = validStaffList.map((s, idx) => ({
-          id: s.id,
-          name: s.name,
-          role: s.role,
-          category: s.category,
-          institution: s.institution || 'MI',
-          nip_or_nuptk: s.nipOrNuptk || null,
-          education: s.education || null,
-          subjects: s.subjects || null,
-          photo_url: s.photoUrl || null,
-          phone: s.phone || null,
-          status: s.status || 'Aktif Mengajar',
-          bio: s.bio || null,
-          quote: s.quote || null,
-          service_years: s.serviceYears || null,
-          expertise: Array.isArray(s.expertise) ? s.expertise : [],
-          order_num: s.order ?? idx,
-        }));
-
-        const { error: fullUpsertError } = await supabase.from('staff_members').upsert(fullStaffPayload);
-        if (fullUpsertError) {
-          console.warn('Upsert staff_members full detail note, falling back to basic columns:', fullUpsertError.message);
-          await supabase.from('staff_members').upsert(
-            validStaffList.map((s, idx) => ({
-              id: s.id,
-              name: s.name,
-              role: s.role,
-              category: s.category,
-              nip_or_nuptk: s.nipOrNuptk || null,
-              education: s.education || null,
-              subjects: s.subjects || null,
-              photo_url: s.photoUrl || null,
-              phone: s.phone || null,
-              order_num: s.order ?? idx,
-            }))
-          );
-        }
-      }
-    } catch (_) {}
-
-    // 5. Save Achievements
-    try {
-      const achieveIds = (state.achievements || []).map((a) => a.id);
-      await syncTableRecords('achievements', achieveIds);
-      if (state.achievements && state.achievements.length > 0) {
-        await supabase.from('achievements').upsert(
-          state.achievements.map((a) => ({
-            id: a.id,
-            title: a.title,
-            winner: a.winner,
-            category: a.category,
-            level: a.level,
-            year: a.year,
-            rank: a.rank,
-            description: a.description || '',
-            image_url: a.imageUrl || null,
-          }))
-        );
-      }
-    } catch (_) {}
-
-    // 6. Save News Articles
-    try {
-      const newsIds = (state.newsList || []).map((n) => n.id);
-      await syncTableRecords('news_articles', newsIds);
-      if (state.newsList && state.newsList.length > 0) {
-        await supabase.from('news_articles').upsert(
-          state.newsList.map((n) => ({
-            id: n.id,
-            title: n.title,
-            category: n.category,
-            summary: n.summary,
-            content: n.content,
-            image_url: n.imageUrl || null,
-            author: n.author,
-            date: n.date,
-            read_time: n.readTime || null,
-          }))
-        );
-      }
-    } catch (_) {}
-
-    // 7. Save Programs
-    try {
-      const progIds = (state.programs || []).map((p) => p.id);
-      await syncTableRecords('programs', progIds);
-      if (state.programs && state.programs.length > 0) {
-        await supabase.from('programs').upsert(
-          state.programs.map((p) => ({
-            id: p.id,
-            title: p.title,
-            category: p.category,
-            icon: p.iconName || null,
-            description: p.shortDesc || '',
-            full_desc: p.fullDesc || '',
-            highlights: p.highlights || [],
-            target: p.target || null,
-            schedule: p.schedule || null,
-          }))
-        );
-      }
-    } catch (_) {}
-
-    // 8. Save Extracurriculars
-    try {
-      const ekskulIds = (state.extracurriculars || []).map((e) => e.id);
-      await syncTableRecords('extracurriculars', ekskulIds);
-      if (state.extracurriculars && state.extracurriculars.length > 0) {
-        await supabase.from('extracurriculars').upsert(
-          state.extracurriculars.map((e) => ({
-            id: e.id,
-            name: e.name,
-            category: e.category,
-            schedule: e.schedule,
-            coach: e.coach,
-            description: e.description,
-            icon: e.iconName || null,
-            achievements: e.achievements || [],
-            photo_url: e.imageUrl || null,
-          }))
-        );
-      }
-    } catch (_) {}
-
-    // 9. Save Facilities
-    try {
-      const facIds = (state.facilities || []).map((f) => f.id);
-      await syncTableRecords('facilities', facIds);
-      if (state.facilities && state.facilities.length > 0) {
-        await supabase.from('facilities').upsert(
-          state.facilities.map((f) => ({
-            id: f.id,
-            name: f.name,
-            category: f.category,
-            description: f.description,
-            specifications: f.specifications || [],
-            photo_url: f.imageUrl || null,
-          }))
-        );
-      }
-    } catch (_) {}
-
-    // 10. Save Gallery
-    try {
-      const galIds = (state.gallery || []).map((g) => g.id);
-      await syncTableRecords('gallery', galIds);
-      if (state.gallery && state.gallery.length > 0) {
-        await supabase.from('gallery').upsert(
-          state.gallery.map((g) => ({
-            id: g.id,
-            title: g.title,
-            category: g.category,
-            image_url: g.imageUrl,
-            date: g.date,
-            description: g.description || null,
-          }))
-        );
-      }
-    } catch (_) {}
-
-    // 11. Save Testimonials
-    try {
-      const testiIds = (state.testimonials || []).map((t) => t.id);
-      await syncTableRecords('testimonials', testiIds);
-      if (state.testimonials && state.testimonials.length > 0) {
-        await supabase.from('testimonials').upsert(
-          state.testimonials.map((t) => ({
-            id: t.id,
-            name: t.name,
-            role: t.role,
-            quote: t.quote,
-            student_name: t.childName || null,
-            student_grade: t.childGrade || null,
-            avatar_url: t.avatarUrl || null,
-          }))
-        );
-      }
-    } catch (_) {}
-
-    // 12. Save FAQs
-    try {
-      const faqIds = (state.faqs || []).map((q) => q.id);
-      await syncTableRecords('faqs', faqIds);
-      if (state.faqs && state.faqs.length > 0) {
-        await supabase.from('faqs').upsert(
-          state.faqs.map((q) => ({
-            id: q.id,
-            question: q.question,
-            answer: q.answer,
-            category: q.category,
-          }))
-        );
-      }
-    } catch (_) {}
-
-    // 13. Save Stats
-    try {
-      const statIds = (state.statsList || []).map((s) => s.id);
-      await syncTableRecords('stats', statIds);
-      if (state.statsList && state.statsList.length > 0) {
-        await supabase.from('stats').upsert(
-          state.statsList.map((s, idx) => ({
-            id: s.id,
-            label: s.label,
-            value: s.value,
-            suffix: s.suffix || null,
-            detail: s.detail || null,
-            order_num: s.order ?? idx,
-          }))
-        );
-      }
-    } catch (_) {}
 
     if (storeError) {
       if (storeError.code === 'PGRST205') {
@@ -758,6 +471,313 @@ export async function saveAllToSupabase(
       }
       return { success: false, message: storeError.message };
     }
+
+    // Instant multi-device broadcast: notify other devices in milliseconds without waiting for other sub-tables
+    broadcastSupabaseChange('madrasah_store');
+
+    // 2. Concurrently sync individual relational tables in parallel (non-blocking)
+    const backgroundTasks: Promise<any>[] = [];
+
+    // Table: School Profile
+    if (state.schoolProfile) {
+      const sp = state.schoolProfile;
+      backgroundTasks.push(
+        Promise.resolve(
+          supabase.from('school_profile').upsert({
+            id: 'main',
+            nsm: sp.nsm || null,
+            npsn: sp.npsn || null,
+            name: sp.name,
+            short_name: sp.shortName || null,
+            tagline: sp.tagline || null,
+            logo_url: sp.logoUrl || null,
+            email: sp.email || null,
+            phone: sp.phone || null,
+            whatsapp: sp.whatsapp || null,
+            address: sp.address || null,
+            village: sp.village || null,
+            district: sp.district || null,
+            regency: sp.regency || null,
+            province: sp.province || null,
+            postal_code: sp.postalCode || null,
+            akreditasi: sp.accreditation || null,
+            headmaster_name: sp.headmasterName || null,
+            headmaster_nip: sp.headmasterNip || null,
+            headmaster_title: sp.headmasterTitle || null,
+            headmaster_photo: sp.headmasterPhotoUrl || null,
+            headmaster_welcome: sp.headmasterWelcome || [],
+            vision: sp.vision || null,
+            missions: sp.missions || [],
+            goals: sp.goals || [],
+            history: sp.history || [],
+            core_values: sp.coreValues || [],
+            updated_at: new Date().toISOString(),
+          })
+        )
+      );
+    }
+
+    // Table: PPDB Registrations
+    if (state.ppdbRegistrations && state.ppdbRegistrations.length > 0) {
+      const ppdbIds = state.ppdbRegistrations.map((p) => p.id);
+      backgroundTasks.push(
+        syncTableRecords('ppdb_registrations', ppdbIds).then(() =>
+          supabase.from('ppdb_registrations').upsert(
+            state.ppdbRegistrations.map((p) => ({
+              id: p.id,
+              registration_number: p.registrationNumber,
+              student_name: p.studentName,
+              nik: p.nik || null,
+              nisn: p.nisn || null,
+              gender: p.gender,
+              birth_place: p.birthPlace || null,
+              birth_date: p.birthDate,
+              target_class: p.targetClass || 'Kelas 1 (Satu)',
+              origin_school: p.originSchool,
+              parent_name: p.parentName,
+              parent_phone: p.parentPhone,
+              parent_address: p.address,
+              submission_date: p.submissionDate,
+              status: p.status,
+              notes: p.notes || null,
+            }))
+          )
+        )
+      );
+    }
+
+    // Table: Staff Members (GTK)
+    const dummyStaffIds = ['staff-1', 'staff-2', 'staff-1789528823190-1-64pi7', 'staff-1789529008391-2-hk1tr'];
+    const validStaffList = (state.staffList || []).filter((s) => !dummyStaffIds.includes(s.id));
+    if (validStaffList.length > 0) {
+      const staffIds = validStaffList.map((s) => s.id);
+      backgroundTasks.push(
+        syncTableRecords('staff_members', staffIds).then(async () => {
+          await supabase.from('staff_members').delete().in('id', dummyStaffIds);
+          const fullStaffPayload = validStaffList.map((s, idx) => ({
+            id: s.id,
+            name: s.name,
+            role: s.role,
+            category: s.category,
+            institution: s.institution || 'MI',
+            nip_or_nuptk: s.nipOrNuptk || null,
+            education: s.education || null,
+            subjects: s.subjects || null,
+            photo_url: s.photoUrl || null,
+            phone: s.phone || null,
+            status: s.status || 'Aktif Mengajar',
+            bio: s.bio || null,
+            quote: s.quote || null,
+            service_years: s.serviceYears || null,
+            expertise: Array.isArray(s.expertise) ? s.expertise : [],
+            order_num: s.order ?? idx,
+          }));
+
+          const { error: fullUpsertError } = await supabase.from('staff_members').upsert(fullStaffPayload);
+          if (fullUpsertError) {
+            await supabase.from('staff_members').upsert(
+              validStaffList.map((s, idx) => ({
+                id: s.id,
+                name: s.name,
+                role: s.role,
+                category: s.category,
+                nip_or_nuptk: s.nipOrNuptk || null,
+                education: s.education || null,
+                subjects: s.subjects || null,
+                photo_url: s.photoUrl || null,
+                phone: s.phone || null,
+                order_num: s.order ?? idx,
+              }))
+            );
+          }
+        })
+      );
+    }
+
+    // Table: Achievements
+    if (state.achievements && state.achievements.length > 0) {
+      const achieveIds = state.achievements.map((a) => a.id);
+      backgroundTasks.push(
+        syncTableRecords('achievements', achieveIds).then(() =>
+          supabase.from('achievements').upsert(
+            state.achievements.map((a) => ({
+              id: a.id,
+              title: a.title,
+              winner: a.winner,
+              category: a.category,
+              level: a.level,
+              year: a.year,
+              rank: a.rank,
+              description: a.description || '',
+              image_url: a.imageUrl || null,
+            }))
+          )
+        )
+      );
+    }
+
+    // Table: News Articles
+    if (state.newsList && state.newsList.length > 0) {
+      const newsIds = state.newsList.map((n) => n.id);
+      backgroundTasks.push(
+        syncTableRecords('news_articles', newsIds).then(() =>
+          supabase.from('news_articles').upsert(
+            state.newsList.map((n) => ({
+              id: n.id,
+              title: n.title,
+              category: n.category,
+              summary: n.summary,
+              content: n.content,
+              image_url: n.imageUrl || null,
+              author: n.author,
+              date: n.date,
+              read_time: n.readTime || null,
+            }))
+          )
+        )
+      );
+    }
+
+    // Table: Programs
+    if (state.programs && state.programs.length > 0) {
+      const progIds = state.programs.map((p) => p.id);
+      backgroundTasks.push(
+        syncTableRecords('programs', progIds).then(() =>
+          supabase.from('programs').upsert(
+            state.programs.map((p) => ({
+              id: p.id,
+              title: p.title,
+              category: p.category,
+              icon: p.iconName || null,
+              description: p.shortDesc || '',
+              full_desc: p.fullDesc || '',
+              highlights: p.highlights || [],
+              target: p.target || null,
+              schedule: p.schedule || null,
+            }))
+          )
+        )
+      );
+    }
+
+    // Table: Extracurriculars
+    if (state.extracurriculars && state.extracurriculars.length > 0) {
+      const ekskulIds = state.extracurriculars.map((e) => e.id);
+      backgroundTasks.push(
+        syncTableRecords('extracurriculars', ekskulIds).then(() =>
+          supabase.from('extracurriculars').upsert(
+            state.extracurriculars.map((e) => ({
+              id: e.id,
+              name: e.name,
+              category: e.category,
+              schedule: e.schedule,
+              coach: e.coach,
+              description: e.description,
+              icon: e.iconName || null,
+              achievements: e.achievements || [],
+              photo_url: e.imageUrl || null,
+            }))
+          )
+        )
+      );
+    }
+
+    // Table: Facilities
+    if (state.facilities && state.facilities.length > 0) {
+      const facIds = state.facilities.map((f) => f.id);
+      backgroundTasks.push(
+        syncTableRecords('facilities', facIds).then(() =>
+          supabase.from('facilities').upsert(
+            state.facilities.map((f) => ({
+              id: f.id,
+              name: f.name,
+              category: f.category,
+              description: f.description,
+              specifications: f.specifications || [],
+              photo_url: f.imageUrl || null,
+            }))
+          )
+        )
+      );
+    }
+
+    // Table: Gallery
+    if (state.gallery && state.gallery.length > 0) {
+      const galIds = state.gallery.map((g) => g.id);
+      backgroundTasks.push(
+        syncTableRecords('gallery', galIds).then(() =>
+          supabase.from('gallery').upsert(
+            state.gallery.map((g) => ({
+              id: g.id,
+              title: g.title,
+              category: g.category,
+              image_url: g.imageUrl,
+              date: g.date,
+              description: g.description || null,
+            }))
+          )
+        )
+      );
+    }
+
+    // Table: Testimonials
+    if (state.testimonials && state.testimonials.length > 0) {
+      const testiIds = state.testimonials.map((t) => t.id);
+      backgroundTasks.push(
+        syncTableRecords('testimonials', testiIds).then(() =>
+          supabase.from('testimonials').upsert(
+            state.testimonials.map((t) => ({
+              id: t.id,
+              name: t.name,
+              role: t.role,
+              quote: t.quote,
+              student_name: t.childName || null,
+              student_grade: t.childGrade || null,
+              avatar_url: t.avatarUrl || null,
+            }))
+          )
+        )
+      );
+    }
+
+    // Table: FAQs
+    if (state.faqs && state.faqs.length > 0) {
+      const faqIds = state.faqs.map((q) => q.id);
+      backgroundTasks.push(
+        syncTableRecords('faqs', faqIds).then(() =>
+          supabase.from('faqs').upsert(
+            state.faqs.map((q) => ({
+              id: q.id,
+              question: q.question,
+              answer: q.answer,
+              category: q.category,
+            }))
+          )
+        )
+      );
+    }
+
+    // Table: Stats
+    if (state.statsList && state.statsList.length > 0) {
+      const statIds = state.statsList.map((s) => s.id);
+      backgroundTasks.push(
+        syncTableRecords('stats', statIds).then(() =>
+          supabase.from('stats').upsert(
+            state.statsList.map((s, idx) => ({
+              id: s.id,
+              label: s.label,
+              value: s.value,
+              suffix: s.suffix || null,
+              detail: s.detail || null,
+              order_num: s.order ?? idx,
+            }))
+          )
+        )
+      );
+    }
+
+    // Run all relational subtable syncs concurrently in background without blocking master return
+    await Promise.allSettled(backgroundTasks);
 
     return { success: true, message: 'Semua 13 modul data website berhasil disinkronkan ke Supabase Cloud!' };
   } catch (err: any) {
@@ -918,12 +938,41 @@ export async function upsertSchoolProfileToSupabase(sp: any) {
 }
 
 /**
- * Load state from Supabase with robust multi-table fallback
+ * Load state from Supabase with ultra-fast single snapshot path and multi-table fallback
  */
 export async function loadFromSupabase(): Promise<AppStorageState | null> {
+  const DUMMY_STAFF_IDS = ['staff-1', 'staff-2', 'staff-1789528823190-1-64pi7', 'staff-1789529008391-2-hk1tr'];
+
+  // Safe timeout helper to avoid hanging on slow network or sleeping Supabase instance
+  const withTimeout = async <T>(promiseLike: PromiseLike<T>, ms: number = 3000): Promise<T> => {
+    let timer: any;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error('Supabase request timeout')), ms);
+    });
+    return Promise.race([Promise.resolve(promiseLike), timeout]).finally(() => clearTimeout(timer));
+  };
+
   try {
+    // 1. Ultra-fast path: single query snapshot from madrasah_store (~200ms)
+    try {
+      const storeRes = await withTimeout<any>(
+        supabase.from('madrasah_store').select('data').eq('id', 'main').single(),
+        3000
+      );
+
+      if (storeRes && storeRes.data?.data && (storeRes.data.data as any).schoolProfile) {
+        const state = storeRes.data.data as AppStorageState;
+        if (state && Array.isArray(state.staffList)) {
+          state.staffList = state.staffList.filter((s: any) => s && !DUMMY_STAFF_IDS.includes(s.id));
+        }
+        return state;
+      }
+    } catch (fastErr) {
+      console.warn('Fast path madrasah_store timed out or empty, attempting multi-table query fallback:', fastErr);
+    }
+
+    // 2. Fallback: multi-table parallel query
     const [
-      storeRes,
       profileRes,
       staffRes,
       newsRes,
@@ -936,36 +985,25 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
       testiRes,
       faqRes,
       statRes,
-    ] = await Promise.allSettled([
-      supabase.from('madrasah_store').select('data').eq('id', 'main').single(),
-      supabase.from('school_profile').select('*').eq('id', 'main').single(),
-      supabase.from('staff_members').select('*').order('order_num', { ascending: true }),
-      supabase.from('news_articles').select('*'),
-      supabase.from('ppdb_registrations').select('*'),
-      supabase.from('achievements').select('*'),
-      supabase.from('programs').select('*'),
-      supabase.from('extracurriculars').select('*'),
-      supabase.from('facilities').select('*'),
-      supabase.from('gallery').select('*'),
-      supabase.from('testimonials').select('*'),
-      supabase.from('faqs').select('*'),
-      supabase.from('stats').select('*').order('order_num', { ascending: true }),
-    ]);
+    ] = await withTimeout(
+      Promise.allSettled([
+        supabase.from('school_profile').select('*').eq('id', 'main').single(),
+        supabase.from('staff_members').select('*').order('order_num', { ascending: true }),
+        supabase.from('news_articles').select('*'),
+        supabase.from('ppdb_registrations').select('*'),
+        supabase.from('achievements').select('*'),
+        supabase.from('programs').select('*'),
+        supabase.from('extracurriculars').select('*'),
+        supabase.from('facilities').select('*'),
+        supabase.from('gallery').select('*'),
+        supabase.from('testimonials').select('*'),
+        supabase.from('faqs').select('*'),
+        supabase.from('stats').select('*').order('order_num', { ascending: true }),
+      ]),
+      4000
+    );
 
-    let state: AppStorageState | null = null;
-
-    const DUMMY_STAFF_IDS = ['staff-1', 'staff-2', 'staff-1789528823190-1-64pi7', 'staff-1789529008391-2-hk1tr'];
-
-    if (storeRes.status === 'fulfilled' && storeRes.value.data?.data) {
-      state = storeRes.value.data.data as AppStorageState;
-      if (state && Array.isArray(state.staffList)) {
-        state.staffList = state.staffList.filter((s: any) => s && !DUMMY_STAFF_IDS.includes(s.id));
-      }
-    }
-
-    if (!state) {
-      state = {} as any;
-    }
+    let state: AppStorageState | null = {} as any;
 
     // Merge School Profile
     if (profileRes.status === 'fulfilled' && profileRes.value.data) {

@@ -604,6 +604,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         bc.close();
       } catch (e) {}
 
+      // Multi-device broadcast via Supabase Realtime!
+      broadcastSupabaseChange('madrasah_store');
+
       if (cloudSqlSuccess || supabaseSuccess) {
         setCloudSyncStatus('synced');
         setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
@@ -784,11 +787,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // 3. Smart Polling + Window Focus + Online triggers
+  // 3. Smart Polling + Window Focus + Mobile VisibilityChange + Online triggers
   useEffect(() => {
-    const handleFocus = () => {
-      // Check version or refresh when user switches tab or unlocks screen
+    const handleActive = () => {
+      // Refresh when user switches tab, unlocks mobile screen, or refocuses window
       refreshFromCloud(true);
+    };
+
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        refreshFromCloud(true);
+      }
     };
 
     const handleOnline = () => {
@@ -796,10 +805,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       refreshFromCloud(true);
     };
 
-    window.addEventListener('focus', handleFocus);
+    window.addEventListener('focus', handleActive);
     window.addEventListener('online', handleOnline);
+    document.addEventListener('visibilitychange', handleVisibility);
 
-    // Periodic background sync check every 12 seconds
+    // Periodic lightweight background sync check every 6 seconds (fast multi-device reaction)
     const interval = setInterval(() => {
       fetch('/api/data/version')
         .then((res) => res.json())
@@ -810,11 +820,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         })
         .catch(() => {});
-    }, 12000);
+    }, 6000);
 
     return () => {
-      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('focus', handleActive);
       window.removeEventListener('online', handleOnline);
+      document.removeEventListener('visibilitychange', handleVisibility);
       clearInterval(interval);
     };
   }, [refreshFromCloud]);
@@ -833,7 +844,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (sender === CLIENT_INSTANCE_ID) {
             return;
           }
-          if (isSelfPushingRef.current || Date.now() - lastLocalEditTimeRef.current < 5000) {
+          if (isSelfPushingRef.current || Date.now() - lastLocalEditTimeRef.current < 2500) {
             return;
           }
           console.log('[Supabase Realtime] Multi-device update detected:', eventPayload);
