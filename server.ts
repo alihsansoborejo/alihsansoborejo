@@ -374,7 +374,7 @@ app.post('/api/sync-all', requireAuth, async (req: AuthRequest, res) => {
       }
     }
 
-    notifyDataChanged('all');
+    notifyDataChanged('all', req.body);
     res.json({ success: true, message: 'Semua perubahan berhasil disinkronkan ke Cloud SQL Database.' });
   } catch (error: any) {
     console.error('Error syncing all settings:', error);
