@@ -2,9 +2,13 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import {
   saveAllToSupabase,
   loadFromSupabase,
+  getRemoteStoreUpdatedAt,
+  touchStoreUpdatedAt,
   supabase,
   CLIENT_INSTANCE_ID,
   broadcastSupabaseChange,
+  registerRealtimeBroadcastChannel,
+  unregisterRealtimeBroadcastChannel,
   upsertStaffToSupabase,
   deleteStaffFromSupabase,
   deleteNewsFromSupabase,
@@ -175,7 +179,7 @@ interface DataContextType {
   // Cloud Database Status & Actions
   cloudSyncStatus: CloudSyncStatus;
   lastSyncedAt: string | null;
-  refreshFromCloud: () => Promise<void>;
+  refreshFromCloud: () => Promise<boolean>;
   pushAllToCloud: (authToken?: string | null) => Promise<boolean>;
   syncToSupabase: () => Promise<{ success: boolean; message: string }>;
   pullFromSupabase: () => Promise<boolean>;
@@ -405,6 +409,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const lastLocalEditTimeRef = useRef<number>(0);
   const isSelfPushingRef = useRef<boolean>(false);
 
+  // --- Sync bookkeeping ---------------------------------------------------
+  // When server.ts is not deployed (static Vercel hosting) every /api/* call
+  // returns 404. Remember that for a while instead of retrying a dead endpoint
+  // on every focus/visibility event.
+  const apiUnavailableUntilRef = useRef<number>(0);
+  // Last `updated_at` seen from Supabase. Polling this tiny column is enough to
+  // detect changes from other devices without re-downloading the full snapshot.
+  const lastStoreUpdatedAtRef = useRef<string | null>(null);
+  const hasLoadedRemoteRef = useRef(false);
+  // Deduplicate simultaneous refreshes (focus + visibility + realtime often
+  // fire together on mobile).
+  const refreshPromiseRef = useRef<Promise<boolean> | null>(null);
+  const checkInFlightRef = useRef<boolean>(false);
+  // Back off version polling when Supabase is unreachable/paused instead of
+  // retrying every 10 seconds on a mobile connection.
+  const versionFailuresRef = useRef<number>(0);
+  const versionRetryAfterRef = useRef<number>(0);
+
   // Mark local user modification so auto-sync knows an intentional edit occurred
   const markLocalEdit = useCallback(() => {
     lastLocalEditTimeRef.current = Date.now();
@@ -412,103 +434,178 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCloudSyncStatus('syncing');
   }, []);
 
-  // Fetch online data (prioritizes ultra-fast Cloud SQL API, with Supabase fallback)
-  const refreshFromCloud = useCallback(async (silent: boolean = false) => {
-    try {
+  const applyRemoteState = useCallback((remoteState: AppStorageState) => {
+    isRemoteUpdating.current = true;
+    setData(sanitizeAppState(remoteState));
+    isCloudLoadedRef.current = true;
+    hasLoadedRemoteRef.current = true;
+    setCloudSyncStatus('synced');
+    setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+  }, []);
+
+  // Fetch online data (optional high-speed API first, Supabase as source of truth)
+  const refreshFromCloud = useCallback(async (silent: boolean = false): Promise<boolean> => {
+    // Reuse an in-flight refresh instead of stacking requests.
+    if (refreshPromiseRef.current) return refreshPromiseRef.current;
+
+    const task = (async (): Promise<boolean> => {
       if (!silent) setCloudSyncStatus('syncing');
 
-      // 1. Primary Source: Load instantly from high-speed local Cloud SQL API (/api/data)
-      // This is co-located on the same server container, responding in ~20-50ms with zero cross-origin DNS delays!
-      try {
-        const res = await fetch('/api/data', { cache: 'no-cache' });
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && json.data) {
-            const onlineData = json.data;
-            if (json.version) {
-              lastKnownVersionRef.current = json.version;
-            }
-
-            // If user edited locally very recently, do not overwrite in-progress edits
-            if (Date.now() - lastLocalEditTimeRef.current < 2500) {
-              setCloudSyncStatus('synced');
-              isCloudLoadedRef.current = true;
-              return;
-            }
-
-            isRemoteUpdating.current = true;
-            setData((prev) => {
-              const rawProfile = { ...prev.schoolProfile, ...(onlineData.schoolProfile || {}) };
-              if (!rawProfile.logoUrl || rawProfile.logoUrl.includes('wikimedia.org')) {
-                rawProfile.logoUrl = '/assets/logo-maarif.svg';
+      // 1. Optional primary source: local Express/Cloud SQL API (/api/data).
+      //    Only used when it actually exists; on Vercel it 404s, so back off.
+      if (Date.now() >= apiUnavailableUntilRef.current) {
+        const controller = new AbortController();
+        const abortTimer = setTimeout(() => controller.abort(), 4000);
+        try {
+          const res = await fetch('/api/data', { cache: 'no-cache', signal: controller.signal });
+          if (res.ok) {
+            const json = await res.json();
+            if (json.success && json.data) {
+              const onlineData = json.data;
+              if (json.version) {
+                lastKnownVersionRef.current = json.version;
               }
 
-              const sanitized = sanitizeAppState({
-                schoolProfile: rawProfile,
-                staffList: Array.isArray(onlineData.staffList) ? onlineData.staffList : prev.staffList,
-                studentList: Array.isArray(onlineData.studentList) ? onlineData.studentList : prev.studentList,
-                statsList: Array.isArray(onlineData.statsList) ? onlineData.statsList : prev.statsList,
-                programs: Array.isArray(onlineData.programs) ? onlineData.programs : prev.programs,
-                extracurriculars: Array.isArray(onlineData.extracurriculars) ? onlineData.extracurriculars : prev.extracurriculars,
-                achievements: Array.isArray(onlineData.achievements) ? onlineData.achievements : prev.achievements,
-                newsList: Array.isArray(onlineData.newsList) ? onlineData.newsList : prev.newsList,
-                facilities: Array.isArray(onlineData.facilities) ? onlineData.facilities : prev.facilities,
-                gallery: Array.isArray(onlineData.gallery) ? onlineData.gallery : prev.gallery,
-                videoGallery: Array.isArray(onlineData.videoGallery) ? onlineData.videoGallery : (prev.videoGallery || []),
-                testimonials: Array.isArray(onlineData.testimonials) ? onlineData.testimonials : prev.testimonials,
-                faqs: Array.isArray(onlineData.faqs) ? onlineData.faqs : prev.faqs,
-                ppdbRegistrations: Array.isArray(onlineData.ppdbRegistrations) ? onlineData.ppdbRegistrations : prev.ppdbRegistrations,
+              // If user edited locally very recently, do not overwrite in-progress edits
+              if (Date.now() - lastLocalEditTimeRef.current < 2500) {
+                setCloudSyncStatus('synced');
+                isCloudLoadedRef.current = true;
+                return false;
+              }
+
+              isRemoteUpdating.current = true;
+              setData((prev) => {
+                const rawProfile = { ...prev.schoolProfile, ...(onlineData.schoolProfile || {}) };
+                if (!rawProfile.logoUrl || rawProfile.logoUrl.includes('wikimedia.org')) {
+                  rawProfile.logoUrl = '/assets/logo-maarif.svg';
+                }
+
+                return sanitizeAppState({
+                  schoolProfile: rawProfile,
+                  staffList: Array.isArray(onlineData.staffList) ? onlineData.staffList : prev.staffList,
+                  studentList: Array.isArray(onlineData.studentList) ? onlineData.studentList : prev.studentList,
+                  statsList: Array.isArray(onlineData.statsList) ? onlineData.statsList : prev.statsList,
+                  programs: Array.isArray(onlineData.programs) ? onlineData.programs : prev.programs,
+                  extracurriculars: Array.isArray(onlineData.extracurriculars) ? onlineData.extracurriculars : prev.extracurriculars,
+                  achievements: Array.isArray(onlineData.achievements) ? onlineData.achievements : prev.achievements,
+                  newsList: Array.isArray(onlineData.newsList) ? onlineData.newsList : prev.newsList,
+                  facilities: Array.isArray(onlineData.facilities) ? onlineData.facilities : prev.facilities,
+                  gallery: Array.isArray(onlineData.gallery) ? onlineData.gallery : prev.gallery,
+                  videoGallery: Array.isArray(onlineData.videoGallery) ? onlineData.videoGallery : (prev.videoGallery || []),
+                  testimonials: Array.isArray(onlineData.testimonials) ? onlineData.testimonials : prev.testimonials,
+                  faqs: Array.isArray(onlineData.faqs) ? onlineData.faqs : prev.faqs,
+                  ppdbRegistrations: Array.isArray(onlineData.ppdbRegistrations) ? onlineData.ppdbRegistrations : prev.ppdbRegistrations,
+                });
               });
-              return sanitized;
-            });
-            isCloudLoadedRef.current = true;
-            setCloudSyncStatus('synced');
-            setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
-            return;
+              isCloudLoadedRef.current = true;
+              hasLoadedRemoteRef.current = true;
+              setCloudSyncStatus('synced');
+              setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+              return true;
+            }
+          } else {
+            // 404 = server.ts is not part of this deployment; don't retry for 10 minutes.
+            apiUnavailableUntilRef.current =
+              Date.now() + (res.status === 404 ? 10 * 60_000 : 60_000);
           }
+        } catch (cloudErr) {
+          console.warn('Local Cloud SQL API unavailable, using Supabase:', cloudErr);
+          apiUnavailableUntilRef.current = Date.now() + 60_000;
+        } finally {
+          clearTimeout(abortTimer);
         }
-      } catch (cloudErr) {
-        console.warn('Could not load from local Cloud SQL API, trying Supabase fallback:', cloudErr);
       }
 
-      // 2. Secondary Source: Fallback to Supabase cloud if local server API is unreachable
+      // 2. Supabase cloud snapshot (retry + timeout handled inside loadFromSupabase)
       try {
         const remoteState = await loadFromSupabase();
         if (remoteState && remoteState.schoolProfile) {
           if (Date.now() - lastLocalEditTimeRef.current < 2500) {
             isCloudLoadedRef.current = true;
             setCloudSyncStatus('synced');
-            return;
+            return false;
           }
-          isRemoteUpdating.current = true;
-          const sanitized = sanitizeAppState(remoteState);
-          setData(sanitized);
-          isCloudLoadedRef.current = true;
-          setCloudSyncStatus('synced');
-          setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
-          return;
+          applyRemoteState(remoteState);
+          return true;
         }
+        isCloudLoadedRef.current = true;
+        setCloudSyncStatus('connected');
+        return false;
       } catch (sbErr) {
         console.warn('Supabase fallback error:', sbErr);
+        isCloudLoadedRef.current = true;
+        if (Date.now() - lastLocalEditTimeRef.current > 3000) {
+          setCloudSyncStatus('offline');
+        } else {
+          setCloudSyncStatus('synced');
+        }
+        return false;
       }
+    })();
 
-      isCloudLoadedRef.current = true;
-      setCloudSyncStatus('connected');
-    } catch (err) {
-      console.warn('Error refreshing from cloud databases:', err);
-      isCloudLoadedRef.current = true;
-      if (Date.now() - lastLocalEditTimeRef.current > 3000) {
-        setCloudSyncStatus('offline');
-      } else {
-        setCloudSyncStatus('synced');
-      }
+    refreshPromiseRef.current = task;
+    try {
+      return await task;
+    } finally {
+      if (refreshPromiseRef.current === task) refreshPromiseRef.current = null;
     }
-  }, []);
+  }, [applyRemoteState]);
 
-  // Initial load
-  useEffect(() => {
-    refreshFromCloud();
+  // Cheap multi-device change check: a single tiny query per poll. Only when
+  // `updated_at` really changed do we download the full snapshot.
+  const checkForRemoteChanges = useCallback(async (force: boolean = false): Promise<void> => {
+    if (checkInFlightRef.current) return;
+    if (refreshPromiseRef.current) return;
+    if (!force && Date.now() < versionRetryAfterRef.current) return;
+    if (Date.now() - lastLocalEditTimeRef.current < 2500) return;
+
+    checkInFlightRef.current = true;
+    try {
+      const updatedAt = await getRemoteStoreUpdatedAt();
+      if (!updatedAt) {
+        // Exponential-ish backoff capped at 2 minutes; a focus/online event
+        // still forces an immediate retry.
+        versionFailuresRef.current = Math.min(5, versionFailuresRef.current + 1);
+        versionRetryAfterRef.current =
+          Date.now() + Math.min(120_000, 10_000 * Math.pow(2, versionFailuresRef.current));
+        return;
+      }
+
+      versionFailuresRef.current = 0;
+      versionRetryAfterRef.current = 0;
+
+      if (lastStoreUpdatedAtRef.current === null) {
+        lastStoreUpdatedAtRef.current = updatedAt;
+        // If the first load never reached the cloud (Supabase was waking up and
+        // this device showed localStorage data), pull the real data now.
+        if (!hasLoadedRemoteRef.current) {
+          const ok = await refreshFromCloud(true);
+          if (ok) lastStoreUpdatedAtRef.current = updatedAt;
+        }
+        return;
+      }
+
+      if (updatedAt !== lastStoreUpdatedAtRef.current) {
+        const ok = await refreshFromCloud(true);
+        // Advance the baseline only on success, so a failed refresh is retried.
+        if (ok) lastStoreUpdatedAtRef.current = updatedAt;
+      }
+    } catch (err) {
+      // Silent: exponential backoff avoids hammering a paused/unreachable project.
+      versionFailuresRef.current = Math.min(5, versionFailuresRef.current + 1);
+      versionRetryAfterRef.current =
+        Date.now() + Math.min(120_000, 10_000 * Math.pow(2, versionFailuresRef.current));
+    } finally {
+      checkInFlightRef.current = false;
+    }
   }, [refreshFromCloud]);
+
+  // Initial load, then seed the change baseline used for multi-device polling
+  useEffect(() => {
+    refreshFromCloud().finally(() => {
+      checkForRemoteChanges(true);
+    });
+  }, [refreshFromCloud, checkForRemoteChanges]);
 
   // Auth methods
   const loginAdmin = (secret: string): boolean => {
@@ -573,22 +670,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       // 1. High-speed write to local Cloud SQL API (/api/sync-all)
-      // This is on the local Express server, responding in ~20-50ms
+      //    Skipped entirely when the API is known to be absent (e.g. static Vercel).
       let cloudSqlSuccess = false;
-      try {
-        const res = await apiRequest('/api/sync-all', {
-          method: 'POST',
-          headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
-          body: JSON.stringify(payload)
-        });
-        if (res.ok) {
-          cloudSqlSuccess = true;
-        } else {
-          const errText = await res.text().catch(() => '');
-          console.warn(`Cloud SQL returned ${res.status}: ${errText}`);
+      if (Date.now() >= apiUnavailableUntilRef.current) {
+        try {
+          const res = await apiRequest('/api/sync-all', {
+            method: 'POST',
+            headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+            body: JSON.stringify(payload)
+          });
+          if (res.ok) {
+            cloudSqlSuccess = true;
+          } else {
+            if (res.status === 404) {
+              apiUnavailableUntilRef.current = Date.now() + 10 * 60_000;
+            }
+            const errText = await res.text().catch(() => '');
+            console.warn(`Cloud SQL returned ${res.status}: ${errText}`);
+          }
+        } catch (cloudErr) {
+          apiUnavailableUntilRef.current = Date.now() + 60_000;
+          console.warn('Direct Cloud SQL sync error:', cloudErr);
         }
-      } catch (cloudErr) {
-        console.warn('Direct Cloud SQL sync error:', cloudErr);
       }
 
       // Broadcast across tabs in the same browser immediately
@@ -604,12 +707,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCloudSyncStatus('synced');
         setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
         hasUserEditedRef.current = false;
+        // Our own write is already reflected locally; restart the version
+        // baseline so the next poll doesn't re-download our own change.
+        lastStoreUpdatedAtRef.current = null;
 
         // 2. Synchronize to Supabase in the background (asynchronous non-blocking backup)
         // This keeps Supabase up to date without freezing or delaying the user interface!
         saveAllToSupabase(data, { isAuthorizedAdmin: true, force })
           .then((sbRes) => {
             if (sbRes?.success) {
+              lastStoreUpdatedAtRef.current = null;
               broadcastSupabaseChange('madrasah_store');
             }
           })
@@ -623,6 +730,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Fallback: If Cloud SQL failed, await Supabase write as backup
       const sbResult = await saveAllToSupabase(data, { isAuthorizedAdmin: true, force });
       if (sbResult?.success) {
+        lastStoreUpdatedAtRef.current = null;
         broadcastSupabaseChange('madrasah_store');
         setCloudSyncStatus('synced');
         setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
@@ -679,16 +787,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => clearTimeout(timer);
   }, [data, isAdmin, pushAllToCloud]);
 
-  // 1. Realtime SSE Connection to /api/realtime/stream
+  // 1. Realtime SSE Connection to /api/realtime/stream (only if the API exists)
   useEffect(() => {
     let eventSource: EventSource | null = null;
     let reconnectTimeout: any = null;
+    let initialTimer: any = null;
+    let attempts = 0;
+    let disposed = false;
 
     const connectSSE = () => {
+      if (disposed) return;
+      // Static deployment (Vercel) has no SSE endpoint; don't keep retrying it.
+      if (Date.now() < apiUnavailableUntilRef.current) return;
+
       try {
         eventSource = new EventSource('/api/realtime/stream');
 
         eventSource.onopen = () => {
+          attempts = 0;
           setCloudSyncStatus((prev) => (prev === 'syncing' ? 'syncing' : 'connected'));
         };
 
@@ -708,7 +824,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 return;
               }
               // Silently refresh data from cloud if change came from another device/source
-              refreshFromCloud(true);
+              checkForRemoteChanges(true);
             }
           } catch (e) {}
         };
@@ -718,22 +834,30 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             eventSource.close();
             eventSource = null;
           }
-          // Reconnect after 5 seconds
+          attempts += 1;
+          if (attempts >= 3) {
+            // Give up for 30 minutes; polling + Supabase realtime still work.
+            apiUnavailableUntilRef.current = Date.now() + 30 * 60_000;
+            return;
+          }
           clearTimeout(reconnectTimeout);
-          reconnectTimeout = setTimeout(connectSSE, 5000);
+          reconnectTimeout = setTimeout(connectSSE, Math.min(30_000, 5000 * attempts));
         };
       } catch (e) {
-        console.warn('SSE not initialized, relying on fallback real-time channels.');
+        console.warn('SSE not initialized, relying on Supabase realtime + polling.');
       }
     };
 
-    connectSSE();
+    // Delay the first attempt so the initial /api/data probe can mark the API absent.
+    initialTimer = setTimeout(connectSSE, 2000);
 
     return () => {
-      if (eventSource) eventSource.close();
+      disposed = true;
+      clearTimeout(initialTimer);
       clearTimeout(reconnectTimeout);
+      if (eventSource) eventSource.close();
     };
-  }, [refreshFromCloud]);
+  }, [checkForRemoteChanges]);
 
   // Synchronize browser favicon and apple-touch-icon dynamically with schoolProfile
   useEffect(() => {
@@ -801,80 +925,102 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // 3. Smart Polling + Window Focus + Mobile VisibilityChange + Online triggers
   useEffect(() => {
     const handleActive = () => {
-      // Refresh when user switches tab, unlocks mobile screen, or refocuses window
-      refreshFromCloud(true);
+      if (typeof document !== 'undefined' && document.hidden) return;
+      checkForRemoteChanges(true);
     };
 
     const handleVisibility = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-        refreshFromCloud(true);
+        checkForRemoteChanges(true);
       }
     };
 
     const handleOnline = () => {
       setCloudSyncStatus('syncing');
-      refreshFromCloud(true);
+      checkForRemoteChanges(true);
+    };
+
+    // iOS Safari may restore a page from the back/forward cache without firing focus.
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) checkForRemoteChanges(true);
     };
 
     window.addEventListener('focus', handleActive);
     window.addEventListener('online', handleOnline);
+    window.addEventListener('pageshow', handlePageShow);
     document.addEventListener('visibilitychange', handleVisibility);
 
-    // Periodic lightweight background sync check every 6 seconds (fast multi-device reaction)
+    // Poll only a tiny `updated_at` column every 10 seconds. The full payload is
+    // downloaded only when another device actually changed something.
     const interval = setInterval(() => {
-      fetch('/api/data/version')
-        .then((res) => res.json())
-        .then((ver) => {
-          if (ver && ver.version && ver.version > lastKnownVersionRef.current) {
-            lastKnownVersionRef.current = ver.version;
-            refreshFromCloud(true);
-          }
-        })
-        .catch(() => {});
-    }, 6000);
+      if (typeof document !== 'undefined' && document.hidden) return;
+      checkForRemoteChanges();
+    }, 10_000);
 
     return () => {
       window.removeEventListener('focus', handleActive);
       window.removeEventListener('online', handleOnline);
+      window.removeEventListener('pageshow', handlePageShow);
       document.removeEventListener('visibilitychange', handleVisibility);
       clearInterval(interval);
     };
-  }, [refreshFromCloud]);
+  }, [checkForRemoteChanges]);
 
-  // 4. Supabase Realtime Channel: Broadcast & Postgres Changes for sub-second cross-device sync
+  // 4. Supabase Realtime: ONE shared broadcast channel (also used as the sender
+  //    by broadcastSupabaseChange) + optional Postgres changes.
   useEffect(() => {
-    let broadcastSub: any = null;
+    let broadcastChannel: any = null;
     let dbSub: any = null;
+    let retryTimer: any = null;
+    let retryCount = 0;
+    let disposed = false;
 
+    const connectBroadcast = () => {
+      if (disposed) return;
+      try {
+        broadcastChannel = supabase.channel('madrasah_live_broadcast', {
+          config: { broadcast: { self: false } },
+        });
+
+        broadcastChannel
+          .on('broadcast', { event: 'data_changed' }, (eventPayload: any) => {
+            const sender = eventPayload?.payload?.senderId;
+            if (sender === CLIENT_INSTANCE_ID) return;
+            if (isSelfPushingRef.current || Date.now() - lastLocalEditTimeRef.current < 2500) {
+              return;
+            }
+            checkForRemoteChanges(true);
+          })
+          .subscribe((status: string) => {
+            if (status === 'SUBSCRIBED') {
+              retryCount = 0;
+              registerRealtimeBroadcastChannel(broadcastChannel);
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+              unregisterRealtimeBroadcastChannel(broadcastChannel);
+              if (broadcastChannel) supabase.removeChannel(broadcastChannel);
+              broadcastChannel = null;
+              if (disposed) return;
+              retryCount += 1;
+              clearTimeout(retryTimer);
+              retryTimer = setTimeout(connectBroadcast, Math.min(30_000, 2000 * retryCount));
+            }
+          });
+      } catch (e) {
+        console.warn('Realtime broadcast channel error:', e);
+      }
+    };
+
+    connectBroadcast();
+
+    // Postgres changes channel for database-level events (optional; only fires
+    // when madrasah_store is added to the `supabase_realtime` publication).
     try {
-      // Fast Realtime Broadcast channel (works on all devices without publication setup)
-      broadcastSub = supabase
-        .channel('madrasah_live_broadcast')
-        .on('broadcast', { event: 'data_changed' }, async (eventPayload: any) => {
-          const sender = eventPayload?.payload?.senderId;
-          if (sender === CLIENT_INSTANCE_ID) {
-            return;
-          }
-          if (isSelfPushingRef.current || Date.now() - lastLocalEditTimeRef.current < 2500) {
-            return;
-          }
-          console.log('[Supabase Realtime] Multi-device update detected:', eventPayload);
-          const remoteState = await loadFromSupabase();
-          if (remoteState && remoteState.schoolProfile) {
-            isRemoteUpdating.current = true;
-            setData((prev) => sanitizeAppState({ ...prev, ...remoteState }));
-            setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
-          }
-        })
-        .subscribe();
-
-      // Postgres changes channel for database-level events
       dbSub = supabase
         .channel('madrasah_realtime_db')
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'madrasah_store' },
-          (payload) => {
+          (payload: any) => {
             if (isSelfPushingRef.current || Date.now() - lastLocalEditTimeRef.current < 5000) {
               return;
             }
@@ -884,7 +1030,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setData((prev) => sanitizeAppState({ ...prev, ...remoteData }));
               setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
             } else {
-              pullFromSupabase(true);
+              checkForRemoteChanges(true);
             }
           }
         )
@@ -924,10 +1070,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     return () => {
-      if (broadcastSub) supabase.removeChannel(broadcastSub);
+      disposed = true;
+      clearTimeout(retryTimer);
+      unregisterRealtimeBroadcastChannel(broadcastChannel);
+      if (broadcastChannel) supabase.removeChannel(broadcastChannel);
       if (dbSub) supabase.removeChannel(dbSub);
     };
-  }, []);
+  }, [checkForRemoteChanges]);
 
   // Explicit Sync to Supabase (Authorized Admin Only)
   const syncToSupabase = async (force: boolean = false): Promise<{ success: boolean; message: string }> => {
@@ -938,6 +1087,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCloudSyncStatus('syncing');
       const res = await saveAllToSupabase(data, { isAuthorizedAdmin: true, force });
       if (res.success) {
+        lastStoreUpdatedAtRef.current = null;
         setCloudSyncStatus('synced');
         setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
         hasUserEditedRef.current = false;
@@ -952,17 +1102,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const pullFromSupabase = async (silent: boolean = false): Promise<boolean> => {
     try {
       if (!silent) setCloudSyncStatus('syncing');
+      if (refreshPromiseRef.current) return false;
       const remoteState = await loadFromSupabase();
       if (remoteState && remoteState.schoolProfile) {
-        const cleanState = sanitizeAppState(remoteState);
-        isRemoteUpdating.current = true;
-        setData(cleanState);
-        isCloudLoadedRef.current = true;
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanState));
-        } catch (e) {}
-        setCloudSyncStatus('synced');
-        setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+        applyRemoteState(remoteState);
         return true;
       }
       return false;
@@ -1467,37 +1610,44 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ppdbRegistrations: [newReg, ...prev.ppdbRegistrations],
     }));
 
-    // Save directly to Cloud SQL online database
-    try {
-      await apiRequest('/api/ppdb/register', {
-        method: 'POST',
-        body: JSON.stringify({
-          id: newReg.id,
-          registrationNumber: newReg.registrationNumber,
-          fullName: newReg.studentName,
-          nisn: newReg.nisn,
-          nik: newReg.nik,
-          birthPlace: newReg.birthPlace,
-          birthDate: newReg.birthDate,
-          gender: newReg.gender,
-          parentName: newReg.parentName,
-          parentPhone: newReg.parentPhone,
-          parentAddress: newReg.address,
-          previousSchool: newReg.originSchool,
-          registrationDate: newReg.submissionDate,
-          status: newReg.status,
-          notes: newReg.notes,
-        })
-      });
-      setCloudSyncStatus('synced');
-      setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
-    } catch (err) {
-      console.error('Failed to post PPDB online to Cloud SQL:', err);
+    // Save directly to the optional Cloud SQL API (skipped on static hosting)
+    if (Date.now() >= apiUnavailableUntilRef.current) {
+      try {
+        const res = await apiRequest('/api/ppdb/register', {
+          method: 'POST',
+          body: JSON.stringify({
+            id: newReg.id,
+            registrationNumber: newReg.registrationNumber,
+            fullName: newReg.studentName,
+            nisn: newReg.nisn,
+            nik: newReg.nik,
+            birthPlace: newReg.birthPlace,
+            birthDate: newReg.birthDate,
+            gender: newReg.gender,
+            parentName: newReg.parentName,
+            parentPhone: newReg.parentPhone,
+            parentAddress: newReg.address,
+            previousSchool: newReg.originSchool,
+            registrationDate: newReg.submissionDate,
+            status: newReg.status,
+            notes: newReg.notes,
+          })
+        });
+        if (res.ok) {
+          setCloudSyncStatus('synced');
+          setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+        } else if (res.status === 404) {
+          apiUnavailableUntilRef.current = Date.now() + 10 * 60_000;
+        }
+      } catch (err) {
+        console.error('Failed to post PPDB online to Cloud SQL:', err);
+        apiUnavailableUntilRef.current = Date.now() + 60_000;
+      }
     }
 
     // Save individual registration to Supabase without touching other tables
     try {
-      await supabase.from('ppdb_registrations').upsert({
+      const { error } = await supabase.from('ppdb_registrations').upsert({
         id: newReg.id,
         registration_number: newReg.registrationNumber,
         student_name: newReg.studentName,
@@ -1515,6 +1665,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         status: newReg.status,
         notes: newReg.notes || null,
       });
+      if (!error) {
+        // Make other devices notice the change via the cheap updated_at poll.
+        await touchStoreUpdatedAt();
+        lastStoreUpdatedAtRef.current = null;
+        broadcastSupabaseChange('ppdb_registrations', { id: newReg.id });
+        setCloudSyncStatus('synced');
+        setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+      }
     } catch (_) {}
 
     return code;
@@ -1529,22 +1687,36 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ),
     }));
 
-    try {
-      await apiRequest('/api/ppdb/update-status', {
-        method: 'POST',
-        body: JSON.stringify({ id, status, notes })
-      });
-      setCloudSyncStatus('synced');
-      setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
-    } catch (err) {
-      console.error('Failed to update PPDB status online:', err);
+    if (Date.now() >= apiUnavailableUntilRef.current) {
+      try {
+        const res = await apiRequest('/api/ppdb/update-status', {
+          method: 'POST',
+          body: JSON.stringify({ id, status, notes })
+        });
+        if (res.ok) {
+          setCloudSyncStatus('synced');
+          setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+        } else if (res.status === 404) {
+          apiUnavailableUntilRef.current = Date.now() + 10 * 60_000;
+        }
+      } catch (err) {
+        console.error('Failed to update PPDB status online:', err);
+        apiUnavailableUntilRef.current = Date.now() + 60_000;
+      }
     }
 
     try {
-      await supabase.from('ppdb_registrations').update({
+      const { error } = await supabase.from('ppdb_registrations').update({
         status,
         ...(notes !== undefined ? { notes } : {}),
       }).eq('id', id);
+      if (!error) {
+        await touchStoreUpdatedAt();
+        lastStoreUpdatedAtRef.current = null;
+        broadcastSupabaseChange('ppdb_registrations', { id, status });
+        setCloudSyncStatus('synced');
+        setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+      }
     } catch (_) {}
   };
 
@@ -1555,16 +1727,30 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ppdbRegistrations: prev.ppdbRegistrations.filter((r) => r.id !== id),
     }));
 
-    try {
-      await apiRequest(`/api/ppdb/${id}`, { method: 'DELETE' });
-      setCloudSyncStatus('synced');
-      setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
-    } catch (err) {
-      console.error('Failed to delete PPDB online:', err);
+    if (Date.now() >= apiUnavailableUntilRef.current) {
+      try {
+        const res = await apiRequest(`/api/ppdb/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          setCloudSyncStatus('synced');
+          setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+        } else if (res.status === 404) {
+          apiUnavailableUntilRef.current = Date.now() + 10 * 60_000;
+        }
+      } catch (err) {
+        console.error('Failed to delete PPDB online:', err);
+        apiUnavailableUntilRef.current = Date.now() + 60_000;
+      }
     }
 
     try {
-      await supabase.from('ppdb_registrations').delete().eq('id', id);
+      const { error } = await supabase.from('ppdb_registrations').delete().eq('id', id);
+      if (!error) {
+        await touchStoreUpdatedAt();
+        lastStoreUpdatedAtRef.current = null;
+        broadcastSupabaseChange('ppdb_registrations', { deletedId: id });
+        setCloudSyncStatus('synced');
+        setLastSyncedAt(new Date().toLocaleTimeString('id-ID'));
+      }
     } catch (_) {}
   };
 

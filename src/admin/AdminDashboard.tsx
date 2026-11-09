@@ -958,15 +958,14 @@ export const AdminDashboard: React.FC = () => {
   };
 
   // Achievement Handlers
-  const handleAchFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAchFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const result = ev.target?.result as string;
-        setAchForm((prev) => ({ ...prev, imageUrl: result }));
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    try {
+      const compressed = await compressImage(file, 900, 900, 0.8);
+      setAchForm((prev) => ({ ...prev, imageUrl: compressed }));
+    } catch (err) {
+      console.error('Gagal mengompres gambar prestasi:', err);
     }
   };
 
@@ -1044,15 +1043,14 @@ export const AdminDashboard: React.FC = () => {
   };
 
   // Ekstrakurikuler Handlers
-  const handleEkskulFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEkskulFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const result = ev.target?.result as string;
-        setEkskulForm((prev) => ({ ...prev, imageUrl: result }));
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    try {
+      const compressed = await compressImage(file, 900, 700, 0.8);
+      setEkskulForm((prev) => ({ ...prev, imageUrl: compressed }));
+    } catch (err) {
+      console.error('Gagal mengompres gambar ekstrakurikuler:', err);
     }
   };
 
@@ -1090,15 +1088,14 @@ export const AdminDashboard: React.FC = () => {
   };
 
   // Gallery Handlers
-  const handleGalleryFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleGalleryFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const result = ev.target?.result as string;
-        setGalleryForm((prev) => ({ ...prev, imageUrl: result }));
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    try {
+      const compressed = await compressImage(file, 1200, 900, 0.8);
+      setGalleryForm((prev) => ({ ...prev, imageUrl: compressed }));
+    } catch (err) {
+      console.error('Gagal mengompres gambar galeri:', err);
     }
   };
 
@@ -1215,28 +1212,26 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleVideoThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVideoThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const result = ev.target?.result as string;
-        setVideoForm((prev) => ({ ...prev, thumbnailUrl: result }));
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    try {
+      const compressed = await compressImage(file, 1280, 720, 0.8);
+      setVideoForm((prev) => ({ ...prev, thumbnailUrl: compressed }));
+    } catch (err) {
+      console.error('Gagal mengompres thumbnail video:', err);
     }
   };
 
   // Facility Handlers
-  const handleFacilityFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFacilityFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const result = ev.target?.result as string;
-        setFacilityForm((prev) => ({ ...prev, imageUrl: result }));
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    try {
+      const compressed = await compressImage(file, 1000, 750, 0.8);
+      setFacilityForm((prev) => ({ ...prev, imageUrl: compressed }));
+    } catch (err) {
+      console.error('Gagal mengompres gambar fasilitas:', err);
     }
   };
 

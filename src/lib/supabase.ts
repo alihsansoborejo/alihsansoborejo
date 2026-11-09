@@ -13,7 +13,39 @@ export const SUPABASE_ANON_KEY =
   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SUPABASE_ANON_KEY) ||
   'sb_publishable_d0OLXPK4PRFrG1xwcD-Rtg_infX_Qwn';
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  // This app does not use Supabase Auth; disabling session persistence avoids
+  // stale auth tokens being written to localStorage on every page load.
+  auth: { persistSession: false, autoRefreshToken: false },
+  realtime: { params: { eventsPerSecond: 10 } },
+});
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Errors that are worth retrying (cold start, paused project wake-up, network blip). */
+export function isTransientSupabaseError(err: any): boolean {
+  const message = String(err?.message || err || '');
+  const code = String(err?.code || '');
+  return (
+    code === 'PGRST002' ||
+    code === 'PGRST003' ||
+    /timeout/i.test(message) ||
+    /failed to fetch|network|load failed|fetch error|521|522|502|503|504/i.test(message)
+  );
+}
+
+/** Race a Supabase query against a timeout so a sleeping project cannot hang the UI. */
+export function withSupabaseTimeout<T>(
+  promiseLike: PromiseLike<T>,
+  ms = 5000,
+  label = 'Supabase request'
+): Promise<T> {
+  let timer: any;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timeout after ${ms}ms`)), ms);
+  });
+  return Promise.race([Promise.resolve(promiseLike), timeout]).finally(() => clearTimeout(timer));
+}
 
 export interface SupabaseHealthResult {
   connected: boolean;
@@ -790,14 +822,28 @@ export const CLIENT_INSTANCE_ID =
     ? 'client_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now()
     : 'server_' + Math.random().toString(36).substring(2, 9);
 
-// Dedicated Realtime Broadcast Channel for instant sub-second multi-device sync
-export const realtimeBroadcastChannel = supabase.channel('madrasah_live_broadcast');
-realtimeBroadcastChannel.subscribe();
+// Single shared Realtime Broadcast channel for instant multi-device sync.
+// The channel is created and subscribed by DataContext (which registers it here)
+// so the sender and the listener always share ONE connection instead of two
+// duplicate channels with the same topic (a common cause of missed events).
+let realtimeBroadcastChannel: any = null;
+
+export function registerRealtimeBroadcastChannel(channel: any) {
+  realtimeBroadcastChannel = channel;
+}
+
+export function unregisterRealtimeBroadcastChannel(channel?: any) {
+  if (!channel || realtimeBroadcastChannel === channel) {
+    realtimeBroadcastChannel = null;
+  }
+}
 
 /**
- * Broadcast an instant change event across all connected devices
+ * Broadcast an instant change event across all connected devices.
+ * No-op when no channel is registered yet (nothing to notify).
  */
 export async function broadcastSupabaseChange(table: string, payload?: any) {
+  if (!realtimeBroadcastChannel) return;
   try {
     await realtimeBroadcastChannel.send({
       type: 'broadcast',
@@ -938,37 +984,133 @@ export async function upsertSchoolProfileToSupabase(sp: any) {
 }
 
 /**
+ * Lightweight change detector: reads only `updated_at` from the master snapshot
+ * (a few hundred bytes instead of the ~360 KB full payload).
+ */
+export async function getRemoteStoreUpdatedAt(): Promise<string | null> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const { data, error } = await withSupabaseTimeout(
+        supabase.from('madrasah_store').select('updated_at').eq('id', 'main').maybeSingle(),
+        4000,
+        'Version check'
+      );
+      if (!error && data) return (data as any).updated_at || null;
+      if (error && !isTransientSupabaseError(error)) return null;
+    } catch (err) {
+      if (attempt === 1) return null;
+    }
+    if (attempt === 0) await sleep(500);
+  }
+  return null;
+}
+
+/**
+ * Map a `ppdb_registrations` row to the app's camelCase shape.
+ */
+export function mapPPDBRow(p: any) {
+  return {
+    id: p.id,
+    registrationNumber: p.registration_number,
+    studentName: p.student_name,
+    nik: p.nik || '',
+    nisn: p.nisn || '',
+    gender: p.gender,
+    birthPlace: p.birth_place || '',
+    birthDate: p.birth_date || '',
+    targetClass: p.target_class || 'Kelas 1 (Satu)',
+    originSchool: p.origin_school || '',
+    parentName: p.parent_name || '',
+    parentPhone: p.parent_phone || '',
+    address: p.parent_address || '',
+    submissionDate: p.submission_date || '',
+    status: p.status || 'Menunggu',
+    notes: p.notes || '',
+  };
+}
+
+/**
+ * Bump the master snapshot's `updated_at` without rewriting its payload.
+ * Used after writes to side tables (e.g. PPDB) so other devices' lightweight
+ * version polling notices the change and reloads.
+ */
+export async function touchStoreUpdatedAt(): Promise<void> {
+  try {
+    await withSupabaseTimeout(
+      supabase
+        .from('madrasah_store')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', 'main'),
+      5000,
+      'Touch updated_at'
+    );
+  } catch (err) {
+    // Non-critical: the next full sync will correct it.
+  }
+}
+
+/**
  * Load state from Supabase with ultra-fast single snapshot path and multi-table fallback
  */
 export async function loadFromSupabase(): Promise<AppStorageState | null> {
   const DUMMY_STAFF_IDS = ['staff-1', 'staff-2', 'staff-1789528823190-1-64pi7', 'staff-1789529008391-2-hk1tr'];
 
-  // Safe timeout helper to avoid hanging on slow network or sleeping Supabase instance
-  const withTimeout = async <T>(promiseLike: PromiseLike<T>, ms: number = 3000): Promise<T> => {
-    let timer: any;
-    const timeout = new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new Error('Supabase request timeout')), ms);
-    });
-    return Promise.race([Promise.resolve(promiseLike), timeout]).finally(() => clearTimeout(timer));
-  };
-
   try {
-    // 1. Ultra-fast path: single query snapshot from madrasah_store (~200ms)
-    try {
-      const storeRes = await withTimeout<any>(
-        supabase.from('madrasah_store').select('data').eq('id', 'main').single(),
-        3000
-      );
+    // 1. Ultra-fast path: single query snapshot from madrasah_store (~200ms).
+    //    Retried once because a paused/cold Supabase project often answers the
+    //    first request with 521 / PGRST002 and succeeds a moment later.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const [storeSettled, ppdbSettled] = await withSupabaseTimeout(
+          Promise.allSettled([
+            supabase.from('madrasah_store').select('data').eq('id', 'main').single(),
+            supabase.from('ppdb_registrations').select('*').order('created_at', { ascending: false }),
+          ]),
+          attempt === 0 ? 4500 : 6000,
+          'Snapshot load'
+        );
 
-      if (storeRes && storeRes.data?.data && (storeRes.data.data as any).schoolProfile) {
-        const state = storeRes.data.data as AppStorageState;
-        if (state && Array.isArray(state.staffList)) {
-          state.staffList = state.staffList.filter((s: any) => s && !DUMMY_STAFF_IDS.includes(s.id));
+        const storeRes: any = storeSettled.status === 'fulfilled' ? storeSettled.value : null;
+        const ppdbRes: any = ppdbSettled.status === 'fulfilled' ? ppdbSettled.value : null;
+
+        if (storeRes && storeRes.data?.data && (storeRes.data.data as any).schoolProfile) {
+          const state = storeRes.data.data as AppStorageState;
+          if (state && Array.isArray(state.staffList)) {
+            state.staffList = state.staffList.filter((s: any) => s && !DUMMY_STAFF_IDS.includes(s.id));
+          }
+
+          // PPDB rows are written directly to their own table (public visitors can
+          // register), so merge the freshest rows over the snapshot. Without this,
+          // other devices using the fast snapshot path never see new registrations.
+          if (ppdbRes && Array.isArray(ppdbRes.data) && ppdbRes.data.length > 0) {
+            const fromTable = ppdbRes.data.map(mapPPDBRow);
+            const tableIds = new Set(fromTable.map((r: any) => r.id));
+            const snapshotOnly = (state.ppdbRegistrations || []).filter(
+              (r: any) => r && !tableIds.has(r.id)
+            );
+            state.ppdbRegistrations = [...fromTable, ...snapshotOnly] as any;
+          }
+          return state;
         }
-        return state;
+
+        // Retry only on a transient database error; an empty snapshot should fall
+        // through to the multi-table path immediately.
+        if (attempt === 0 && storeRes?.error && isTransientSupabaseError(storeRes.error)) {
+          await sleep(700);
+          continue;
+        }
+        break;
+      } catch (fastErr) {
+        console.warn(
+          `Fast path madrasah_store failed (attempt ${attempt + 1}/2):`,
+          fastErr instanceof Error ? fastErr.message : fastErr
+        );
+        if (attempt === 0) {
+          await sleep(700);
+          continue;
+        }
+        break;
       }
-    } catch (fastErr) {
-      console.warn('Fast path madrasah_store timed out or empty, attempting multi-table query fallback:', fastErr);
     }
 
     // 2. Fallback: multi-table parallel query
@@ -985,7 +1127,7 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
       testiRes,
       faqRes,
       statRes,
-    ] = await withTimeout(
+    ] = await withSupabaseTimeout(
       Promise.allSettled([
         supabase.from('school_profile').select('*').eq('id', 'main').single(),
         supabase.from('staff_members').select('*').order('order_num', { ascending: true }),
@@ -1000,7 +1142,8 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
         supabase.from('faqs').select('*'),
         supabase.from('stats').select('*').order('order_num', { ascending: true }),
       ]),
-      4000
+      6000,
+      'Multi-table load'
     );
 
     let state: AppStorageState | null = {} as any;
@@ -1108,24 +1251,7 @@ export async function loadFromSupabase(): Promise<AppStorageState | null> {
 
     // Merge PPDB
     if (ppdbRes.status === 'fulfilled' && Array.isArray(ppdbRes.value.data)) {
-      state.ppdbRegistrations = ppdbRes.value.data.map((p: any) => ({
-        id: p.id,
-        registrationNumber: p.registration_number,
-        studentName: p.student_name,
-        nik: p.nik || '',
-        nisn: p.nisn || '',
-        gender: p.gender,
-        birthPlace: p.birth_place || '',
-        birthDate: p.birth_date || '',
-        targetClass: p.target_class || 'Kelas 1 (Satu)',
-        originSchool: p.origin_school || '',
-        parentName: p.parent_name || '',
-        parentPhone: p.parent_phone || '',
-        address: p.parent_address || '',
-        submissionDate: p.submission_date || '',
-        status: p.status || 'Menunggu',
-        notes: p.notes || '',
-      }));
+      state.ppdbRegistrations = ppdbRes.value.data.map(mapPPDBRow);
     }
 
     // Merge Achievements
