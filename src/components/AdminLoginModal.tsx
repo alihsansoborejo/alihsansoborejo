@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useDataContext } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, Lock, X, KeyRound, AlertCircle, ArrowRight, Sparkles, Globe, LogIn } from 'lucide-react';
+import { ShieldCheck, Lock, X, AlertCircle, ArrowRight } from 'lucide-react';
 
 export const AdminLoginModal: React.FC = () => {
   const { isLoginModalOpen, setIsLoginModalOpen, loginAdmin, setViewMode } = useDataContext();
@@ -17,15 +17,10 @@ export const AdminLoginModal: React.FC = () => {
     setError(null);
     const success = loginAdmin(password);
     if (!success) {
-      setError('Kata sandi salah. Gunakan kata sandi admin: admin123 atau alihsan2025');
+      setError('Kata sandi salah. Silakan coba lagi.');
     } else {
       setPassword('');
     }
-  };
-
-  const handleQuickLogin = () => {
-    loginAdmin('admin123');
-    setPassword('');
   };
 
   const handleGoogleSignIn = async () => {
@@ -165,28 +160,6 @@ export const AdminLoginModal: React.FC = () => {
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
-
-          {/* Quick Demo Access */}
-          <div className="mt-4 pt-3 border-t border-gray-100">
-            <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-xl p-2.5 text-xs text-emerald-900 mb-2.5">
-              <div className="font-bold flex items-center gap-1.5 text-emerald-800 mb-0.5">
-                <Globe className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Status Online Database:</span>
-              </div>
-              <p className="text-[11px] text-gray-600 leading-snug">
-                Tersambung ke Google Cloud SQL (PostgreSQL). Perubahan tersimpan online dan langsung sinkron ke seluruh pengunjung & komputer lain.
-              </p>
-            </div>
-
-            <button
-              id="admin-quick-login-btn"
-              onClick={handleQuickLogin}
-              className="w-full py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5"
-            >
-              <KeyRound className="w-3.5 h-3.5 text-[#0b3c26]" />
-              <span>Masuk Cepat (Akses Langsung)</span>
-            </button>
-          </div>
         </div>
       </div>
     </div>

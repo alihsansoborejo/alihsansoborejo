@@ -26,7 +26,12 @@ Perubahan ini memperbaiki data yang lambat/tidak muncul di perangkat lain.
      sekarang dikompres sebelum disimpan (tidak lagi base64 mentah).
    - Ini mencegah payload Supabase membengkak dan localStorage penuh.
 
-4. `.github/workflows/supabase-keepalive.yml` (baru)
+4. `src/components/AdminLoginModal.tsx`
+   - Tombol "Masuk Cepat (Akses Langsung)" dan kotak info "Status Online Database"
+     di bagian bawah jendela login dihapus. Login tinggal lewat Google atau kata sandi.
+   - Pesan "kata sandi salah" tidak lagi mencetak kata sandi admin di layar publik.
+
+5. `.github/workflows/supabase-keepalive.yml` (baru)
    - Menulis "heartbeat" (`updated_at`) ke Supabase setiap hari agar project
      Free tidak di-pause. Penulisan (bukan sekadar ping status) dipakai karena
      yang dihitung Supabase adalah aktivitas database yang sebenarnya.
